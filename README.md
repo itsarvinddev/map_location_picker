@@ -19,7 +19,7 @@
 - 🗺️ Advanced map customization options
 - 🧭 Improved navigation and UI flow
 
-**_Check out the more screenshots [here](https://github.com/itsarvinddev/map_location_picker/assets)_**
+**_Check out the more screenshots [here](https://github.com/itsarvinddev/map_location_picker/tree/master/assets)_**
 
 <table>
   <tr>
