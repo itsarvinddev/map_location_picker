@@ -7,9 +7,11 @@ issue_tracker: https://github.com/mohesu/map_location_picker/issues
 documentation: https://github.com/mohesu/map_location_picker/blob/master/README.md
 screenshots:
     - description: "Map Location Picker Decoded Address"
-      path: assets/IMG_2480.png
+      path: assets/one31.png
     - description: "Map Location Picker Places autocomplete"
-      path: assets/IMG_2482.png
+      path: assets/one44.png
+    - description: "Map Location Picker dark mode"
+      path: assets/one42.png
 
 topics:
     - map-picker
