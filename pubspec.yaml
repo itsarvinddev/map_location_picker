@@ -43,7 +43,6 @@ dependencies:
     google_maps_webapi: ^0.0.24
     geolocator: ^14.0.2
     http: ^1.4.0
-    logger: ^2.6.0
     flutter_hooks: ^0.21.2
 
 dev_dependencies:
