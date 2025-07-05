@@ -28,7 +28,7 @@
     <td>Picker Options</td>
   </tr>
   <tr>
-    <td><img src="https://raw.githubusercontent.com/itsarvinddev/map_location_picker/master/assets/video01.mp4" width=270 height=480 alt=""></td>
+    <td><img src="https://raw.githubusercontent.com/itsarvinddev/map_location_picker/master/assets/video01.gif" width=270 height=480 alt=""></td>
     <td><img src="https://raw.githubusercontent.com/itsarvinddev/map_location_picker/master/assets/one31.png" width=270 height=480 alt=""></td>
     <td><img src="https://raw.githubusercontent.com/itsarvinddev/map_location_picker/master/assets/one44.png" width=270 height=480 alt=""></td>
   </tr>
