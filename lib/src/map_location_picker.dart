@@ -300,6 +300,9 @@ class MapLocationPicker extends StatefulWidget {
     String address,
   )? bottomCardBuilder;
 
+  /// Duration for search debounce in milliseconds
+  final Duration debounceDuration;
+
   const MapLocationPicker({
     super.key,
     this.desiredAccuracy = LocationAccuracy.high,
@@ -393,6 +396,7 @@ class MapLocationPicker extends StatefulWidget {
     this.zoomGesturesEnabled = true,
     this.decoration,
     this.bottomCardBuilder,
+    this.debounceDuration = const Duration(milliseconds: 500),
   });
 
   @override
@@ -552,6 +556,7 @@ class _MapLocationPickerState extends State<MapLocationPicker> {
                     types: widget.types,
                     minCharsForSuggestions: widget.minCharsForSuggestions,
                     decoration: widget.decoration,
+                    debounceDuration: widget.debounceDuration,
                     onGetDetailsByPlaceId: (placesDetails) async {
                       if (placesDetails == null) {
                         logger.e("placesDetails is null");
@@ -596,6 +601,7 @@ class _MapLocationPickerState extends State<MapLocationPicker> {
                   Padding(
                     padding: const EdgeInsets.all(8.0),
                     child: FloatingActionButton(
+                      heroTag: "map_type_fab",
                       onPressed: null,
                       tooltip: 'Map Type',
                       backgroundColor: Theme.of(context).primaryColor,
@@ -636,6 +642,7 @@ class _MapLocationPickerState extends State<MapLocationPicker> {
                   Padding(
                     padding: const EdgeInsets.all(8.0),
                     child: FloatingActionButton(
+                      heroTag: "set_current_location_fab",
                       tooltip: widget.fabTooltip,
                       backgroundColor: Theme.of(context).primaryColor,
                       foregroundColor: Theme.of(context).colorScheme.onPrimary,
