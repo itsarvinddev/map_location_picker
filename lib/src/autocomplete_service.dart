@@ -3,9 +3,15 @@ import 'package:http/http.dart';
 
 import 'logger.dart';
 
+/// The autocomplete service for the map location picker.
 class AutoCompleteService {
+  /// The HTTP client to use for the autocomplete service.
   final Client? httpClient;
+
+  /// The API headers to use for the autocomplete service.
   final Map<String, String>? apiHeaders;
+
+  /// The base URL to use for the autocomplete service.
   final String? baseUrl;
 
   AutoCompleteService({this.httpClient, this.apiHeaders, this.baseUrl});

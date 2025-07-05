@@ -2,9 +2,15 @@ import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:google_maps_webapi/geocoding.dart';
 import 'package:http/http.dart';
 
+/// The geocoding service to use for the map location picker.
 class GeoCodingService {
+  /// The API key for the geocoding service.
   final String apiKey;
+
+  /// The HTTP client to use for the geocoding service.
   final Client? httpClient;
+
+  /// The API headers to use for the geocoding service.
   final Map<String, String>? apiHeaders;
   final String? baseUrl;
   final String? language;

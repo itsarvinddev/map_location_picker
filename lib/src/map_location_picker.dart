@@ -15,11 +15,18 @@ import 'autocomplete_view.dart';
 import 'geocoding_service.dart';
 import 'logger.dart';
 
+/// Default radius for the map location picker.
 const _radius = 16.0;
 
+/// The main widget for the map location picker.
 class MapLocationPicker extends HookWidget {
+  /// The configuration for the map location picker.
   final MapPickerConfig config;
+
+  /// The configuration for the search autocomplete.
   final PlacesAutocompleteConfig searchConfig;
+
+  /// The geocoding service to use for the map location picker.
   final GeoCodingService? geoCodingService;
 
   const MapLocationPicker({
@@ -31,7 +38,7 @@ class MapLocationPicker extends HookWidget {
 
   @override
   Widget build(BuildContext context) {
-    // State management
+    /// State management
     final position = useState(config.initialPosition);
     final address = useState("");
     final isLoading = useState(false);
@@ -51,7 +58,7 @@ class MapLocationPicker extends HookWidget {
           baseUrl: config.geoCodingBaseUrl,
         ));
 
-    // Initialize map
+    /// Initialize map
     useEffect(() {
       markers.value = _createMarkers(position.value);
       if (config.initialPosition != const LatLng(0, 0)) {
@@ -82,7 +89,7 @@ class MapLocationPicker extends HookWidget {
         ),
       );
 
-      // Search Bar
+      /// Search Bar
       return (!config.hideSearchBar)
           ? Positioned(
               top: 0,
@@ -99,7 +106,7 @@ class MapLocationPicker extends HookWidget {
     }
 
     Widget buildFloatingControls() {
-      // Floating Controls
+      /// Floating Controls
       return Positioned(
         bottom: 0,
         left: 0,
@@ -122,7 +129,7 @@ class MapLocationPicker extends HookWidget {
                   mainAxisAlignment: MainAxisAlignment.end,
                   crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
-                    // Map Type Button
+                    /// Map Type Button
                     config.mapTypeButton ??
                         FloatingActionButton(
                           heroTag: "map_type_button",
@@ -153,7 +160,8 @@ class MapLocationPicker extends HookWidget {
                           child: Icon(config.mapTypeIcon ?? Icons.layers),
                         ),
                     const SizedBox(height: 8),
-                    // Location Button
+
+                    /// Location Button
                     config.locationButton ??
                         FloatingActionButton(
                           heroTag: "location_button",
@@ -180,7 +188,7 @@ class MapLocationPicker extends HookWidget {
                 ),
               ),
 
-              // Bottom Card
+              /// Bottom Card
               if (shouldShowBottomCard)
                 config.bottomCardBuilder?.call(
                       context,
@@ -210,7 +218,7 @@ class MapLocationPicker extends HookWidget {
       backgroundColor: CupertinoColors.systemBackground,
       body: Stack(
         children: [
-          /// Google map view
+          /// Google Map View
           GoogleMap(
             initialCameraPosition: CameraPosition(
               target: position.value,

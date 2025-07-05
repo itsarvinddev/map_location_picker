@@ -9,12 +9,21 @@ import 'package:map_location_picker/map_location_picker.dart';
 
 import 'logger.dart';
 
+/// The autocomplete view for the map location picker.
 class PlacesAutocomplete extends HookWidget {
+  /// The configuration for the autocomplete view.
   final PlacesAutocompleteConfig config;
+
+  /// The initial value for the autocomplete view.
   final Prediction? initialValue;
+
+  /// The callback for when a place is selected.
   final void Function(PlacesDetailsResponse?)? onGetDetails;
+
+  /// The callback for when a place is selected.
   final void Function(Prediction)? onSelected;
 
+  /// The constructor for the autocomplete view.
   const PlacesAutocomplete({
     super.key,
     required this.config,
