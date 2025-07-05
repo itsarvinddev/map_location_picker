@@ -1,265 +1,237 @@
 import 'dart:async';
 
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:flutter_typeahead/flutter_typeahead.dart';
-import 'package:form_builder_extra_fields/form_builder_extra_fields.dart';
 import 'package:http/http.dart';
+import 'package:map_location_picker/map_location_picker.dart';
 
-import '../map_location_picker.dart';
 import 'logger.dart';
 
-class PlacesAutocomplete extends StatefulWidget {
-  /// API key for the map & places
-  final String apiKey;
-
-  /// Top card margin
-  final EdgeInsetsGeometry topCardMargin;
-
-  /// Top card color
-  final Color? topCardColor;
-
-  /// Top card shape
-  final ShapeBorder topCardShape;
-
-  /// Top card text field border radius
-  final BorderRadiusGeometry borderRadius;
-
-  /// Top card text field hint text
-  final String searchHintText;
-
-  /// Top card text field hint style (optional)
-  final TextStyle? searchHintStyle;
-
-  /// Top card text field label style (optional)
-  final TextStyle? labelStyle;
-
-  /// Show back button (default: true)
-  final bool hideBackButton;
-
-  /// Back button replacement when [hideBackButton] is false and [backButton] is not null
-  final Widget? backButton;
-
-  /// httpClient is used to make network requests.
-  final Client? placesHttpClient;
-
-  /// apiHeader is used to add headers to the request.
-  final Map<String, String>? placesApiHeaders;
-
-  /// baseUrl is used to build the url for the request.
-  final String? placesBaseUrl;
-
-  /// Session token for Google Places API
-  final String? sessionToken;
-
-  /// Offset for pagination of results
-  /// offset: int,
-  final num? offsetParameter;
-
-  /// Origin location for calculating distance from results
-  /// origin: Location(lat: -33.852, lng: 151.211),
-  final Location? origin;
-
-  /// Location bounds for restricting results to a radius around a location
-  /// location: Location(lat: -33.867, lng: 151.195)
-  final Location? location;
-
-  /// Radius for restricting results to a radius around a location
-  /// radius: Radius in meters
-  final num? radius;
-
-  /// Language code for Places API results
-  /// language: 'en',
-  final String? language;
-
-  /// Types for restricting results to a set of place types
-  final List<String> types;
-
-  /// Components set results to be restricted to a specific area
-  /// components: [Component(Component.country, "us")]
-  final List<Component> components;
-
-  /// Bounds for restricting results to a set of bounds
-  final bool strictbounds;
-
-  /// Region for restricting results to a set of regions
-  /// region: "us"
-  final String? region;
-
-  /// fields
-  final List<String> fields;
-
-  /// On get details callback
-  final void Function(PlacesDetailsResponse?)? onGetDetailsByPlaceId;
-
-  /// On suggestion selected callback
+class PlacesAutocomplete extends HookWidget {
+  final PlacesAutocompleteConfig config;
+  final Prediction? initialValue;
+  final void Function(PlacesDetailsResponse?)? onGetDetails;
   final void Function(Prediction)? onSelected;
 
-  /// Search text field controller
-  ///
-  /// Controls the text being edited.
-  ///
-  /// If null, this widget will create its own [TextEditingController].
-  final TextEditingController? searchController;
+  const PlacesAutocomplete({
+    super.key,
+    required this.config,
+    this.initialValue,
+    this.onGetDetails,
+    this.onSelected,
+  });
 
-  /// Is widget mounted
-  final bool mounted;
+  @override
+  Widget build(BuildContext context) {
+    final textController = useTextEditingController(
+        text: initialValue?.description ?? config.defaultAddressText);
 
-  /// Can show clear button on search text field
-  final bool showClearButton;
+    final focusNode = useFocusNode();
 
-  /// suffix icon for search text field. You can use [showClearButton] to show clear button or replace with suffix icon
-  final Widget? suffixIcon;
+    final service = useMemoized(
+      () => AutoCompleteService(
+        httpClient: config.placesHttpClient,
+        apiHeaders: config.placesApiHeaders,
+        baseUrl: config.placesBaseUrl,
+      ),
+    );
 
-  /// Initial value for search text field (optional)
-  /// [initialValue] not in use when [searchController] is not null.
-  final Prediction? initialValue;
+    return CupertinoTypeAheadField<Prediction>(
+      controller: textController,
+      itemBuilder: config.itemBuilder ?? _defaultItemBuilder(context),
+      suggestionsCallback: (query) => _getSuggestions(query, service),
+      onSelected: (value) {
+        _handleSelection(value, context, textController);
+        config.onSelected?.call(value);
+        focusNode.unfocus();
+      },
+      errorBuilder: config.errorBuilder,
+      animationDuration: config.animationDuration,
+      autoFlipDirection: config.autoFlipDirection,
+      debounceDuration: config.debounceDuration,
+      direction: config.direction,
+      hideOnEmpty: config.hideOnEmpty,
+      hideOnError: config.hideOnError,
+      hideOnLoading: config.hideOnLoading,
+      loadingBuilder: config.loadingBuilder,
+      transitionBuilder: config.transitionBuilder,
+      autoFlipMinHeight: config.autoFlipMinHeight,
+      constraints: config.constraints ?? BoxConstraints(maxHeight: 500),
+      hideOnSelect: config.hideOnSelect,
+      hideOnUnfocus: config.hideOnUnfocus,
+      hideWithKeyboard: config.hideWithKeyboard,
+      itemSeparatorBuilder: config.itemSeparatorBuilder ??
+          (context, index) => const Divider(
+                color: CupertinoColors.systemGrey5,
+                height: 0,
+              ),
+      listBuilder: config.listBuilder,
+      offset: config.offset ?? Offset(0, 12),
+      retainOnLoading: config.retainOnLoading,
+      showOnFocus: config.showOnFocus,
+      suggestionsController:
+          config.suggestionsController as SuggestionsController<Prediction>?,
+      decorationBuilder: config.decorationBuilder ??
+          (context, child) {
+            return Material(
+              type: MaterialType.card,
+              elevation: 0,
+              borderRadius: BorderRadius.circular(12),
+              child: child,
+            );
+          },
+      emptyBuilder: config.emptyBuilder,
+      scrollController: config.scrollController,
+      focusNode: config.focusNode ?? focusNode,
+      hideKeyboardOnDrag: config.hideKeyboardOnDrag,
+      builder: (context, controller, focusNode) => CupertinoSearchTextField(
+        controller: controller,
+        focusNode: focusNode,
+        placeholder: config.searchHintText,
+        placeholderStyle: config.searchHintStyle,
+        decoration: BoxDecoration(
+          color: CupertinoColors.tertiarySystemBackground,
+          borderRadius: BorderRadius.circular(12),
+        ),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+        keyboardType: TextInputType.streetAddress,
+        style: CupertinoTheme.of(context).textTheme.textStyle.copyWith(
+              fontSize: 16,
+            ),
+      ),
+    );
+  }
 
-  /// Validator for search text field (optional)
-  final String? Function(Prediction?)? validator;
+  Widget Function(BuildContext, Prediction) _defaultItemBuilder(
+      BuildContext context) {
+    return (context, content) => ListTile(
+          contentPadding: const EdgeInsets.symmetric(horizontal: 16),
+          title: Text(
+            content.description ?? "",
+          ),
+          subtitle: Text(
+            content.structuredFormatting?.secondaryText ??
+                content.structuredFormatting?.mainText ??
+                "",
+          ),
+        );
+  }
 
-  /// Called for each suggestion returned by [suggestionsCallback] to build the
-  /// corresponding widget.
-  ///
-  /// This callback must not be null. It is called by the TypeAhead widget for
-  /// each suggestion, and expected to build a widget to display this
-  /// suggestion's info. For example:
-  ///
-  /// ```dart
-  /// itemBuilder: (context, suggestion) {
-  ///   return ListTile(
-  ///     title: Text(suggestion['name']),
-  ///     subtitle: Text('USD' + suggestion['price'].toString())
-  ///   );
-  /// }
-  /// ```
-  final Widget Function(BuildContext, Prediction)? itemBuilder;
+  Future<List<Prediction>> _getSuggestions(
+      String query, AutoCompleteService service) async {
+    if (query.length < config.minCharsForSuggestions) return [];
+    return service.search(
+      query: query,
+      apiKey: config.apiKey,
+      language: config.suggestionsLanguage,
+      sessionToken: config.sessionToken,
+      region: config.suggestionsRegion,
+      components: config.suggestionsComponents,
+      location: config.suggestionsLocation,
+      offset: config.suggestionsOffset,
+      origin: config.suggestionsOrigin,
+      radius: config.suggestionsRadius,
+      strictbounds: config.suggestionsStrictbounds,
+      types: config.suggestionsTypes,
+    );
+  }
 
-  /// The duration to wait after the user stops typing before calling
-  /// [suggestionsCallback]
-  ///
-  /// This is useful, because, if not set, a request for suggestions will be
-  /// sent for every character that the user types.
-  ///
-  /// This duration is set by default to 300 milliseconds
+  void _handleSelection(
+    Prediction value,
+    BuildContext context,
+    TextEditingController controller,
+  ) async {
+    controller.selection =
+        TextSelection.collapsed(offset: controller.text.length);
+    await _getPlaceDetails(value.placeId ?? value.id ?? "", context);
+    onSelected?.call(value);
+  }
+
+  Future<void> _getPlaceDetails(String placeId, BuildContext context) async {
+    try {
+      final places = GoogleMapsPlaces(
+        apiKey: config.apiKey,
+        httpClient: config.placesHttpClient,
+        apiHeaders: config.placesApiHeaders,
+        baseUrl: config.placesBaseUrl,
+      );
+
+      final response = await places.getDetailsByPlaceId(
+        placeId,
+        region: config.placesRegion,
+        sessionToken: config.placesSessionToken,
+        language: config.placesLanguage,
+        fields: config.placesFields,
+      );
+
+      if (_isErrorResponse(response)) {
+        _showErrorSnackbar(response.errorMessage, context);
+        return;
+      }
+      onGetDetails?.call(response);
+    } catch (e) {
+      mapLogger.e(e);
+    }
+  }
+
+  bool _isErrorResponse(PlacesDetailsResponse response) {
+    return response.hasNoResults ||
+        response.isDenied ||
+        response.isInvalid ||
+        response.isNotFound ||
+        response.unknownError ||
+        response.isOverQueryLimit;
+  }
+
+  void _showErrorSnackbar(String? message, BuildContext context) {
+    if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(message ?? "Address not found")),
+      );
+    }
+  }
+}
+
+class PlacesAutocompleteConfig<Prediction> {
+  final String apiKey;
+  final Client? placesHttpClient;
+  final String? placesRegion;
+  final String? placesSessionToken;
+  final String? placesLanguage;
+  final List<String> placesFields;
+  final Map<String, String>? placesApiHeaders;
+  final String? placesBaseUrl;
+  final String? suggestionsLanguage;
+  final String? suggestionsRegion;
+  final List<Component> suggestionsComponents;
+  final Location? suggestionsLocation;
+  final num? suggestionsOffset;
+  final Location? suggestionsOrigin;
+  final num? suggestionsRadius;
+  final bool suggestionsStrictbounds;
+  final List<String> suggestionsTypes;
+  final String? sessionToken;
+  final String searchHintText;
+  final TextStyle? searchHintStyle;
+  final int minCharsForSuggestions;
   final Duration debounceDuration;
-
-  /// Called when waiting for [suggestionsCallback] to return.
-  ///
-  /// It is expected to return a widget to display while waiting.
-  /// For example:
-  /// ```dart
-  /// (BuildContext context) {
-  ///   return Text('Loading...');
-  /// }
-  /// ```
-  ///
-  /// If not specified, a [CircularProgressIndicator](https://docs.flutter.io/flutter/material/CircularProgressIndicator-class.html) is shown
-  final WidgetBuilder? loadingBuilder;
-
-  /// Called when [suggestionsCallback] throws an exception.
-  ///
-  /// It is called with the error object, and expected to return a widget to
-  /// display when an exception is thrown
-  /// For example:
-  /// ```dart
-  /// (BuildContext context, error) {
-  ///   return Text('$error');
-  /// }
-  /// ```
-  ///
-  /// If not specified, the error is shown in [ThemeData.errorColor](https://docs.flutter.io/flutter/material/ThemeData/errorColor.html)
-  final Widget Function(BuildContext, Object?)? suggestionErrorBuilder;
-
-  /// The duration that [transitionBuilder] animation takes.
-  ///
-  /// This argument is best used with [transitionBuilder] and [animationStart]
-  /// to fully control the animation.
-  ///
-  /// Defaults to 500 milliseconds.
+  final String defaultAddressText;
+  final Widget Function(BuildContext, Prediction)? itemBuilder;
+  final void Function(Prediction)? onSelected;
+  final Widget Function(BuildContext, Object)? errorBuilder;
   final Duration animationDuration;
-
-  final VerticalDirection direction;
-
+  final bool autoFlipDirection;
+  final VerticalDirection? direction;
+  final bool hideOnEmpty;
+  final bool hideOnError;
+  final bool hideOnLoading;
+  final Widget Function(BuildContext)? loadingBuilder;
   final Widget Function(BuildContext, Animation<double>, Widget)?
       transitionBuilder;
-
-  /// If set to true, no loading box will be shown while suggestions are
-  /// being fetched. [loadingBuilder] will also be ignored.
-  ///
-  /// Defaults to false.
-  final bool hideOnLoading;
-
-  /// If set to true, nothing will be shown if there are no results.
-  /// [noItemsFoundBuilder] will also be ignored.
-  ///
-  /// Defaults to false.
-  final bool hideOnEmpty;
-
-  /// If set to true, nothing will be shown if there is an error.
-  /// [suggestionErrorBuilder] will also be ignored.
-  ///
-  /// Defaults to false.
-  final bool hideOnError;
-
-  /// If set to true, in the case where the suggestions box has less than
-  /// _SuggestionsBoxController.minOverlaySpace to grow in the desired [direction], the direction axis
-  /// will be temporarily flipped if there's more room available in the opposite
-  /// direction.
-  ///
-  /// Defaults to false
-  final bool autoFlipDirection;
-
-  /// Controls the text being edited.
-  ///
-  /// If null, this widget will create its own [TextEditingController].
-  final TextEditingController? controller;
-
-  /// The suggestions box controller
-  final ScrollController? scrollController;
-
-  /// Input decoration for the text field
-  final InputDecoration? decoration;
-
-  /// value transformer
-  final dynamic Function(Prediction?)? valueTransformer;
-
-  /// Text input enabler
-  final bool enabled;
-
-  /// Auto-validate mode for the text field
-  final AutovalidateMode autovalidateMode;
-
-  /// on change callback
-  final void Function(Prediction?)? onChanged;
-
-  /// on reset callback
-  final void Function()? onReset;
-
-  /// on form save callback
-  final void Function(Prediction?)? onSaved;
-
-  /// Focus node for the text field
-  final FocusNode? focusNode;
-
-  /// Safe area parameters
-  final bool bottom;
-  final bool left;
-  final bool maintainBottomViewPadding;
-  final EdgeInsets minimum;
-  final bool right;
-  final bool top;
-
-  /// Minimum number of characters to trigger suggestions
-  /// Defaults to 3
-  final int minCharsForSuggestions;
-
-  final bool autoFlipListDirection;
   final double autoFlipMinHeight;
   final BoxConstraints? constraints;
-  final TextField? customTextField;
-  final Widget Function(BuildContext, Widget)? decorationBuilder;
-  final Widget Function(BuildContext)? emptyBuilder;
-  final bool hideKeyboardOnDrag;
   final bool hideOnSelect;
   final bool hideOnUnfocus;
   final bool hideWithKeyboard;
@@ -269,298 +241,170 @@ class PlacesAutocomplete extends StatefulWidget {
   final bool retainOnLoading;
   final bool showOnFocus;
   final SuggestionsController<Prediction>? suggestionsController;
+  final Widget Function(BuildContext, Widget)? decorationBuilder;
+  final Widget Function(BuildContext)? emptyBuilder;
+  final ScrollController? scrollController;
+  final FocusNode? focusNode;
+  final bool hideKeyboardOnDrag;
 
-  const PlacesAutocomplete({
-    super.key,
+  const PlacesAutocompleteConfig({
     required this.apiKey,
-    this.language,
-    this.topCardMargin = const EdgeInsets.all(8),
-    this.topCardColor,
-    this.topCardShape = const RoundedRectangleBorder(
-      borderRadius: BorderRadius.all(Radius.circular(12)),
-    ),
-    this.borderRadius = const BorderRadius.all(Radius.circular(12)),
-    this.searchHintText = "Start typing to search",
-    this.searchHintStyle,
-    this.labelStyle,
-    this.hideBackButton = false,
-    this.backButton,
     this.placesHttpClient,
+    this.placesRegion,
+    this.placesSessionToken,
+    this.placesLanguage,
+    this.placesFields = const [],
     this.placesApiHeaders,
     this.placesBaseUrl,
+    this.suggestionsLanguage,
+    this.suggestionsRegion,
+    this.suggestionsComponents = const [],
+    this.suggestionsLocation,
+    this.suggestionsOffset,
+    this.suggestionsOrigin,
+    this.suggestionsRadius,
+    this.suggestionsStrictbounds = false,
+    this.suggestionsTypes = const [],
     this.sessionToken,
-    this.offset,
-    this.origin,
-    this.location,
-    this.radius,
-    this.region,
-    this.fields = const [],
-    this.types = const [],
-    this.components = const [],
-    this.strictbounds = false,
-    this.searchController,
-    required this.mounted,
-    this.onGetDetailsByPlaceId,
-    this.onSelected,
-    this.showClearButton = true,
-    this.suffixIcon,
-    this.initialValue,
-    this.validator,
+    this.searchHintText = "Start typing to search",
+    this.searchHintStyle,
+    this.minCharsForSuggestions = 3,
+    this.debounceDuration = const Duration(milliseconds: 500),
+    this.defaultAddressText = "",
     this.itemBuilder,
-    this.animationDuration = const Duration(milliseconds: 500),
+    this.onSelected,
+    this.errorBuilder,
+    this.animationDuration = const Duration(milliseconds: 300),
     this.autoFlipDirection = false,
-    this.controller,
-    this.debounceDuration = const Duration(milliseconds: 300),
-    this.direction = VerticalDirection.down,
-    this.suggestionErrorBuilder,
+    this.direction,
     this.hideOnEmpty = false,
     this.hideOnError = false,
     this.hideOnLoading = false,
     this.loadingBuilder,
-    this.scrollController,
-    this.decoration,
-    this.valueTransformer,
-    this.enabled = true,
-    this.autovalidateMode = AutovalidateMode.disabled,
-    this.onChanged,
-    this.onReset,
-    this.onSaved,
-    this.focusNode,
-    this.minimum = EdgeInsets.zero,
-    this.bottom = true,
-    this.left = true,
-    this.maintainBottomViewPadding = false,
-    this.right = true,
-    this.top = true,
-    this.minCharsForSuggestions = 3,
     this.transitionBuilder,
-    this.autoFlipListDirection = true,
-    this.autoFlipMinHeight = 64.0,
+    this.autoFlipMinHeight = 0,
     this.constraints,
-    this.customTextField,
-    this.decorationBuilder,
-    this.emptyBuilder,
-    this.hideKeyboardOnDrag = false,
     this.hideOnSelect = true,
     this.hideOnUnfocus = true,
     this.hideWithKeyboard = true,
     this.itemSeparatorBuilder,
     this.listBuilder,
-    this.retainOnLoading = true,
+    this.offset,
+    this.retainOnLoading = false,
     this.showOnFocus = true,
     this.suggestionsController,
-    this.offsetParameter,
+    this.decorationBuilder,
+    this.emptyBuilder,
+    this.scrollController,
+    this.focusNode,
+    this.hideKeyboardOnDrag = true,
   });
 
-  @override
-  State<PlacesAutocomplete> createState() => _PlacesAutocompleteState();
-}
-
-class _PlacesAutocompleteState extends State<PlacesAutocomplete> {
-  /// Get [AutoCompleteState] for [AutoCompleteTextField]
-  AutoCompleteState autoCompleteState() {
-    return AutoCompleteState(
-      apiHeaders: widget.placesApiHeaders,
-      baseUrl: widget.placesBaseUrl,
-      httpClient: widget.placesHttpClient,
+  PlacesAutocompleteConfig copyWith({
+    String? apiKey,
+    Client? placesHttpClient,
+    String? placesRegion,
+    String? placesSessionToken,
+    String? placesLanguage,
+    List<String>? placesFields,
+    Map<String, String>? placesApiHeaders,
+    String? placesBaseUrl,
+    String? suggestionsLanguage,
+    String? suggestionsRegion,
+    List<Component>? suggestionsComponents,
+    Location? suggestionsLocation,
+    num? suggestionsOffset,
+    Location? suggestionsOrigin,
+    num? suggestionsRadius,
+    bool? suggestionsStrictbounds,
+    List<String>? suggestionsTypes,
+    String? sessionToken,
+    String? searchHintText,
+    TextStyle? searchHintStyle,
+    int? minCharsForSuggestions,
+    Duration? debounceDuration,
+    String? defaultAddressText,
+    Widget Function(BuildContext, Prediction)? itemBuilder,
+    void Function(Prediction)? onSelected,
+    Widget Function(BuildContext, Object)? errorBuilder,
+    Duration? animationDuration,
+    bool? autoFlipDirection,
+    VerticalDirection? direction,
+    bool? hideOnEmpty,
+    bool? hideOnError,
+    bool? hideOnLoading,
+    Widget Function(BuildContext)? loadingBuilder,
+    Widget Function(BuildContext, Animation<double>, Widget)? transitionBuilder,
+    double? autoFlipMinHeight,
+    BoxConstraints? constraints,
+    bool? hideOnSelect,
+    bool? hideOnUnfocus,
+    bool? hideWithKeyboard,
+    Widget Function(BuildContext, int)? itemSeparatorBuilder,
+    Widget Function(BuildContext, List<Widget>)? listBuilder,
+    Offset? offset,
+    bool? retainOnLoading,
+    bool? showOnFocus,
+    SuggestionsController<Prediction>? suggestionsController,
+    Widget Function(BuildContext, Widget)? decorationBuilder,
+    Widget Function(BuildContext)? emptyBuilder,
+    ScrollController? scrollController,
+    FocusNode? focusNode,
+    bool? hideKeyboardOnDrag,
+  }) {
+    return PlacesAutocompleteConfig(
+      apiKey: apiKey ?? this.apiKey,
+      placesHttpClient: placesHttpClient ?? this.placesHttpClient,
+      placesRegion: placesRegion ?? this.placesRegion,
+      placesSessionToken: placesSessionToken ?? this.placesSessionToken,
+      placesLanguage: placesLanguage ?? this.placesLanguage,
+      placesFields: placesFields ?? this.placesFields,
+      placesApiHeaders: placesApiHeaders ?? this.placesApiHeaders,
+      placesBaseUrl: placesBaseUrl ?? this.placesBaseUrl,
+      suggestionsLanguage: suggestionsLanguage ?? this.suggestionsLanguage,
+      suggestionsRegion: suggestionsRegion ?? this.suggestionsRegion,
+      suggestionsComponents:
+          suggestionsComponents ?? this.suggestionsComponents,
+      suggestionsLocation: suggestionsLocation ?? this.suggestionsLocation,
+      suggestionsOffset: suggestionsOffset ?? this.suggestionsOffset,
+      suggestionsOrigin: suggestionsOrigin ?? this.suggestionsOrigin,
+      suggestionsRadius: suggestionsRadius ?? this.suggestionsRadius,
+      suggestionsStrictbounds:
+          suggestionsStrictbounds ?? this.suggestionsStrictbounds,
+      suggestionsTypes: suggestionsTypes ?? this.suggestionsTypes,
+      sessionToken: sessionToken ?? this.sessionToken,
+      searchHintText: searchHintText ?? this.searchHintText,
+      searchHintStyle: searchHintStyle ?? this.searchHintStyle,
+      minCharsForSuggestions:
+          minCharsForSuggestions ?? this.minCharsForSuggestions,
+      debounceDuration: debounceDuration ?? this.debounceDuration,
+      defaultAddressText: defaultAddressText ?? this.defaultAddressText,
+      errorBuilder: errorBuilder ?? this.errorBuilder,
+      animationDuration: animationDuration ?? this.animationDuration,
+      autoFlipDirection: autoFlipDirection ?? this.autoFlipDirection,
+      direction: direction ?? this.direction,
+      hideOnEmpty: hideOnEmpty ?? this.hideOnEmpty,
+      hideOnError: hideOnError ?? this.hideOnError,
+      hideOnLoading: hideOnLoading ?? this.hideOnLoading,
+      loadingBuilder: loadingBuilder ?? this.loadingBuilder,
+      transitionBuilder: transitionBuilder ?? this.transitionBuilder,
+      autoFlipMinHeight: autoFlipMinHeight ?? this.autoFlipMinHeight,
+      constraints: constraints ?? this.constraints,
+      hideOnSelect: hideOnSelect ?? this.hideOnSelect,
+      hideOnUnfocus: hideOnUnfocus ?? this.hideOnUnfocus,
+      hideWithKeyboard: hideWithKeyboard ?? this.hideWithKeyboard,
+      itemSeparatorBuilder: itemSeparatorBuilder ?? this.itemSeparatorBuilder,
+      listBuilder: listBuilder ?? this.listBuilder,
+      offset: offset ?? this.offset,
+      retainOnLoading: retainOnLoading ?? this.retainOnLoading,
+      showOnFocus: showOnFocus ?? this.showOnFocus,
+      suggestionsController:
+          suggestionsController ?? this.suggestionsController,
+      decorationBuilder: decorationBuilder ?? this.decorationBuilder,
+      emptyBuilder: emptyBuilder ?? this.emptyBuilder,
+      scrollController: scrollController ?? this.scrollController,
+      focusNode: focusNode ?? this.focusNode,
+      hideKeyboardOnDrag: hideKeyboardOnDrag ?? this.hideKeyboardOnDrag,
     );
-  }
-
-  late TextEditingController _controller;
-
-  late Debouncer _debounce;
-  @override
-  void initState() {
-    /// Get text controller from [searchController] or create new instance of [TextEditingController] if [searchController] is null or empty
-    _controller = widget.searchController ?? TextEditingController();
-
-    _debounce = Debouncer(duration: widget.debounceDuration);
-    super.initState();
-  }
-
-  @override
-  void dispose() {
-  //  _controller.dispose();
-    _debounce.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return SafeArea(
-      bottom: widget.bottom,
-      left: widget.left,
-      maintainBottomViewPadding: widget.maintainBottomViewPadding,
-      minimum: widget.minimum,
-      right: widget.right,
-      top: widget.top,
-      child: Card(
-        margin: widget.topCardMargin,
-        shape: widget.topCardShape,
-        color: widget.topCardColor,
-        child: ListTile(
-          minVerticalPadding: 0,
-          contentPadding: const EdgeInsets.only(right: 4, left: 4),
-          leading: widget.hideBackButton
-              ? null
-              : widget.backButton ?? const BackButton(),
-          title: ClipRRect(
-            borderRadius: widget.borderRadius,
-            child: FormBuilderTypeAhead<Prediction>(
-              decoration: widget.decoration ??
-                  InputDecoration(
-                    hintText: searchHintText,
-                    hintStyle: searchHintStyle,
-                    border: InputBorder.none,
-                    filled: true,
-                    suffixIcon: (showClearButton && initialValue == null)
-                        ? IconButton(
-                            icon: const Icon(Icons.close),
-                            onPressed: () => textController.value.clear(),
-                          )
-                        : suffixIcon,
-                    labelStyle: labelStyle,
-                  ),
-              name: 'Search',
-              controller: widget.initialValue == null ? _controller : null,
-              selectionToTextTransformer: (result) {
-                return result.description ?? "";
-              },
-              itemBuilder: widget.itemBuilder ??
-                  (context, content) {
-                    return ListTile(
-                      title: Text(content.description ?? ""),
-                    );
-                  },
-              suggestionsCallback: (query) async {
-                if (query.length < widget.minCharsForSuggestions) {
-                  return [];
-                }
-                final completer = Completer<List<Prediction>>();
-                _debounce.run(() async {
-                  List<Prediction> predictions =
-                      await autoCompleteState().search(
-                    query,
-                    widget.apiKey,
-                    language: widget.language,
-                    sessionToken: widget.sessionToken,
-                    region: widget.region,
-                    components: widget.components,
-                    location: widget.location,
-                    offset: widget.offsetParameter,
-                    origin: widget.origin,
-                    radius: widget.radius,
-                    strictbounds: widget.strictbounds,
-                    types: widget.types,
-                  );
-                  completer.complete(predictions);
-                });
-                return completer.future;
-              },
-              onSelected: (value) async {
-                _controller.selection =
-                    TextSelection.collapsed(offset: _controller.text.length);
-                _getDetailsByPlaceId(value.placeId ?? "", context);
-                widget.onSelected?.call(value);
-              },
-              initialValue: widget.initialValue,
-              validator: widget.validator,
-              scrollController: widget.scrollController,
-              animationDuration: widget.animationDuration,
-              autoFlipDirection: widget.autoFlipDirection,
-              debounceDuration: widget.debounceDuration,
-              direction: widget.direction,
-              suggestionErrorBuilder: widget.suggestionErrorBuilder,
-              focusNode: widget.focusNode,
-              hideOnEmpty: widget.hideOnEmpty,
-              hideOnError: widget.hideOnError,
-              hideOnLoading: widget.hideOnLoading,
-              loadingBuilder: widget.loadingBuilder,
-              transitionBuilder: widget.transitionBuilder,
-              valueTransformer: widget.valueTransformer,
-              enabled: widget.enabled,
-              autovalidateMode: widget.autovalidateMode,
-              onChanged: widget.onChanged,
-              onReset: widget.onReset,
-              onSaved: widget.onSaved,
-              autoFlipListDirection: widget.autoFlipListDirection,
-              autoFlipMinHeight: widget.autoFlipMinHeight,
-              constraints: widget.constraints,
-              customTextField: widget.customTextField,
-              decorationBuilder: widget.decorationBuilder,
-              emptyBuilder: widget.emptyBuilder,
-              hideKeyboardOnDrag: widget.hideKeyboardOnDrag,
-              hideOnSelect: widget.hideOnSelect,
-              hideOnUnfocus: widget.hideOnUnfocus,
-              hideWithKeyboard: widget.hideWithKeyboard,
-              itemSeparatorBuilder: widget.itemSeparatorBuilder,
-              listBuilder: widget.listBuilder,
-              offset: widget.offset,
-              retainOnLoading: widget.retainOnLoading,
-              showOnFocus: widget.showOnFocus,
-              suggestionsController: widget.suggestionsController,
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  /// Get address details from place id
-  void _getDetailsByPlaceId(String placeId, BuildContext context) async {
-    try {
-      final GoogleMapsPlaces places = GoogleMapsPlaces(
-        apiKey: widget.apiKey,
-        httpClient: widget.placesHttpClient,
-        apiHeaders: widget.placesApiHeaders,
-        baseUrl: widget.placesBaseUrl,
-      );
-      final PlacesDetailsResponse response = await places.getDetailsByPlaceId(
-        placeId,
-        region: widget.region,
-        sessionToken: widget.sessionToken,
-        language: widget.language,
-        fields: widget.fields,
-      );
-
-      /// When get any error from the API, show the error in the console.
-      if (response.hasNoResults ||
-          response.isDenied ||
-          response.isInvalid ||
-          response.isNotFound ||
-          response.unknownError ||
-          response.isOverQueryLimit) {
-        logger.e(response.errorMessage);
-        if (widget.mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(response.errorMessage ??
-                  "Address not found, something went wrong!"),
-            ),
-          );
-        }
-        return;
-      }
-      widget.onGetDetailsByPlaceId?.call(response);
-    } catch (e) {
-      logger.e(e);
-    }
-  }
-}
-
-class Debouncer {
-  final Duration duration;
-  Timer? _timer;
-
-  Debouncer({required this.duration});
-
-  void run(VoidCallback action) {
-    _timer?.cancel();
-    _timer = Timer(duration, action);
-  }
-
-  void dispose() {
-    _timer?.cancel();
-    _timer = null;
   }
 }

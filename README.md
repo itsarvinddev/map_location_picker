@@ -1,76 +1,61 @@
 # map_location_picker:
 
 [![Pub Version](https://img.shields.io/pub/v/map_location_picker?color=blue&style=plastic)](https://pub.dev/packages/map_location_picker)
-[![GitHub Repo stars](https://img.shields.io/github/stars/mohesu/map_location_picker?color=gold&style=plastic)](https://github.com/mohesu/map_location_picker/stargazers)
-[![GitHub Repo forks](https://img.shields.io/github/forks/mohesu/map_location_picker?color=slateblue&style=plastic)](https://github.com/mohesu/map_location_picker/fork)
-[![GitHub Repo issues](https://img.shields.io/github/issues/mohesu/map_location_picker?color=coral&style=plastic)](https://github.com/mohesu/map_location_picker/issues)
-[![GitHub Repo contributors](https://img.shields.io/github/contributors/mohesu/map_location_picker?color=green&style=plastic)](https://github.com/mohesu/map_location_picker/graphs/contributors)
+[![GitHub Repo stars](https://img.shields.io/github/stars/itsarvinddev/map_location_picker?color=gold&style=plastic)](https://github.com/itsarvinddev/map_location_picker/stargazers)
+[![GitHub Repo forks](https://img.shields.io/github/forks/itsarvinddev/map_location_picker?color=slateblue&style=plastic)](https://github.com/itsarvinddev/map_location_picker/fork)
+[![GitHub Repo issues](https://img.shields.io/github/issues/itsarvinddev/map_location_picker?color=coral&style=plastic)](https://github.com/itsarvinddev/map_location_picker/issues)
+[![GitHub Repo contributors](https://img.shields.io/github/contributors/itsarvinddev/map_location_picker?color=green&style=plastic)](https://github.com/itsarvinddev/map_location_picker/graphs/contributors)
 
-# A simple library to pick a location on a map.
+## Modern Location Picker for Flutter with Enhanced UI & Customization
 
-Made by Arvind [@rvndsngwn](https://github.com/rvndsngwn):
+**Version 2.0 introduces a complete overhaul with:**
 
-- Compatibility with Geolocator
-- Use of Google map APIs
-- Added support for flutter web
-- All new customizations are done in the `MapLocationPicker` class
+**Check migration guide from 1.x to 2.x [map_location_picker/MIGRATION_GUIDE](https://github.com/itsarvinddev/map_location_picker/blob/master/MIGRATION_GUIDE.md)**
 
-|             | Android | iOS     | Web                              |
-|-------------|---------|---------|----------------------------------|
-| **Support** | SDK 20+ | iOS 11+ | Same as [Flutter's][web-support] |
+- 🍎 New Cupertino-style UI components
+- 🌗 Built-in dark/light theme support
+- 🧩 Modular configuration architecture
+- 🚀 Performance optimizations
+- 🗺️ Advanced map customization options
+- 🧭 Improved navigation and UI flow
 
-Location picker using the official [google_maps_flutter](https://pub.dev/packages/google_maps_flutter).
-
-I made This plugin because google
-deprecated [Place Picker](https://developers.google.com/places/android-sdk/placepicker).
+**_Check out the more screenshots [here](https://github.com/itsarvinddev/map_location_picker/assets)_**
 
 <table>
   <tr>
-    <td>Video </td>
-     <td>Decoded Address</td>
-     <td>Places autocomplete</td>
+    <td>Map Preview</td>
+    <td>Address Display</td>
+    <td>Picker Options</td>
   </tr>
   <tr>
-<td><img src="https://raw.githubusercontent.com/mohesu/map_location_picker/master/assets/GIF_4300.gif" width=270 height=480 alt=""></td>
-<td><img src="https://raw.githubusercontent.com/mohesu/map_location_picker/master/assets/IMG_2480.PNG" width=270 height=480 alt=""></td>
-<td><img src="https://raw.githubusercontent.com/mohesu/map_location_picker/master/assets/IMG_2482.PNG" width=270 height=480 alt=""></td>
-</tr>
+    <td><img src="https://raw.githubusercontent.com/itsarvinddev/map_location_picker/master/assets/video01.mp4" width=270 height=480 alt=""></td>
+    <td><img src="https://raw.githubusercontent.com/itsarvinddev/map_location_picker/master/assets/one31.png" width=270 height=480 alt=""></td>
+    <td><img src="https://raw.githubusercontent.com/itsarvinddev/map_location_picker/master/assets/one44.png" width=270 height=480 alt=""></td>
+  </tr>
 </table>
 
-## Setup
+## 🚀 Getting Started
 
-Pubspec changes:
+### Installation
 
-```
-      dependencies:
-        map_location_picker: ^1.2.7
-```
+Add to your `pubspec.yaml`:
 
-You can now add a `GoogleMap` widget to your widget tree.
-
-```dart
-import 'package:map_location_picker/map_location_picker.dart';
-
-MapLocationPicker
-(
-apiKey: "YOUR_API_KEY",
-onNext: (GeocodingResult? result) {
-...
-},
-);
+```yaml
+dependencies:
+  map_location_picker: ^2.0.0
 ```
 
-## Getting Started
+## Setup Guide
 
 - Get an API key at <https://cloud.google.com/maps-platform/>.
 
 - And don't forget to enable the following APIs in <https://console.cloud.google.com/google/maps-apis/>
 
-    - Maps SDK for Android
-    - Maps SDK for iOS
-    - Places API
-    - Geocoding API
-    - Maps JavaScript API
+  - Maps SDK for Android
+  - Maps SDK for iOS
+  - Places API
+  - Geocoding API
+  - Maps JavaScript API
 
 - And ensure to enable billing for the project.
 
@@ -148,25 +133,27 @@ import GoogleMaps
   }
 }
 ```
+
 ### Recommended: Restricting Api Keys to your Android or IOS bundle identifiers:
+
 <img width="503" alt="Screenshot 2025-01-06 at 21 04 43" src="https://github.com/user-attachments/assets/1a097012-1eb8-4c07-b2c8-010c460d654b" />
 
 You must then send the following in the headers:
 
-  ```
-    Map<String, String> headers = {};
-    if (Platform.isIOS || Platform.isMacOS) {
-      headers['X-Ios-Bundle-Identifier'] = 'Your Bundle Identifier';
-    }
-    if (Platform.isAndroid) {
-      headers['X-Android-Package'] = 'Your Bundle Identifier';
-      headers['X-Android-Cert'] = 'Your Sha-1';
-    }
-     MapLocationPicker(
-        geoCodingApiHeaders: headers,
-        ...
-     )
- ```
+```
+  Map<String, String> headers = {};
+  if (Platform.isIOS || Platform.isMacOS) {
+    headers['X-Ios-Bundle-Identifier'] = 'Your Bundle Identifier';
+  }
+  if (Platform.isAndroid) {
+    headers['X-Android-Package'] = 'Your Bundle Identifier';
+    headers['X-Android-Cert'] = 'Your Sha-1';
+  }
+   MapLocationPicker(
+      geoCodingApiHeaders: headers,
+      ...
+   )
+```
 
 ### Web View
 
@@ -178,11 +165,10 @@ started [here](https://developers.google.com/maps/documentation/javascript/get-a
 Modify the `<head>` tag of your `web/index.html` to load the Google Maps JavaScript API, like so:
 
 ```html
-
 <head>
-    <!-- // Other stuff -->
+  <!-- // Other stuff -->
 
-    <script src="https://maps.googleapis.com/maps/api/js?key=YOUR_API_KEY"></script>
+  <script src="https://maps.googleapis.com/maps/api/js?key=YOUR_API_KEY"></script>
 </head>
 ```
 
@@ -227,171 +213,337 @@ You can find code information
 at [Wikipedia: List of ISO 3166 country codes](https://en.wikipedia.org/wiki/List_of_ISO_3166_country_codes) or
 the [ISO Online Browsing Platform](https://www.iso.org/obp/ui/#search).
 
-The example below restricts Autocomplete Search to the United Arab Emirates and Nigeria
+### Basic Usage
 
 ```dart
-MapLocationPicker
-(
-apiKey: "YOUR_API_KEY",
-onNext: (GeocodingResult? result) {
-...
-},
+import 'package:map_location_picker/map_location_picker.dart';
+
+MapLocationPicker(
+  config: MapPickerConfig(
+    apiKey: "YOUR_API_KEY",
+    initialPosition: LatLng(37.7749, -122.4194),
+  ),
+  searchConfig: PlacesAutocompleteConfig(
+    apiKey: "YOUR_API_KEY",
+    searchHintText: "Search locations...",
+  ),
 );
 ```
 
-See the `example` directory for a complete sample app.
+## 🆕 What's New in 2.0.0
 
-### Parameters of the MapLocationPicker
+### 1. Cupertino-Style UI
+
+The entire UI has been redesigned with Cupertino components for a native iOS feel:
 
 ```dart
-/// Padding around the map
-final EdgeInsets padding;
-
-/// Compass for the map (default: true)
-final bool compassEnabled;
-
-/// Lite mode for the map (default: false)
-final bool liteModeEnabled;
-
-/// API key for the map & places
-final String apiKey;
-
-/// GPS accuracy for the map
-final LocationAccuracy desiredAccuracy;
-
-/// GeoCoding base url
-final String? geoCodingBaseUrl;
-
-/// GeoCoding http client
-final Client? geoCodingHttpClient;
-
-/// GeoCoding api headers
-final Map<String, String>? geoCodingApiHeaders;
-
-/// GeoCoding location type
-final List<String> locationType;
-
-/// GeoCoding result type
-final List<String> resultType;
-
-/// Map minimum zoom level & maximum zoom level
-final MinMaxZoomPreference minMaxZoomPreference;
-
-/// Top card margin
-final EdgeInsetsGeometry topCardMargin;
-
-/// Top card color
-final Color? topCardColor;
-
-/// Top card shape
-final ShapeBorder topCardShape;
-
-/// Top card text field border radius
-final BorderRadius? borderRadius;
-
-/// Top card text field hint text
-final String searchHintText;
-
-/// Bottom card shape
-final ShapeBorder bottomCardShape;
-
-/// Bottom card margin
-final EdgeInsetsGeometry bottomCardMargin;
-
-/// Bottom card icon
-final Icon bottomCardIcon;
-
-/// Bottom card tooltip
-final String bottomCardTooltip;
-
-/// Bottom card color
-final Color? bottomCardColor;
-
-/// On Suggestion Selected callback
-final Function(PlacesDetailsResponse?)? onSuggestionSelected;
-
-/// On Next Page callback
-final Function(GeocodingResult?) onNext;
-
-/// Show back button (default: true)
-final bool showBackButton;
-
-/// Popup route on next press (default: false)
-final bool canPopOnNextButtonTaped;
-
-/// Back button replacement when [showBackButton] is false and [backButton] is not null
-final Widget? backButton;
-
-/// Show more suggestions
-final bool showMoreOptions;
-
-/// Dialog title
-final String dialogTitle;
-
-/// httpClient is used to make network requests.
-final Client? placesHttpClient;
-
-/// apiHeader is used to add headers to the request.
-final Map<String, String>? placesApiHeaders;
-
-/// baseUrl is used to build the url for the request.
-final String? placesBaseUrl;
-
-/// Session token for Google Places API
-final String? sessionToken;
-
-/// Offset for pagination of results
-/// offset: int,
-final num? offset;
-
-/// Origin location for calculating distance from results
-/// origin: Location(lat: -33.852, lng: 151.211),
-final Location? origin;
-
-/// Location bounds for restricting results to a radius around a location
-/// location: Location(lat: -33.867, lng: 151.195)
-final Location? location;
-
-/// Radius for restricting results to a radius around a location
-/// radius: Radius in meters
-final num? radius;
-
-/// Language code for Places API results
-/// language: 'en',
-final String? language;
-
-/// Types for restricting results to a set of place types
-final List<String> types;
-
-/// Components set results to be restricted to a specific area
-/// components: [Component(Component.country, "us")]
-final List<Component> components;
-
-/// Bounds for restricting results to a set of bounds
-final bool strictbounds;
-
-/// Region for restricting results to a set of regions
-/// region: "us"
-final String? region;
-
-/// fields
-final List<String> fields;
+PlacesAutocomplete(
+  config: PlacesAutocompleteConfig(
+    // Uses CupertinoTypeAheadField internally
+    searchHintText: "Search locations...",
+  ),
+);
 ```
 
-## 💰You can help me by Donating
+### 2. Theme Support
 
-[![BuyMeACoffee](https://img.shields.io/badge/Buy%20Me%20a%20Coffee-ffdd00?style=for-the-badge&logo=buy-me-a-coffee&logoColor=black)](https://buymeacoffee.com/rvndsngwn) [![PayPal](https://img.shields.io/badge/PayPal-00457C?style=for-the-badge&logo=paypal&logoColor=white)](https://paypal.me/rvndsngwn?country.x=IN&locale.x=en_GB) [![Ko-Fi](https://img.shields.io/badge/Ko--fi-F16061?style=for-the-badge&logo=ko-fi&logoColor=white)](https://ko-fi.com/rvndsngwn)
+Built-in support for light/dark themes with automatic switching:
 
-## 👨🏻‍💻Contribute to the project
+```dart
+final _themeMode = ValueNotifier<ThemeMode>(ThemeMode.light);
 
-All contributions are welcome.
+MapLocationPicker(
+  config: MapPickerConfig(
+    // Automatically adapts to current theme
+  ),
+);
+```
 
-[![GitHub](https://img.shields.io/badge/GitHub-0f0f0f?style=for-the-badge&logo=github&logoColor=white)](https://github.com/mohesu/map_location_picker)
+### 3. Enhanced Configuration
 
-## 👨🏻‍💻Contributors
+More granular control with expanded configuration objects:
 
-<a href="https://github.com/mohesu/map_location_picker/graphs/contributors">
-  <img src="https://contrib.rocks/image?repo=mohesu/map_location_picker" />
+```dart
+MapPickerConfig(
+  mapTypeButton: CustomMapTypeButton(), // Fully customizable buttons
+  locationButton: CustomLocationButton(),
+  bottomCardBuilder: (ctx, result, address, isLoading, onNext) {
+    return CustomBottomCard(address: address);
+  },
+);
+```
+
+### 4. Improved Map Previews
+
+New static map previews for selected locations:
+
+```dart
+Image.network(
+  googleStaticMapWithMarker(
+    _pickedLocation!.latitude,
+    _pickedLocation!.longitude,
+    18,
+    apiKey: YOUR_API_KEY,
+  ),
+);
+```
+
+### 5. Advanced Marker Support
+
+Custom markers with asset-based icons:
+
+```dart
+void _createMarkerIcon() async {
+  _customMarkerIcon = await BitmapDescriptor.asset(
+    const ImageConfiguration(size: Size(48, 48)),
+    'assets/marker.webp',
+  );
+}
+
+MapPickerConfig(
+  mainMarkerIcon: _customMarkerIcon,
+);
+```
+
+## 🌟 Key Features
+
+### Cupertino-Styled Search
+
+```dart
+PlacesAutocomplete(
+  config: PlacesAutocompleteConfig(
+    searchHintText: "Search locations...",
+    itemBuilder: (context, prediction) => CupertinoListTile(
+      title: Text(prediction.description ?? ""),
+      subtitle: Text(prediction.secondaryText ?? ""),
+    ),
+  ),
+);
+```
+
+### Theme-Aware Components
+
+```dart
+// Automatically adapts to light/dark themes
+MapLocationPicker(
+  config: MapPickerConfig(
+    floatingControlsColor: Theme.of(context).colorScheme.primary,
+    floatingControlsIconColor: Theme.of(context).colorScheme.onPrimary,
+  ),
+);
+```
+
+### Customizable Bottom Sheets
+
+```dart
+MapPickerConfig(
+  bottomCardBuilder: (context, result, address, isLoading, onNext) {
+    return CupertinoActionSheet(
+      title: const Text("Selected Location"),
+      actions: [
+        CupertinoActionSheetAction(
+          onPressed: onNext,
+          child: Text(address),
+        ),
+      ],
+    );
+  },
+);
+```
+
+### Advanced Marker Configuration
+
+```dart
+MapPickerConfig(
+  additionalMarkers: const {
+    "landmark1": LatLng(37.422, -122.084),
+    "landmark2": LatLng(37.426, -122.083),
+  },
+  customMarkerIcons: {
+    "landmark1": BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueYellow),
+    "landmark2": BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueBlue),
+  },
+  customInfoWindows: const {
+    "landmark1": InfoWindow(title: "Golden Gate Bridge"),
+  },
+);
+```
+
+## 🛠 Setup Guide
+
+### API Keys Setup
+
+1. Get an API key at [Google Cloud Console](https://cloud.google.com/maps-platform/)
+2. Enable required APIs:
+   - Maps SDK for Android/iOS
+   - Places API
+   - Geocoding API
+   - Maps JavaScript API (for web)
+
+### Android Setup
+
+Add to `AndroidManifest.xml`:
+
+```xml
+<meta-data
+  android:name="com.google.android.geo.API_KEY"
+  android:value="YOUR_ANDROID_API_KEY"/>
+```
+
+### iOS Setup
+
+Add to `AppDelegate.swift`:
+
+```swift
+GMSServices.provideAPIKey("YOUR_IOS_API_KEY")
+```
+
+### Web Setup
+
+Add to `web/index.html`:
+
+```html
+<script src="https://maps.googleapis.com/maps/api/js?key=YOUR_WEB_API_KEY"></script>
+```
+
+## 💻 Example App
+
+```dart
+import 'package:example/key.dart';
+import 'package:flutter/material.dart';
+import 'package:map_location_picker/map_location_picker.dart';
+
+void main() => runApp(const MyApp());
+
+final _themeMode = ValueNotifier<ThemeMode>(ThemeMode.light);
+
+class MyApp extends StatelessWidget {
+  const MyApp({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return ValueListenableBuilder<ThemeMode>(
+      valueListenable: _themeMode,
+      builder: (context, themeMode, child) {
+        return MaterialApp(
+          theme: ThemeData.light(),
+          darkTheme: ThemeData.dark(),
+          themeMode: themeMode,
+          home: const LocationPickerScreen(),
+        );
+      },
+    );
+  }
+}
+
+class LocationPickerScreen extends StatefulWidget {
+  const LocationPickerScreen({super.key});
+
+  @override
+  State<LocationPickerScreen> createState() => _LocationPickerScreenState();
+}
+
+class _LocationPickerScreenState extends State<LocationPickerScreen> {
+  LatLng? _pickedLocation;
+  String _formattedAddress = "No location selected";
+  BitmapDescriptor? _customMarkerIcon;
+
+  @override
+  void initState() {
+    super.initState();
+    _createMarkerIcon();
+  }
+
+  void _createMarkerIcon() async {
+    _customMarkerIcon = await BitmapDescriptor.asset(
+      const ImageConfiguration(size: Size(48, 48)),
+      'assets/marker.webp',
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text('Location Picker')),
+      body: SingleChildScrollView(
+        child: Column(
+          children: [
+            // Map preview
+            Container(
+              height: 200,
+              child: _pickedLocation == null
+                ? Center(child: Text("Select a location"))
+                : Image.network(
+                    googleStaticMapWithMarker(
+                      _pickedLocation!.latitude,
+                      _pickedLocation!.longitude,
+                      16,
+                      apiKey: YOUR_API_KEY,
+                    ),
+                    fit: BoxFit.cover,
+                  ),
+            ),
+
+            // Address display
+            ListTile(
+              leading: Icon(Icons.location_on),
+              title: Text(_formattedAddress),
+            ),
+
+            // Picker options
+            _buildOptionCard(
+              icon: Icons.map,
+              title: "Standard Picker",
+              onTap: () => _openPicker(standardConfig),
+            ),
+            // More options...
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _openPicker(MapPickerConfig config) async {
+    await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => MapLocationPicker(
+          config: config.copyWith(
+            initialPosition: _pickedLocation,
+            onNext: (result) {
+              if (result != null) {
+                setState(() {
+                  _pickedLocation = LatLng(
+                    result.geometry.location.lat,
+                    result.geometry.location.lng,
+                  );
+                  _formattedAddress = result.formattedAddress ?? "";
+                });
+              }
+            },
+          ),
+          searchConfig: PlacesAutocompleteConfig(
+            apiKey: YOUR_API_KEY,
+          ),
+        ),
+      ),
+    );
+  }
+}
+```
+
+## 💰 Support the Project
+
+[![BuyMeACoffee](https://img.shields.io/badge/Buy%20Me%20a%20Coffee-ffdd00?style=for-the-badge&logo=buy-me-a-coffee&logoColor=black)](https://buymeacoffee.com/rvndsngwn)
+[![PayPal](https://img.shields.io/badge/PayPal-00457C?style=for-the-badge&logo=paypal&logoColor=white)](https://paypal.me/rvndsngwn)
+[![GitHub Sponsors](https://img.shields.io/badge/GitHub%20Sponsors-ea4aaa?style=for-the-badge&logo=github&logoColor=white)](https://github.com/sponsors/itsarvinddev)
+
+## 👨‍💻 Contribute
+
+We welcome contributions! Please see our [contribution guidelines](https://github.com/itsarvinddev/map_location_picker/blob/master/CONTRIBUTING.md).
+
+## 👥 Contributors
+
+<a href="https://github.com/itsarvinddev/map_location_picker/graphs/contributors">
+  <img src="https://contrib.rocks/image?repo=itsarvinddev/map_location_picker" />
 </a>
-
-Made with [contrib.rocks](https://contrib.rocks).

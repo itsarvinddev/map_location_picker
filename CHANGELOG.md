@@ -1,3 +1,18 @@
+## 2.0.0
+
+- Added `defaultAddressText` parameter to customize the default address text shown when no location is selected.
+- Fixed FloatingActionButton hero tag conflict ([#62](https://github.com/itsarvinddev/map_location_picker/issues/62)), thanks to [Anthony1701](https://github.com/Anthony1701) for [PR #63](https://github.com/itsarvinddev/map_location_picker/pull/63).
+- Confirmed compatibility with latest flutter_typeahead (5.2.0) ([#51](https://github.com/itsarvinddev/map_location_picker/issues/51)).
+- Fixed TextEditingController disposal issue to prevent double disposal errors ([#56](https://github.com/itsarvinddev/map_location_picker/issues/56)).
+- Improved back button placement with prominent top positioning and title ([#47](https://github.com/itsarvinddev/map_location_picker/issues/47)).
+- Added padding to autocomplete list items for better visual spacing and readability ([#39](https://github.com/itsarvinddev/map_location_picker/issues/39)).
+- Enhanced documentation and examples for custom map styles feature ([#58](https://github.com/itsarvinddev/map_location_picker/issues/58)).
+- Added `onMapCreated` callback to provide access to GoogleMapController for manual customization ([#61](https://github.com/itsarvinddev/map_location_picker/issues/61)).
+- Enhanced custom markers support with icons, info windows, and tap handlers ([#59](https://github.com/itsarvinddev/map_location_picker/issues/59)).
+- Improved API key restrictions documentation with security best practices ([#60](https://github.com/itsarvinddev/map_location_picker/issues/60)).
+- Enhanced map type functionality with change callback and better documentation.
+- Fixed web autocomplete focus issues in Safari and Firefox browsers ([#57](https://github.com/itsarvinddev/map_location_picker/issues/57)).
+
 ## 1.3.4
 
 - dependencies updated.
