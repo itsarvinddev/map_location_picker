@@ -1,3 +1,8 @@
+## 2.0.0+1
+
+- dependencies updated.
+- form_builder_extra_fields package removed from dependencies.
+
 ## 2.0.0
 
 - Added `defaultAddressText` parameter to customize the default address text shown when no location is selected.
