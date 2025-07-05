@@ -27,6 +27,12 @@ class PlacesAutocomplete extends StatefulWidget {
   /// Top card text field hint text
   final String searchHintText;
 
+  /// Top card text field hint style (optional)
+  final TextStyle? searchHintStyle;
+
+  /// Top card text field label style (optional)
+  final TextStyle? labelStyle;
+
   /// Show back button (default: true)
   final bool hideBackButton;
 
@@ -275,6 +281,8 @@ class PlacesAutocomplete extends StatefulWidget {
     ),
     this.borderRadius = const BorderRadius.all(Radius.circular(12)),
     this.searchHintText = "Start typing to search",
+    this.searchHintStyle,
+    this.labelStyle,
     this.hideBackButton = false,
     this.backButton,
     this.placesHttpClient,
@@ -401,16 +409,17 @@ class _PlacesAutocompleteState extends State<PlacesAutocomplete> {
             child: FormBuilderTypeAhead<Prediction>(
               decoration: widget.decoration ??
                   InputDecoration(
-                    hintText: widget.searchHintText,
+                    hintText: searchHintText,
+                    hintStyle: searchHintStyle,
                     border: InputBorder.none,
                     filled: true,
-                    suffixIcon:
-                        (widget.showClearButton && widget.initialValue == null)
-                            ? IconButton(
-                                icon: const Icon(Icons.close),
-                                onPressed: () => _controller.clear(),
-                              )
-                            : widget.suffixIcon,
+                    suffixIcon: (showClearButton && initialValue == null)
+                        ? IconButton(
+                            icon: const Icon(Icons.close),
+                            onPressed: () => textController.value.clear(),
+                          )
+                        : suffixIcon,
+                    labelStyle: labelStyle,
                   ),
               name: 'Search',
               controller: widget.initialValue == null ? _controller : null,
