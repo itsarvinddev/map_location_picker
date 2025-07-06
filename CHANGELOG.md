@@ -1,3 +1,7 @@
+## 2.0.0+2
+
+- custom logger added.
+
 ## 2.0.0+1
 
 - dependencies updated.

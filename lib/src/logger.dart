@@ -1,15 +1,17 @@
 import 'package:flutter/foundation.dart';
 
+final mapLogger = MyLogger('Map Location Picker');
+
 class MyLogger {
   final String tag;
 
   MyLogger(this.tag);
 
-  void _log(String level, String message, {Object? error, StackTrace? stackTrace}) {
-    final timestamp = DateTime.now().toIso8601String();
+  void _log(String level, Object? message,
+      {Object? error, StackTrace? stackTrace}) {
     final buffer = StringBuffer();
 
-    buffer.write("[$timestamp][$tag][$level]: $message");
+    buffer.write("[$tag][$level]: $message");
 
     if (error != null) {
       buffer.write(" | Error: $error");
@@ -23,21 +25,21 @@ class MyLogger {
     }
   }
 
-  void t(String message, {Object? error, StackTrace? stackTrace}) =>
+  void t(Object? message, {Object? error, StackTrace? stackTrace}) =>
       _log('TRACE', message, error: error, stackTrace: stackTrace);
 
-  void d(String message, {Object? error, StackTrace? stackTrace}) =>
+  void d(Object? message, {Object? error, StackTrace? stackTrace}) =>
       _log('DEBUG', message, error: error, stackTrace: stackTrace);
 
-  void i(String message, {Object? error, StackTrace? stackTrace}) =>
+  void i(Object? message, {Object? error, StackTrace? stackTrace}) =>
       _log('INFO', message, error: error, stackTrace: stackTrace);
 
-  void w(String message, {Object? error, StackTrace? stackTrace}) =>
+  void w(Object? message, {Object? error, StackTrace? stackTrace}) =>
       _log('WARN', message, error: error, stackTrace: stackTrace);
 
-  void e(String message, {Object? error, StackTrace? stackTrace}) =>
+  void e(Object? message, {Object? error, StackTrace? stackTrace}) =>
       _log('ERROR', message, error: error, stackTrace: stackTrace);
 
-  void f(String message, {Object? error, StackTrace? stackTrace}) =>
+  void f(Object? message, {Object? error, StackTrace? stackTrace}) =>
       _log('FATAL', message, error: error, stackTrace: stackTrace);
 }
