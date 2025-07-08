@@ -137,7 +137,7 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
                   title: "Standard Map Picker",
                   description: "Open map with default settings",
                   onTap: () => _openLocationPicker(
-                    const MapPickerConfig(
+                    const MapLocationPickerConfig(
                       apiKey: YOUR_API_KEY,
                       popOnNext: true,
                     ),
@@ -152,7 +152,7 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
                   onTap: () async {
                     _themeMode.value = ThemeMode.dark;
                     await _openLocationPicker(
-                      MapPickerConfig(
+                      MapLocationPickerConfig(
                         apiKey: YOUR_API_KEY,
                         popOnNext: true,
                         mapStyle: _darkMapStyle,
@@ -168,7 +168,7 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
                   title: "Satellite View",
                   description: "Open with satellite imagery",
                   onTap: () => _openLocationPicker(
-                    const MapPickerConfig(
+                    const MapLocationPickerConfig(
                       apiKey: YOUR_API_KEY,
                       popOnNext: true,
                       initialMapType: MapType.satellite,
@@ -182,7 +182,7 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
                   title: "Custom Markers",
                   description: "Add custom markers to the map",
                   onTap: () => _openLocationPicker(
-                    MapPickerConfig(
+                    MapLocationPickerConfig(
                       apiKey: YOUR_API_KEY,
                       popOnNext: true,
                       mainMarkerIcon: _customMarkerIcon,
@@ -254,7 +254,7 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
     );
   }
 
-  Future<void> _openLocationPicker(MapPickerConfig config) async {
+  Future<void> _openLocationPicker(MapLocationPickerConfig config) async {
     await Navigator.push(
       context,
       MaterialPageRoute(
@@ -274,7 +274,7 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
               }
             },
           ),
-          searchConfig: const PlacesAutocompleteConfig(
+          searchConfig: const SearchConfig(
             apiKey: YOUR_API_KEY,
             searchHintText: "Search for a location",
           ),

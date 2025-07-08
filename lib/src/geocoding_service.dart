@@ -3,7 +3,7 @@ import 'package:google_maps_webapi/geocoding.dart';
 import 'package:http/http.dart';
 
 /// The geocoding service to use for the map location picker.
-class GeoCodingService {
+class GeoCodingConfig {
   /// The API key for the geocoding service.
   final String apiKey;
 
@@ -17,7 +17,7 @@ class GeoCodingService {
   final List<String> locationType;
   final List<String> resultType;
 
-  GeoCodingService({
+  GeoCodingConfig({
     required this.apiKey,
     this.httpClient,
     this.apiHeaders,

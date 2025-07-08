@@ -21,19 +21,19 @@ const _radius = 16.0;
 /// The main widget for the map location picker.
 class MapLocationPicker extends HookWidget {
   /// The configuration for the map location picker.
-  final MapPickerConfig config;
+  final MapLocationPickerConfig config;
 
   /// The configuration for the search autocomplete.
-  final PlacesAutocompleteConfig searchConfig;
+  final SearchConfig? searchConfig;
 
   /// The geocoding service to use for the map location picker.
-  final GeoCodingService? geoCodingService;
+  final GeoCodingConfig? geoCodingConfig;
 
   const MapLocationPicker({
     super.key,
     required this.config,
-    required this.searchConfig,
-    this.geoCodingService,
+    this.searchConfig,
+    this.geoCodingConfig,
   });
 
   @override
@@ -49,24 +49,28 @@ class MapLocationPicker extends HookWidget {
     final geoCodingResults = useState<List<GeocodingResult>>([]);
     final mapType = useState(config.initialMapType);
 
-    final effectiveGeoCodingService = useMemoized(() =>
-        geoCodingService ??
-        GeoCodingService(
-          apiKey: config.apiKey,
-          httpClient: config.geoCodingHttpClient,
-          apiHeaders: config.geoCodingApiHeaders,
-          baseUrl: config.geoCodingBaseUrl,
-        ));
+    final effectiveGeoCodingService = useMemoized(
+      () =>
+          geoCodingConfig ??
+          GeoCodingConfig(
+            apiKey: config.apiKey,
+            httpClient: config.baseClient,
+            apiHeaders: config.baseApiHeaders,
+            baseUrl: config.baseUrl,
+          ),
+    );
 
     /// Initialize map
     useEffect(() {
-      markers.value = _createMarkers(position.value);
-      if (config.initialPosition != const LatLng(0, 0)) {
-        _getAddressForPosition(position.value, effectiveGeoCodingService,
-            address, isLoading, geoCodingResult, geoCodingResults);
-      }
+      Future.microtask(() {
+        markers.value = _createMarkers(position.value);
+        if (config.initialPosition != const LatLng(0, 0)) {
+          _getAddressForPosition(position.value, effectiveGeoCodingService,
+              address, isLoading, geoCodingResult, geoCodingResults);
+        }
+      });
       return null;
-    }, []);
+    }, const []);
 
     final theme = Theme.of(context);
     final isKeyboardVisible = MediaQuery.of(context).viewInsets.bottom > 0;
@@ -75,7 +79,13 @@ class MapLocationPicker extends HookWidget {
 
     Widget buildSearchView() {
       Widget searchBar = PlacesAutocomplete(
-        config: searchConfig,
+        config: searchConfig ??
+            SearchConfig(
+              apiKey: config.apiKey,
+              baseClient: config.baseClient,
+              baseApiHeaders: config.baseApiHeaders,
+              baseBaseUrl: config.baseUrl,
+            ),
         onGetDetails: (details) => _handlePlaceDetails(
           details,
           context,
@@ -379,7 +389,7 @@ class MapLocationPicker extends HookWidget {
     String address,
     bool isLoading,
     List<GeocodingResult> results,
-    MapPickerConfig config,
+    MapLocationPickerConfig config,
     VoidCallback onNext,
   ) {
     final theme = Theme.of(context);
@@ -437,7 +447,7 @@ class MapLocationPicker extends HookWidget {
   void _showAddressOptions(
     BuildContext context,
     List<GeocodingResult> results,
-    MapPickerConfig config,
+    MapLocationPickerConfig config,
   ) {
     final theme = Theme.of(context);
     showModalBottomSheet(
@@ -486,7 +496,7 @@ class MapLocationPicker extends HookWidget {
   Future<void> _getCurrentLocation(
     ValueNotifier<LatLng> position,
     Completer<GoogleMapController> mapControllerCompleter,
-    GeoCodingService geoCodingService,
+    GeoCodingConfig geoCodingService,
     ValueNotifier<String> address,
     ValueNotifier<bool> isLoading,
     ValueNotifier<GeocodingResult?> geoCodingResult,
@@ -548,7 +558,7 @@ class MapLocationPicker extends HookWidget {
     LatLng latLng,
     Completer<GoogleMapController> mapControllerCompleter,
     ValueNotifier<LatLng> position,
-    GeoCodingService geoCodingService,
+    GeoCodingConfig geoCodingService,
     ValueNotifier<String> address,
     ValueNotifier<bool> isLoading,
     ValueNotifier<GeocodingResult?> geoCodingResult,
@@ -579,7 +589,7 @@ class MapLocationPicker extends HookWidget {
 
   Future<void> _getAddressForPosition(
     LatLng position,
-    GeoCodingService geoCodingService,
+    GeoCodingConfig geoCodingService,
     ValueNotifier<String> address,
     ValueNotifier<bool> isLoading,
     ValueNotifier<GeocodingResult?> geoCodingResult,
@@ -613,7 +623,7 @@ class MapLocationPicker extends HookWidget {
     ValueNotifier<LatLng> position,
     Completer<GoogleMapController> mapControllerCompleter,
     ValueNotifier<String> address,
-    GeoCodingService geoCodingService,
+    GeoCodingConfig geoCodingService,
     ValueNotifier<bool> isLoading,
     ValueNotifier<GeocodingResult?> geoCodingResult,
     ValueNotifier<Set<Marker>> markers,
@@ -666,12 +676,12 @@ class MapLocationPicker extends HookWidget {
   }
 }
 
-class MapPickerConfig {
+class MapLocationPickerConfig {
   // Core configuration
   final String apiKey;
-  final Client? geoCodingHttpClient;
-  final Map<String, String>? geoCodingApiHeaders;
-  final String? geoCodingBaseUrl;
+  final Client? baseClient;
+  final Map<String, String>? baseApiHeaders;
+  final String? baseUrl;
   final LatLng initialPosition;
   final double initialZoom;
   final MapType initialMapType;
@@ -759,12 +769,12 @@ class MapPickerConfig {
   final Set<GroundOverlay> groundOverlays;
   final Set<Heatmap> heatmaps;
 
-  const MapPickerConfig({
+  const MapLocationPickerConfig({
     required this.apiKey,
     this.bottomCardBuilder,
-    this.geoCodingHttpClient,
-    this.geoCodingApiHeaders,
-    this.geoCodingBaseUrl,
+    this.baseClient,
+    this.baseApiHeaders,
+    this.baseUrl,
     this.initialPosition = const LatLng(28.8993468, 76.6250249),
     this.initialZoom = 14.0,
     this.initialMapType = MapType.normal,
@@ -830,7 +840,7 @@ class MapPickerConfig {
     this.heatmaps = const <Heatmap>{},
   });
 
-  MapPickerConfig copyWith({
+  MapLocationPickerConfig copyWith({
     // Core configuration
     String? apiKey,
     Client? geoCodingHttpClient,
@@ -942,11 +952,11 @@ class MapPickerConfig {
     Set<GroundOverlay>? groundOverlays,
     Set<Heatmap>? heatmaps,
   }) {
-    return MapPickerConfig(
+    return MapLocationPickerConfig(
       apiKey: apiKey ?? this.apiKey,
-      geoCodingHttpClient: geoCodingHttpClient ?? this.geoCodingHttpClient,
-      geoCodingApiHeaders: geoCodingApiHeaders ?? this.geoCodingApiHeaders,
-      geoCodingBaseUrl: geoCodingBaseUrl ?? this.geoCodingBaseUrl,
+      baseClient: geoCodingHttpClient ?? baseClient,
+      baseApiHeaders: geoCodingApiHeaders ?? baseApiHeaders,
+      baseUrl: geoCodingBaseUrl ?? baseUrl,
       initialPosition: initialPosition ?? this.initialPosition,
       initialZoom: initialZoom ?? this.initialZoom,
       initialMapType: initialMapType ?? this.initialMapType,

@@ -1,3 +1,8 @@
+## 2.0.1
+
+- autocomplete configurations to improve clarity and consistency.
+- Renamed MapPickerConfig to MapLocationPickerConfig and PlacesAutocompleteConfig to SearchConfig, updating related references throughout the codebase. This enhances the structure and readability of the location picking functionality.
+
 ## 2.0.0+2
 
 - custom logger added.

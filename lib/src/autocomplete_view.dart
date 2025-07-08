@@ -12,7 +12,7 @@ import 'logger.dart';
 /// The autocomplete view for the map location picker.
 class PlacesAutocomplete extends HookWidget {
   /// The configuration for the autocomplete view.
-  final PlacesAutocompleteConfig config;
+  final SearchConfig config;
 
   /// The initial value for the autocomplete view.
   final Prediction? initialValue;
@@ -41,9 +41,9 @@ class PlacesAutocomplete extends HookWidget {
 
     final service = useMemoized(
       () => AutoCompleteService(
-        httpClient: config.placesHttpClient,
-        apiHeaders: config.placesApiHeaders,
-        baseUrl: config.placesBaseUrl,
+        httpClient: config.baseClient,
+        apiHeaders: config.baseApiHeaders,
+        baseUrl: config.baseBaseUrl,
       ),
     );
 
@@ -162,17 +162,17 @@ class PlacesAutocomplete extends HookWidget {
     try {
       final places = GoogleMapsPlaces(
         apiKey: config.apiKey,
-        httpClient: config.placesHttpClient,
-        apiHeaders: config.placesApiHeaders,
-        baseUrl: config.placesBaseUrl,
+        httpClient: config.baseClient,
+        apiHeaders: config.baseApiHeaders,
+        baseUrl: config.baseBaseUrl,
       );
 
       final response = await places.getDetailsByPlaceId(
         placeId,
-        region: config.placesRegion,
-        sessionToken: config.placesSessionToken,
-        language: config.placesLanguage,
-        fields: config.placesFields,
+        region: config.baseRegion,
+        sessionToken: config.baseSessionToken,
+        language: config.baseLanguage,
+        fields: config.baseFields,
       );
 
       if (_isErrorResponse(response)) {
@@ -203,15 +203,15 @@ class PlacesAutocomplete extends HookWidget {
   }
 }
 
-class PlacesAutocompleteConfig<Prediction> {
+class SearchConfig<Prediction> {
   final String apiKey;
-  final Client? placesHttpClient;
-  final String? placesRegion;
-  final String? placesSessionToken;
-  final String? placesLanguage;
-  final List<String> placesFields;
-  final Map<String, String>? placesApiHeaders;
-  final String? placesBaseUrl;
+  final Client? baseClient;
+  final String? baseRegion;
+  final String? baseSessionToken;
+  final String? baseLanguage;
+  final List<String> baseFields;
+  final Map<String, String>? baseApiHeaders;
+  final String? baseBaseUrl;
   final String? suggestionsLanguage;
   final String? suggestionsRegion;
   final List<Component> suggestionsComponents;
@@ -256,15 +256,15 @@ class PlacesAutocompleteConfig<Prediction> {
   final FocusNode? focusNode;
   final bool hideKeyboardOnDrag;
 
-  const PlacesAutocompleteConfig({
-    required this.apiKey,
-    this.placesHttpClient,
-    this.placesRegion,
-    this.placesSessionToken,
-    this.placesLanguage,
-    this.placesFields = const [],
-    this.placesApiHeaders,
-    this.placesBaseUrl,
+  const SearchConfig({
+    this.apiKey = "",
+    this.baseClient,
+    this.baseRegion,
+    this.baseSessionToken,
+    this.baseLanguage,
+    this.baseFields = const [],
+    this.baseApiHeaders,
+    this.baseBaseUrl,
     this.suggestionsLanguage,
     this.suggestionsRegion,
     this.suggestionsComponents = const [],
@@ -309,7 +309,7 @@ class PlacesAutocompleteConfig<Prediction> {
     this.hideKeyboardOnDrag = true,
   });
 
-  PlacesAutocompleteConfig copyWith({
+  SearchConfig copyWith({
     String? apiKey,
     Client? placesHttpClient,
     String? placesRegion,
@@ -361,15 +361,15 @@ class PlacesAutocompleteConfig<Prediction> {
     FocusNode? focusNode,
     bool? hideKeyboardOnDrag,
   }) {
-    return PlacesAutocompleteConfig(
+    return SearchConfig(
       apiKey: apiKey ?? this.apiKey,
-      placesHttpClient: placesHttpClient ?? this.placesHttpClient,
-      placesRegion: placesRegion ?? this.placesRegion,
-      placesSessionToken: placesSessionToken ?? this.placesSessionToken,
-      placesLanguage: placesLanguage ?? this.placesLanguage,
-      placesFields: placesFields ?? this.placesFields,
-      placesApiHeaders: placesApiHeaders ?? this.placesApiHeaders,
-      placesBaseUrl: placesBaseUrl ?? this.placesBaseUrl,
+      baseClient: placesHttpClient ?? this.baseClient,
+      baseRegion: placesRegion ?? this.baseRegion,
+      baseSessionToken: placesSessionToken ?? this.baseSessionToken,
+      baseLanguage: placesLanguage ?? this.baseLanguage,
+      baseFields: placesFields ?? this.baseFields,
+      baseApiHeaders: placesApiHeaders ?? this.baseApiHeaders,
+      baseBaseUrl: placesBaseUrl ?? this.baseBaseUrl,
       suggestionsLanguage: suggestionsLanguage ?? this.suggestionsLanguage,
       suggestionsRegion: suggestionsRegion ?? this.suggestionsRegion,
       suggestionsComponents:
