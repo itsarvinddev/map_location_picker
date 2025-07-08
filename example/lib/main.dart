@@ -139,7 +139,6 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
                   onTap: () => _openLocationPicker(
                     const MapLocationPickerConfig(
                       apiKey: YOUR_API_KEY,
-                      popOnNext: true,
                     ),
                   ),
                 ),
@@ -154,7 +153,6 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
                     await _openLocationPicker(
                       MapLocationPickerConfig(
                         apiKey: YOUR_API_KEY,
-                        popOnNext: true,
                         mapStyle: _darkMapStyle,
                       ),
                     );
@@ -170,7 +168,6 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
                   onTap: () => _openLocationPicker(
                     const MapLocationPickerConfig(
                       apiKey: YOUR_API_KEY,
-                      popOnNext: true,
                       initialMapType: MapType.satellite,
                     ),
                   ),
@@ -184,7 +181,6 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
                   onTap: () => _openLocationPicker(
                     MapLocationPickerConfig(
                       apiKey: YOUR_API_KEY,
-                      popOnNext: true,
                       mainMarkerIcon: _customMarkerIcon,
                       additionalMarkers: const {
                         "landmark1": LatLng(37.422, -122.084),
@@ -271,6 +267,9 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
                   _formattedAddress =
                       result.formattedAddress ?? "Address not available";
                 });
+              }
+              if (context.mounted) {
+                Navigator.pop(context, result);
               }
             },
           ),

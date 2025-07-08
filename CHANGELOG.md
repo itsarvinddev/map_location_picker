@@ -1,3 +1,12 @@
+## 2.0.2
+
+- searchBarBuilder added to customize the search bar.
+- bottomCardTitle added to customize the bottom card title.
+- hideBottomCardOnKeyboard added to hide the bottom card when the keyboard is visible.
+- hideSearchBar added to hide the search bar.
+- hideBottomCard added to hide the bottom card.
+- popOnNext added to pop the next button.
+
 ## 2.0.1
 
 - autocomplete configurations to improve clarity and consistency.

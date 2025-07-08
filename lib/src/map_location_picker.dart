@@ -74,7 +74,7 @@ class MapLocationPicker extends HookWidget {
 
     final theme = Theme.of(context);
     final isKeyboardVisible = MediaQuery.of(context).viewInsets.bottom > 0;
-    final shouldShowBottomCard = !config.hideBottomCard &&
+    final shouldShowBottomCard =
         (!isKeyboardVisible || !config.hideBottomCardOnKeyboard);
 
     Widget buildSearchView() {
@@ -100,19 +100,18 @@ class MapLocationPicker extends HookWidget {
       );
 
       /// Search Bar
-      return (!config.hideSearchBar)
-          ? Positioned(
-              top: 0,
-              left: 0,
-              right: 0,
-              child: SafeArea(
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 12),
-                  child: searchBar,
-                ),
+      return config.searchBarBuilder?.call(context, searchBar) ??
+          Positioned(
+            top: 0,
+            left: 0,
+            right: 0,
+            child: SafeArea(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 12),
+                child: searchBar,
               ),
-            )
-          : const SizedBox.shrink();
+            ),
+          );
     }
 
     Widget buildFloatingControls() {
@@ -206,6 +205,7 @@ class MapLocationPicker extends HookWidget {
                       address.value,
                       isLoading.value,
                       () => _handleNext(context, geoCodingResult.value),
+                      buildSearchView(),
                     ) ??
                     _defaultBottomCard(
                       context,
@@ -394,7 +394,9 @@ class MapLocationPicker extends HookWidget {
   ) {
     final theme = Theme.of(context);
     return CupertinoActionSheet(
-      title: config.dialogTitle.isNotEmpty ? Text(config.dialogTitle) : null,
+      title: config.bottomCardTitle.isNotEmpty
+          ? Text(config.bottomCardTitle)
+          : null,
       actions: [
         if (isLoading)
           CupertinoActionSheetAction(
@@ -670,9 +672,6 @@ class MapLocationPicker extends HookWidget {
 
   void _handleNext(BuildContext context, GeocodingResult? result) {
     config.onNext?.call(result);
-    if (config.popOnNext) {
-      Navigator.pop(context, result);
-    }
   }
 }
 
@@ -702,19 +701,21 @@ class MapLocationPickerConfig {
   final IconData? locationIcon;
   final BitmapDescriptor? mainMarkerIcon;
 
-  // Search bar options
-  final bool hideSearchBar;
-
-  // Bottom card options
-  final bool hideBottomCard;
   final bool hideBottomCardOnKeyboard;
+  final String bottomCardTitle;
   final Widget Function(
     BuildContext context,
     GeocodingResult? result,
     String address,
     bool isLoading,
     VoidCallback onNext,
+    Widget searchBar,
   )? bottomCardBuilder;
+
+  final Widget Function(
+    BuildContext context,
+    Widget searchBar,
+  )? searchBarBuilder;
 
   // Location services
   final bool hasLocationPermission;
@@ -722,12 +723,10 @@ class MapLocationPickerConfig {
   final Function(dynamic error)? onLocationError;
 
   // Behavior flags
-  final bool popOnNext;
   final bool hideMoreOptions;
   final Widget? mapTypeButton;
   final Widget? locationButton;
   final String fabTooltip;
-  final String dialogTitle;
 
   // Additional markers
   final Map<String, LatLng>? additionalMarkers;
@@ -772,6 +771,7 @@ class MapLocationPickerConfig {
   const MapLocationPickerConfig({
     required this.apiKey,
     this.bottomCardBuilder,
+    this.searchBarBuilder,
     this.baseClient,
     this.baseApiHeaders,
     this.baseUrl,
@@ -787,18 +787,15 @@ class MapLocationPickerConfig {
     this.compassEnabled = true,
     this.liteModeEnabled = false,
     this.mapStyle,
-    this.hideSearchBar = false,
-    this.hideBottomCard = false,
     this.hideBottomCardOnKeyboard = true,
     this.hasLocationPermission = true,
     this.locationSettings,
     this.onLocationError,
-    this.popOnNext = true,
     this.hideMoreOptions = false,
     this.mapTypeButton,
     this.locationButton,
     this.fabTooltip = 'My Location',
-    this.dialogTitle = 'Select your location',
+    this.bottomCardTitle = 'Select your location',
     this.additionalMarkers,
     this.customMarkerIcons,
     this.customInfoWindows,
@@ -843,9 +840,9 @@ class MapLocationPickerConfig {
   MapLocationPickerConfig copyWith({
     // Core configuration
     String? apiKey,
-    Client? geoCodingHttpClient,
-    Map<String, String>? geoCodingApiHeaders,
-    String? geoCodingBaseUrl,
+    Client? baseClient,
+    Map<String, String>? baseApiHeaders,
+    String? baseUrl,
     LatLng? initialPosition,
     double? initialZoom,
     MapType? initialMapType,
@@ -888,7 +885,14 @@ class MapLocationPickerConfig {
       String address,
       bool isLoading,
       VoidCallback onNext,
+      Widget searchBar,
     )? bottomCardBuilder,
+
+    // Search bar options
+    Widget Function(
+      BuildContext context,
+      Widget searchBar,
+    )? searchBarBuilder,
 
     // Location services
     bool? hasLocationPermission,
@@ -902,7 +906,7 @@ class MapLocationPickerConfig {
     Widget? mapTypeButton,
     Widget? locationButton,
     String? fabTooltip,
-    String? dialogTitle,
+    String? bottomCardTitle,
 
     // Additional markers
     Map<String, LatLng>? additionalMarkers,
@@ -954,9 +958,9 @@ class MapLocationPickerConfig {
   }) {
     return MapLocationPickerConfig(
       apiKey: apiKey ?? this.apiKey,
-      baseClient: geoCodingHttpClient ?? baseClient,
-      baseApiHeaders: geoCodingApiHeaders ?? baseApiHeaders,
-      baseUrl: geoCodingBaseUrl ?? baseUrl,
+      baseClient: baseClient ?? this.baseClient,
+      baseApiHeaders: baseApiHeaders ?? this.baseApiHeaders,
+      baseUrl: baseUrl ?? this.baseUrl,
       initialPosition: initialPosition ?? this.initialPosition,
       initialZoom: initialZoom ?? this.initialZoom,
       initialMapType: initialMapType ?? this.initialMapType,
@@ -970,21 +974,19 @@ class MapLocationPickerConfig {
       compassEnabled: compassEnabled ?? this.compassEnabled,
       liteModeEnabled: liteModeEnabled ?? this.liteModeEnabled,
       mapStyle: mapStyle ?? this.mapStyle,
-      hideSearchBar: hideSearchBar ?? this.hideSearchBar,
-      hideBottomCard: hideBottomCard ?? this.hideBottomCard,
       hideBottomCardOnKeyboard:
           hideBottomCardOnKeyboard ?? this.hideBottomCardOnKeyboard,
       bottomCardBuilder: bottomCardBuilder ?? this.bottomCardBuilder,
+      searchBarBuilder: searchBarBuilder ?? this.searchBarBuilder,
       hasLocationPermission:
           hasLocationPermission ?? this.hasLocationPermission,
       locationSettings: locationSettings ?? this.locationSettings,
       onLocationError: onLocationError ?? this.onLocationError,
-      popOnNext: popOnNext ?? this.popOnNext,
       hideMoreOptions: hideMoreOptions ?? this.hideMoreOptions,
       mapTypeButton: mapTypeButton ?? this.mapTypeButton,
       locationButton: locationButton ?? this.locationButton,
       fabTooltip: fabTooltip ?? this.fabTooltip,
-      dialogTitle: dialogTitle ?? this.dialogTitle,
+      bottomCardTitle: bottomCardTitle ?? this.bottomCardTitle,
       mapTypeIcon: mapTypeIcon ?? this.mapTypeIcon,
       locationIcon: locationIcon ?? this.locationIcon,
       mainMarkerIcon: mainMarkerIcon ?? this.mainMarkerIcon,
