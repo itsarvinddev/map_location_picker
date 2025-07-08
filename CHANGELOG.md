@@ -1,3 +1,7 @@
+## 2.0.3
+
+- add context.mounted check for geocoding result.
+
 ## 2.0.2
 
 - searchBarBuilder added to customize the search bar.

@@ -63,13 +63,21 @@ class MapLocationPicker extends HookWidget {
     /// Initialize map
     useEffect(() {
       Future.microtask(() {
+        if (!context.mounted) return;
         markers.value = _createMarkers(position.value);
         if (config.initialPosition != const LatLng(0, 0)) {
-          _getAddressForPosition(position.value, effectiveGeoCodingService,
-              address, isLoading, geoCodingResult, geoCodingResults);
+          _getAddressForPosition(
+            position.value,
+            effectiveGeoCodingService,
+            address,
+            isLoading,
+            geoCodingResult,
+            geoCodingResults,
+            context,
+          );
         }
       });
-      return null;
+      return;
     }, const []);
 
     final theme = Theme.of(context);
@@ -157,8 +165,10 @@ class MapLocationPicker extends HookWidget {
                                   topRight: Radius.circular(_radius),
                                 ),
                               ),
-                              builder: (context) =>
-                                  _buildMapTypeSelector(context, mapType),
+                              builder: (context) => _buildMapTypeSelector(
+                                context,
+                                mapType,
+                              ),
                             );
                           },
                           tooltip: 'Map Type',
@@ -190,6 +200,7 @@ class MapLocationPicker extends HookWidget {
                             geoCodingResult,
                             geoCodingResults,
                             markers,
+                            context,
                           ),
                           child: Icon(config.locationIcon ?? Icons.my_location),
                         ),
@@ -244,6 +255,7 @@ class MapLocationPicker extends HookWidget {
               geoCodingResult,
               geoCodingResults,
               markers,
+              context,
             ),
             onMapCreated: (controller) {
               mapControllerCompleter.complete(controller);
@@ -504,6 +516,7 @@ class MapLocationPicker extends HookWidget {
     ValueNotifier<GeocodingResult?> geoCodingResult,
     ValueNotifier<List<GeocodingResult>> geoCodingResults,
     ValueNotifier<Set<Marker>> markers,
+    BuildContext context,
   ) async {
     try {
       isLoading.value = true;
@@ -544,6 +557,7 @@ class MapLocationPicker extends HookWidget {
           isLoading,
           geoCodingResult,
           geoCodingResults,
+          context,
         );
       }
     } catch (e) {
@@ -566,6 +580,7 @@ class MapLocationPicker extends HookWidget {
     ValueNotifier<GeocodingResult?> geoCodingResult,
     ValueNotifier<List<GeocodingResult>> geoCodingResults,
     ValueNotifier<Set<Marker>> markers,
+    BuildContext context,
   ) async {
     try {
       position.value = latLng;
@@ -581,6 +596,7 @@ class MapLocationPicker extends HookWidget {
         isLoading,
         geoCodingResult,
         geoCodingResults,
+        context,
       );
     } catch (e) {
       mapLogger.e("Error handling map tap: $e");
@@ -596,6 +612,7 @@ class MapLocationPicker extends HookWidget {
     ValueNotifier<bool> isLoading,
     ValueNotifier<GeocodingResult?> geoCodingResult,
     ValueNotifier<List<GeocodingResult>> geoCodingResults,
+    BuildContext context,
   ) async {
     isLoading.value = true;
     try {
@@ -603,6 +620,7 @@ class MapLocationPicker extends HookWidget {
       final result = response.$1;
       final results = response.$2;
 
+      if (!context.mounted) return;
       if (result != null) {
         address.value = result.formattedAddress ?? "Address not found";
         geoCodingResult.value = result;
@@ -613,9 +631,12 @@ class MapLocationPicker extends HookWidget {
       }
     } catch (e) {
       mapLogger.e("Geocoding error: $e");
+      if (!context.mounted) return;
       address.value = "Error fetching address";
     } finally {
-      isLoading.value = false;
+      if (context.mounted) {
+        isLoading.value = false;
+      }
     }
   }
 
