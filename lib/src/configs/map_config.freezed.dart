@@ -3,7 +3,7 @@
 // ignore_for_file: type=lint
 // ignore_for_file: unused_element, deprecated_member_use, deprecated_member_use_from_same_package, use_function_type_syntax_for_parameters, unnecessary_const, avoid_init_to_null, invalid_override_different_default_values_named, prefer_expression_function_bodies, annotate_overrides, invalid_annotation_target, unnecessary_question_mark
 
-part of 'map_picker.dart';
+part of 'map_config.dart';
 
 // **************************************************************************
 // FreezedGenerator
@@ -81,6 +81,9 @@ mixin _$MapLocationPickerConfig {
   Set<ClusterManager> get clusterManagers;
   Set<GroundOverlay> get groundOverlays;
   Set<Heatmap> get heatmaps;
+  CardType get cardType;
+  Color get cardColor;
+  String get noAddressFoundText;
 
   /// Create a copy of MapLocationPickerConfig
   /// with the given fields replaced by the non-null parameter values.
@@ -189,7 +192,10 @@ mixin _$MapLocationPickerConfig {
             (identical(other.zoomGesturesEnabled, zoomGesturesEnabled) || other.zoomGesturesEnabled == zoomGesturesEnabled) &&
             const DeepCollectionEquality().equals(other.clusterManagers, clusterManagers) &&
             const DeepCollectionEquality().equals(other.groundOverlays, groundOverlays) &&
-            const DeepCollectionEquality().equals(other.heatmaps, heatmaps));
+            const DeepCollectionEquality().equals(other.heatmaps, heatmaps) &&
+            (identical(other.cardType, cardType) || other.cardType == cardType) &&
+            (identical(other.cardColor, cardColor) || other.cardColor == cardColor) &&
+            (identical(other.noAddressFoundText, noAddressFoundText) || other.noAddressFoundText == noAddressFoundText));
   }
 
   @override
@@ -260,12 +266,15 @@ mixin _$MapLocationPickerConfig {
         zoomGesturesEnabled,
         const DeepCollectionEquality().hash(clusterManagers),
         const DeepCollectionEquality().hash(groundOverlays),
-        const DeepCollectionEquality().hash(heatmaps)
+        const DeepCollectionEquality().hash(heatmaps),
+        cardType,
+        cardColor,
+        noAddressFoundText
       ]);
 
   @override
   String toString() {
-    return 'MapLocationPickerConfig(apiKey: $apiKey, placesApi: $placesApi, geocodingRadius: $geocodingRadius, initialPosition: $initialPosition, initialZoom: $initialZoom, initialMapType: $initialMapType, myLocationButtonEnabled: $myLocationButtonEnabled, myLocationEnabled: $myLocationEnabled, zoomControlsEnabled: $zoomControlsEnabled, minMaxZoomPreference: $minMaxZoomPreference, onCameraMove: $onCameraMove, padding: $padding, compassEnabled: $compassEnabled, liteModeEnabled: $liteModeEnabled, mapStyle: $mapStyle, floatingControlsColor: $floatingControlsColor, floatingControlsIconColor: $floatingControlsIconColor, mapTypeIcon: $mapTypeIcon, locationIcon: $locationIcon, mainMarkerIcon: $mainMarkerIcon, hideBottomCardOnKeyboard: $hideBottomCardOnKeyboard, bottomCardTitle: $bottomCardTitle, bottomCardType: $bottomCardType, confirmButton: $confirmButton, bottomCardBuilder: $bottomCardBuilder, searchBarBuilder: $searchBarBuilder, locationSettings: $locationSettings, onLocationError: $onLocationError, hideMoreOptions: $hideMoreOptions, mapTypeButton: $mapTypeButton, locationButton: $locationButton, fabTooltip: $fabTooltip, additionalMarkers: $additionalMarkers, customMarkerIcons: $customMarkerIcons, customInfoWindows: $customInfoWindows, onMarkerTapped: $onMarkerTapped, onMapCreated: $onMapCreated, onMapTypeChanged: $onMapTypeChanged, onSuggestionSelected: $onSuggestionSelected, onNext: $onNext, onAddressDecoded: $onAddressDecoded, onAddressSelected: $onAddressSelected, buildingsEnabled: $buildingsEnabled, cameraTargetBounds: $cameraTargetBounds, circles: $circles, cloudMapId: $cloudMapId, fortyFiveDegreeImageryEnabled: $fortyFiveDegreeImageryEnabled, gestureRecognizers: $gestureRecognizers, indoorViewEnabled: $indoorViewEnabled, layoutDirection: $layoutDirection, mapToolbarEnabled: $mapToolbarEnabled, onCameraIdle: $onCameraIdle, onCameraMoveStarted: $onCameraMoveStarted, onLongPress: $onLongPress, polygons: $polygons, polylines: $polylines, rotateGesturesEnabled: $rotateGesturesEnabled, scrollGesturesEnabled: $scrollGesturesEnabled, tileOverlays: $tileOverlays, tiltGesturesEnabled: $tiltGesturesEnabled, trafficEnabled: $trafficEnabled, webGestureHandling: $webGestureHandling, zoomGesturesEnabled: $zoomGesturesEnabled, clusterManagers: $clusterManagers, groundOverlays: $groundOverlays, heatmaps: $heatmaps)';
+    return 'MapLocationPickerConfig(apiKey: $apiKey, placesApi: $placesApi, geocodingRadius: $geocodingRadius, initialPosition: $initialPosition, initialZoom: $initialZoom, initialMapType: $initialMapType, myLocationButtonEnabled: $myLocationButtonEnabled, myLocationEnabled: $myLocationEnabled, zoomControlsEnabled: $zoomControlsEnabled, minMaxZoomPreference: $minMaxZoomPreference, onCameraMove: $onCameraMove, padding: $padding, compassEnabled: $compassEnabled, liteModeEnabled: $liteModeEnabled, mapStyle: $mapStyle, floatingControlsColor: $floatingControlsColor, floatingControlsIconColor: $floatingControlsIconColor, mapTypeIcon: $mapTypeIcon, locationIcon: $locationIcon, mainMarkerIcon: $mainMarkerIcon, hideBottomCardOnKeyboard: $hideBottomCardOnKeyboard, bottomCardTitle: $bottomCardTitle, bottomCardType: $bottomCardType, confirmButton: $confirmButton, bottomCardBuilder: $bottomCardBuilder, searchBarBuilder: $searchBarBuilder, locationSettings: $locationSettings, onLocationError: $onLocationError, hideMoreOptions: $hideMoreOptions, mapTypeButton: $mapTypeButton, locationButton: $locationButton, fabTooltip: $fabTooltip, additionalMarkers: $additionalMarkers, customMarkerIcons: $customMarkerIcons, customInfoWindows: $customInfoWindows, onMarkerTapped: $onMarkerTapped, onMapCreated: $onMapCreated, onMapTypeChanged: $onMapTypeChanged, onSuggestionSelected: $onSuggestionSelected, onNext: $onNext, onAddressDecoded: $onAddressDecoded, onAddressSelected: $onAddressSelected, buildingsEnabled: $buildingsEnabled, cameraTargetBounds: $cameraTargetBounds, circles: $circles, cloudMapId: $cloudMapId, fortyFiveDegreeImageryEnabled: $fortyFiveDegreeImageryEnabled, gestureRecognizers: $gestureRecognizers, indoorViewEnabled: $indoorViewEnabled, layoutDirection: $layoutDirection, mapToolbarEnabled: $mapToolbarEnabled, onCameraIdle: $onCameraIdle, onCameraMoveStarted: $onCameraMoveStarted, onLongPress: $onLongPress, polygons: $polygons, polylines: $polylines, rotateGesturesEnabled: $rotateGesturesEnabled, scrollGesturesEnabled: $scrollGesturesEnabled, tileOverlays: $tileOverlays, tiltGesturesEnabled: $tiltGesturesEnabled, trafficEnabled: $trafficEnabled, webGestureHandling: $webGestureHandling, zoomGesturesEnabled: $zoomGesturesEnabled, clusterManagers: $clusterManagers, groundOverlays: $groundOverlays, heatmaps: $heatmaps, cardType: $cardType, cardColor: $cardColor, noAddressFoundText: $noAddressFoundText)';
   }
 }
 
@@ -341,7 +350,10 @@ abstract mixin class $MapLocationPickerConfigCopyWith<$Res> {
       bool zoomGesturesEnabled,
       Set<ClusterManager> clusterManagers,
       Set<GroundOverlay> groundOverlays,
-      Set<Heatmap> heatmaps});
+      Set<Heatmap> heatmaps,
+      CardType cardType,
+      Color cardColor,
+      String noAddressFoundText});
 }
 
 /// @nodoc
@@ -423,6 +435,9 @@ class _$MapLocationPickerConfigCopyWithImpl<$Res>
     Object? clusterManagers = null,
     Object? groundOverlays = null,
     Object? heatmaps = null,
+    Object? cardType = null,
+    Object? cardColor = null,
+    Object? noAddressFoundText = null,
   }) {
     return _then(_self.copyWith(
       apiKey: null == apiKey
@@ -689,6 +704,18 @@ class _$MapLocationPickerConfigCopyWithImpl<$Res>
           ? _self.heatmaps
           : heatmaps // ignore: cast_nullable_to_non_nullable
               as Set<Heatmap>,
+      cardType: null == cardType
+          ? _self.cardType
+          : cardType // ignore: cast_nullable_to_non_nullable
+              as CardType,
+      cardColor: null == cardColor
+          ? _self.cardColor
+          : cardColor // ignore: cast_nullable_to_non_nullable
+              as Color,
+      noAddressFoundText: null == noAddressFoundText
+          ? _self.noAddressFoundText
+          : noAddressFoundText // ignore: cast_nullable_to_non_nullable
+              as String,
     ));
   }
 }
@@ -852,7 +879,10 @@ extension MapLocationPickerConfigPatterns on MapLocationPickerConfig {
             bool zoomGesturesEnabled,
             Set<ClusterManager> clusterManagers,
             Set<GroundOverlay> groundOverlays,
-            Set<Heatmap> heatmaps)?
+            Set<Heatmap> heatmaps,
+            CardType cardType,
+            Color cardColor,
+            String noAddressFoundText)?
         $default, {
     required TResult orElse(),
   }) {
@@ -925,7 +955,10 @@ extension MapLocationPickerConfigPatterns on MapLocationPickerConfig {
             _that.zoomGesturesEnabled,
             _that.clusterManagers,
             _that.groundOverlays,
-            _that.heatmaps);
+            _that.heatmaps,
+            _that.cardType,
+            _that.cardColor,
+            _that.noAddressFoundText);
       case _:
         return orElse();
     }
@@ -1012,7 +1045,10 @@ extension MapLocationPickerConfigPatterns on MapLocationPickerConfig {
             bool zoomGesturesEnabled,
             Set<ClusterManager> clusterManagers,
             Set<GroundOverlay> groundOverlays,
-            Set<Heatmap> heatmaps)
+            Set<Heatmap> heatmaps,
+            CardType cardType,
+            Color cardColor,
+            String noAddressFoundText)
         $default,
   ) {
     final _that = this;
@@ -1084,7 +1120,10 @@ extension MapLocationPickerConfigPatterns on MapLocationPickerConfig {
             _that.zoomGesturesEnabled,
             _that.clusterManagers,
             _that.groundOverlays,
-            _that.heatmaps);
+            _that.heatmaps,
+            _that.cardType,
+            _that.cardColor,
+            _that.noAddressFoundText);
       case _:
         throw StateError('Unexpected subclass');
     }
@@ -1170,7 +1209,10 @@ extension MapLocationPickerConfigPatterns on MapLocationPickerConfig {
             bool zoomGesturesEnabled,
             Set<ClusterManager> clusterManagers,
             Set<GroundOverlay> groundOverlays,
-            Set<Heatmap> heatmaps)?
+            Set<Heatmap> heatmaps,
+            CardType cardType,
+            Color cardColor,
+            String noAddressFoundText)?
         $default,
   ) {
     final _that = this;
@@ -1242,7 +1284,10 @@ extension MapLocationPickerConfigPatterns on MapLocationPickerConfig {
             _that.zoomGesturesEnabled,
             _that.clusterManagers,
             _that.groundOverlays,
-            _that.heatmaps);
+            _that.heatmaps,
+            _that.cardType,
+            _that.cardColor,
+            _that.noAddressFoundText);
       case _:
         return null;
     }
@@ -1319,7 +1364,10 @@ class _MapLocationPickerConfig implements MapLocationPickerConfig {
       this.zoomGesturesEnabled = true,
       final Set<ClusterManager> clusterManagers = const <ClusterManager>{},
       final Set<GroundOverlay> groundOverlays = const <GroundOverlay>{},
-      final Set<Heatmap> heatmaps = const <Heatmap>{}})
+      final Set<Heatmap> heatmaps = const <Heatmap>{},
+      this.cardType = CardType.defaultCard,
+      this.cardColor = CupertinoColors.systemGrey6,
+      this.noAddressFoundText = "No address found"})
       : _additionalMarkers = additionalMarkers,
         _customMarkerIcons = customMarkerIcons,
         _customInfoWindows = customInfoWindows,
@@ -1616,6 +1664,16 @@ class _MapLocationPickerConfig implements MapLocationPickerConfig {
     return EqualUnmodifiableSetView(_heatmaps);
   }
 
+  @override
+  @JsonKey()
+  final CardType cardType;
+  @override
+  @JsonKey()
+  final Color cardColor;
+  @override
+  @JsonKey()
+  final String noAddressFoundText;
+
   /// Create a copy of MapLocationPickerConfig
   /// with the given fields replaced by the non-null parameter values.
   @override
@@ -1724,7 +1782,10 @@ class _MapLocationPickerConfig implements MapLocationPickerConfig {
             (identical(other.zoomGesturesEnabled, zoomGesturesEnabled) || other.zoomGesturesEnabled == zoomGesturesEnabled) &&
             const DeepCollectionEquality().equals(other._clusterManagers, _clusterManagers) &&
             const DeepCollectionEquality().equals(other._groundOverlays, _groundOverlays) &&
-            const DeepCollectionEquality().equals(other._heatmaps, _heatmaps));
+            const DeepCollectionEquality().equals(other._heatmaps, _heatmaps) &&
+            (identical(other.cardType, cardType) || other.cardType == cardType) &&
+            (identical(other.cardColor, cardColor) || other.cardColor == cardColor) &&
+            (identical(other.noAddressFoundText, noAddressFoundText) || other.noAddressFoundText == noAddressFoundText));
   }
 
   @override
@@ -1795,12 +1856,15 @@ class _MapLocationPickerConfig implements MapLocationPickerConfig {
         zoomGesturesEnabled,
         const DeepCollectionEquality().hash(_clusterManagers),
         const DeepCollectionEquality().hash(_groundOverlays),
-        const DeepCollectionEquality().hash(_heatmaps)
+        const DeepCollectionEquality().hash(_heatmaps),
+        cardType,
+        cardColor,
+        noAddressFoundText
       ]);
 
   @override
   String toString() {
-    return 'MapLocationPickerConfig(apiKey: $apiKey, placesApi: $placesApi, geocodingRadius: $geocodingRadius, initialPosition: $initialPosition, initialZoom: $initialZoom, initialMapType: $initialMapType, myLocationButtonEnabled: $myLocationButtonEnabled, myLocationEnabled: $myLocationEnabled, zoomControlsEnabled: $zoomControlsEnabled, minMaxZoomPreference: $minMaxZoomPreference, onCameraMove: $onCameraMove, padding: $padding, compassEnabled: $compassEnabled, liteModeEnabled: $liteModeEnabled, mapStyle: $mapStyle, floatingControlsColor: $floatingControlsColor, floatingControlsIconColor: $floatingControlsIconColor, mapTypeIcon: $mapTypeIcon, locationIcon: $locationIcon, mainMarkerIcon: $mainMarkerIcon, hideBottomCardOnKeyboard: $hideBottomCardOnKeyboard, bottomCardTitle: $bottomCardTitle, bottomCardType: $bottomCardType, confirmButton: $confirmButton, bottomCardBuilder: $bottomCardBuilder, searchBarBuilder: $searchBarBuilder, locationSettings: $locationSettings, onLocationError: $onLocationError, hideMoreOptions: $hideMoreOptions, mapTypeButton: $mapTypeButton, locationButton: $locationButton, fabTooltip: $fabTooltip, additionalMarkers: $additionalMarkers, customMarkerIcons: $customMarkerIcons, customInfoWindows: $customInfoWindows, onMarkerTapped: $onMarkerTapped, onMapCreated: $onMapCreated, onMapTypeChanged: $onMapTypeChanged, onSuggestionSelected: $onSuggestionSelected, onNext: $onNext, onAddressDecoded: $onAddressDecoded, onAddressSelected: $onAddressSelected, buildingsEnabled: $buildingsEnabled, cameraTargetBounds: $cameraTargetBounds, circles: $circles, cloudMapId: $cloudMapId, fortyFiveDegreeImageryEnabled: $fortyFiveDegreeImageryEnabled, gestureRecognizers: $gestureRecognizers, indoorViewEnabled: $indoorViewEnabled, layoutDirection: $layoutDirection, mapToolbarEnabled: $mapToolbarEnabled, onCameraIdle: $onCameraIdle, onCameraMoveStarted: $onCameraMoveStarted, onLongPress: $onLongPress, polygons: $polygons, polylines: $polylines, rotateGesturesEnabled: $rotateGesturesEnabled, scrollGesturesEnabled: $scrollGesturesEnabled, tileOverlays: $tileOverlays, tiltGesturesEnabled: $tiltGesturesEnabled, trafficEnabled: $trafficEnabled, webGestureHandling: $webGestureHandling, zoomGesturesEnabled: $zoomGesturesEnabled, clusterManagers: $clusterManagers, groundOverlays: $groundOverlays, heatmaps: $heatmaps)';
+    return 'MapLocationPickerConfig(apiKey: $apiKey, placesApi: $placesApi, geocodingRadius: $geocodingRadius, initialPosition: $initialPosition, initialZoom: $initialZoom, initialMapType: $initialMapType, myLocationButtonEnabled: $myLocationButtonEnabled, myLocationEnabled: $myLocationEnabled, zoomControlsEnabled: $zoomControlsEnabled, minMaxZoomPreference: $minMaxZoomPreference, onCameraMove: $onCameraMove, padding: $padding, compassEnabled: $compassEnabled, liteModeEnabled: $liteModeEnabled, mapStyle: $mapStyle, floatingControlsColor: $floatingControlsColor, floatingControlsIconColor: $floatingControlsIconColor, mapTypeIcon: $mapTypeIcon, locationIcon: $locationIcon, mainMarkerIcon: $mainMarkerIcon, hideBottomCardOnKeyboard: $hideBottomCardOnKeyboard, bottomCardTitle: $bottomCardTitle, bottomCardType: $bottomCardType, confirmButton: $confirmButton, bottomCardBuilder: $bottomCardBuilder, searchBarBuilder: $searchBarBuilder, locationSettings: $locationSettings, onLocationError: $onLocationError, hideMoreOptions: $hideMoreOptions, mapTypeButton: $mapTypeButton, locationButton: $locationButton, fabTooltip: $fabTooltip, additionalMarkers: $additionalMarkers, customMarkerIcons: $customMarkerIcons, customInfoWindows: $customInfoWindows, onMarkerTapped: $onMarkerTapped, onMapCreated: $onMapCreated, onMapTypeChanged: $onMapTypeChanged, onSuggestionSelected: $onSuggestionSelected, onNext: $onNext, onAddressDecoded: $onAddressDecoded, onAddressSelected: $onAddressSelected, buildingsEnabled: $buildingsEnabled, cameraTargetBounds: $cameraTargetBounds, circles: $circles, cloudMapId: $cloudMapId, fortyFiveDegreeImageryEnabled: $fortyFiveDegreeImageryEnabled, gestureRecognizers: $gestureRecognizers, indoorViewEnabled: $indoorViewEnabled, layoutDirection: $layoutDirection, mapToolbarEnabled: $mapToolbarEnabled, onCameraIdle: $onCameraIdle, onCameraMoveStarted: $onCameraMoveStarted, onLongPress: $onLongPress, polygons: $polygons, polylines: $polylines, rotateGesturesEnabled: $rotateGesturesEnabled, scrollGesturesEnabled: $scrollGesturesEnabled, tileOverlays: $tileOverlays, tiltGesturesEnabled: $tiltGesturesEnabled, trafficEnabled: $trafficEnabled, webGestureHandling: $webGestureHandling, zoomGesturesEnabled: $zoomGesturesEnabled, clusterManagers: $clusterManagers, groundOverlays: $groundOverlays, heatmaps: $heatmaps, cardType: $cardType, cardColor: $cardColor, noAddressFoundText: $noAddressFoundText)';
   }
 }
 
@@ -1878,7 +1942,10 @@ abstract mixin class _$MapLocationPickerConfigCopyWith<$Res>
       bool zoomGesturesEnabled,
       Set<ClusterManager> clusterManagers,
       Set<GroundOverlay> groundOverlays,
-      Set<Heatmap> heatmaps});
+      Set<Heatmap> heatmaps,
+      CardType cardType,
+      Color cardColor,
+      String noAddressFoundText});
 }
 
 /// @nodoc
@@ -1960,6 +2027,9 @@ class __$MapLocationPickerConfigCopyWithImpl<$Res>
     Object? clusterManagers = null,
     Object? groundOverlays = null,
     Object? heatmaps = null,
+    Object? cardType = null,
+    Object? cardColor = null,
+    Object? noAddressFoundText = null,
   }) {
     return _then(_MapLocationPickerConfig(
       apiKey: null == apiKey
@@ -2226,6 +2296,18 @@ class __$MapLocationPickerConfigCopyWithImpl<$Res>
           ? _self._heatmaps
           : heatmaps // ignore: cast_nullable_to_non_nullable
               as Set<Heatmap>,
+      cardType: null == cardType
+          ? _self.cardType
+          : cardType // ignore: cast_nullable_to_non_nullable
+              as CardType,
+      cardColor: null == cardColor
+          ? _self.cardColor
+          : cardColor // ignore: cast_nullable_to_non_nullable
+              as Color,
+      noAddressFoundText: null == noAddressFoundText
+          ? _self.noAddressFoundText
+          : noAddressFoundText // ignore: cast_nullable_to_non_nullable
+              as String,
     ));
   }
 }

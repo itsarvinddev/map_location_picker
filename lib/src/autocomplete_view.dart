@@ -7,6 +7,7 @@ import 'package:flutter_typeahead/flutter_typeahead.dart';
 import 'package:google_maps_apis/places_new.dart';
 import 'package:map_location_picker/map_location_picker.dart';
 
+import 'card.dart';
 import 'logger.dart';
 
 /// The autocomplete view for the map location picker.
@@ -35,6 +36,10 @@ class PlacesAutocomplete extends HookWidget {
   /// The callback for when a place is selected.
   final void Function(Suggestion)? onSelected;
 
+  final CardType cardType;
+
+  final Color? cardColor;
+
   /// The constructor for the autocomplete view.
   const PlacesAutocomplete({
     super.key,
@@ -42,6 +47,8 @@ class PlacesAutocomplete extends HookWidget {
     this.initialValue,
     this.onGetDetails,
     this.onSelected,
+    this.cardType = CardType.defaultCard,
+    this.cardColor,
   });
 
   @override
@@ -87,7 +94,10 @@ class PlacesAutocomplete extends HookWidget {
       hideWithKeyboard: config.hideWithKeyboard,
       itemSeparatorBuilder: config.itemSeparatorBuilder ??
           (context, index) => const Divider(
-                color: CupertinoColors.systemGrey5,
+                color: CupertinoColors.opaqueSeparator,
+                thickness: 0.5,
+                indent: 12,
+                endIndent: 12,
                 height: 0,
               ),
       listBuilder: config.listBuilder,
@@ -97,34 +107,51 @@ class PlacesAutocomplete extends HookWidget {
       suggestionsController: config.suggestionsController,
       decorationBuilder: config.decorationBuilder ??
           (context, child) {
-            return Material(
-              type: MaterialType.card,
-              elevation: 0,
-              borderRadius: BorderRadius.circular(12),
-              child: child,
-            );
+            return cardType == CardType.defaultCard
+                ? Material(
+                    type: MaterialType.card,
+                    elevation: 0,
+                    borderRadius: BorderRadius.circular(12),
+                    child: child,
+                  )
+                : LiquidCard(
+                    radius: 12,
+                    padding: EdgeInsets.zero,
+                    color: cardColor,
+                    child: child,
+                  );
           },
       emptyBuilder: config.emptyBuilder,
       scrollController: config.scrollController,
       focusNode: config.focusNode ?? focusNode,
       hideKeyboardOnDrag: config.hideKeyboardOnDrag,
       builder: config.builder ??
-          (context, controller, focusNode) => CupertinoSearchTextField(
-                controller: controller,
-                focusNode: focusNode,
-                placeholder: config.searchHintText,
-                placeholderStyle: config.searchHintStyle,
-                decoration: BoxDecoration(
-                  color: CupertinoColors.tertiarySystemBackground,
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                keyboardType: TextInputType.streetAddress,
-                style: CupertinoTheme.of(context).textTheme.textStyle.copyWith(
-                      fontSize: 16,
-                    ),
+          (context, controller, focusNode) {
+            final child = CupertinoSearchTextField(
+              controller: controller,
+              focusNode: focusNode,
+              placeholder: config.searchHintText,
+              placeholderStyle: config.searchHintStyle,
+              decoration: BoxDecoration(
+                color: cardColor,
+                borderRadius: BorderRadius.circular(12),
               ),
+              padding: const EdgeInsets.symmetric(
+                horizontal: 12,
+                vertical: 10,
+              ),
+              keyboardType: TextInputType.streetAddress,
+              style: CupertinoTheme.of(context).textTheme.textStyle,
+            );
+            return cardType == CardType.defaultCard
+                ? child
+                : LiquidCard(
+                    radius: 12,
+                    padding: EdgeInsets.zero,
+                    color: cardColor,
+                    child: child,
+                  );
+          },
     );
   }
 
@@ -219,10 +246,10 @@ class PlacesAutocomplete extends HookWidget {
       final places = service.placesApi ?? PlacesAPINew(apiKey: config.apiKey);
       final response = await places.getDetails(
         id: placeId,
-        fields: config.baseFields,
+        fields: config.placeFields,
         allFields: config.placesAllFields,
         filter: config.placeDetailsFilter,
-        instanceFields: config.placeDetails,
+        instanceFields: config.placeInstanceFields,
       );
 
       if (_isErrorResponse(response)) {
@@ -251,214 +278,5 @@ class PlacesAutocomplete extends HookWidget {
         SnackBar(content: Text(message ?? "Address not found")),
       );
     }
-  }
-}
-
-/// The configuration for the autocomplete view.
-/// [SearchConfig] is a class that contains the configuration for the autocomplete view.
-///
-/// ```dart
-/// final config = SearchConfig(
-///   apiKey: "YOUR_API_KEY",
-///   placesApi: PlacesAPINew(apiKey: "YOUR_API_KEY"),
-/// );
-/// ```
-///
-class SearchConfig {
-  final String apiKey;
-  final PlacesAPINew? placesApi;
-  final bool placesAllFields;
-  final PlaceDetailsFilter? placeDetailsFilter;
-  final Place? placeDetails;
-  final SessionTokenHandler? sessionToken;
-  final bool searchAllFields;
-  final List<String>? searchFields;
-  final AutocompleteSearchFilter? searchFilter;
-  final PlacesSuggestions? searchInstanceFields;
-  final List<String> baseFields;
-  final String searchHintText;
-  final TextStyle? searchHintStyle;
-  final int minCharsForSuggestions;
-  final Duration debounceDuration;
-  final String defaultAddressText;
-  final Widget Function(BuildContext, Suggestion)? itemBuilder;
-  final void Function(Suggestion)? onSelected;
-  final Widget Function(BuildContext, Object)? errorBuilder;
-  final Duration animationDuration;
-  final bool autoFlipDirection;
-  final VerticalDirection? direction;
-  final bool hideOnEmpty;
-  final bool hideOnError;
-  final bool hideOnLoading;
-  final Widget Function(BuildContext)? loadingBuilder;
-  final Widget Function(BuildContext, Animation<double>, Widget)?
-      transitionBuilder;
-  final double autoFlipMinHeight;
-  final BoxConstraints? constraints;
-  final bool hideOnSelect;
-  final bool hideOnUnfocus;
-  final bool hideWithKeyboard;
-  final Widget Function(BuildContext, int)? itemSeparatorBuilder;
-  final Widget Function(BuildContext, List<Widget>)? listBuilder;
-  final Offset? offset;
-  final bool retainOnLoading;
-  final bool showOnFocus;
-  final SuggestionsController<Suggestion>? suggestionsController;
-  final Widget Function(BuildContext, Widget)? decorationBuilder;
-  final Widget Function(BuildContext)? emptyBuilder;
-  final ScrollController? scrollController;
-  final FocusNode? focusNode;
-  final bool hideKeyboardOnDrag;
-  final Widget Function(BuildContext, TextEditingController, FocusNode)?
-      builder;
-
-  const SearchConfig({
-    this.apiKey = "",
-    this.baseFields = const [],
-    this.placesApi,
-    this.placesAllFields = true,
-    this.placeDetailsFilter,
-    this.placeDetails,
-    this.searchAllFields = true,
-    this.searchFields,
-    this.searchFilter,
-    this.searchInstanceFields,
-    this.sessionToken,
-    this.searchHintText = "Search for place, address, landmark, etc.",
-    this.searchHintStyle,
-    this.minCharsForSuggestions = 3,
-    this.debounceDuration = const Duration(milliseconds: 500),
-    this.defaultAddressText = "",
-    this.itemBuilder,
-    this.onSelected,
-    this.errorBuilder,
-    this.animationDuration = const Duration(milliseconds: 300),
-    this.autoFlipDirection = false,
-    this.direction,
-    this.hideOnEmpty = false,
-    this.hideOnError = false,
-    this.hideOnLoading = false,
-    this.loadingBuilder,
-    this.transitionBuilder,
-    this.autoFlipMinHeight = 0,
-    this.constraints,
-    this.hideOnSelect = true,
-    this.hideOnUnfocus = true,
-    this.hideWithKeyboard = true,
-    this.itemSeparatorBuilder,
-    this.listBuilder,
-    this.offset,
-    this.retainOnLoading = false,
-    this.showOnFocus = true,
-    this.suggestionsController,
-    this.decorationBuilder,
-    this.emptyBuilder,
-    this.scrollController,
-    this.focusNode,
-    this.hideKeyboardOnDrag = true,
-    this.builder,
-  });
-
-  /// Copy with the configuration for the autocomplete view.
-  ///
-  /// ```dart
-  /// final config = config.copyWith(
-  ///   apiKey: "YOUR_API_KEY",
-  ///   placesApi: PlacesAPINew(apiKey: "YOUR_API_KEY"),
-  /// );
-  /// ```
-  ///
-  SearchConfig copyWith({
-    String? apiKey,
-    PlacesAPINew? placesApi,
-    bool? placesAllFields,
-    PlaceDetailsFilter? placeDetailsFilter,
-    Place? placeDetails,
-    bool? searchAllFields,
-    List<String>? searchFields,
-    AutocompleteSearchFilter? searchFilter,
-    PlacesSuggestions? searchInstanceFields,
-    SessionTokenHandler? sessionToken,
-    String? searchHintText,
-    TextStyle? searchHintStyle,
-    int? minCharsForSuggestions,
-    Duration? debounceDuration,
-    String? defaultAddressText,
-    Widget Function(BuildContext, Suggestion)? itemBuilder,
-    void Function(Suggestion)? onSelected,
-    Widget Function(BuildContext, Object)? errorBuilder,
-    Duration? animationDuration,
-    bool? autoFlipDirection,
-    VerticalDirection? direction,
-    bool? hideOnEmpty,
-    bool? hideOnError,
-    bool? hideOnLoading,
-    Widget Function(BuildContext)? loadingBuilder,
-    Widget Function(BuildContext, Animation<double>, Widget)? transitionBuilder,
-    double? autoFlipMinHeight,
-    BoxConstraints? constraints,
-    bool? hideOnSelect,
-    bool? hideOnUnfocus,
-    bool? hideWithKeyboard,
-    Widget Function(BuildContext, int)? itemSeparatorBuilder,
-    Widget Function(BuildContext, List<Widget>)? listBuilder,
-    Offset? offset,
-    bool? retainOnLoading,
-    bool? showOnFocus,
-    SuggestionsController<Suggestion>? suggestionsController,
-    Widget Function(BuildContext, Widget)? decorationBuilder,
-    Widget Function(BuildContext)? emptyBuilder,
-    ScrollController? scrollController,
-    FocusNode? focusNode,
-    bool? hideKeyboardOnDrag,
-    Widget Function(BuildContext, TextEditingController, FocusNode)? builder,
-  }) {
-    return SearchConfig(
-      apiKey: apiKey ?? this.apiKey,
-      placesApi: placesApi ?? this.placesApi,
-      placesAllFields: placesAllFields ?? this.placesAllFields,
-      placeDetailsFilter: placeDetailsFilter ?? this.placeDetailsFilter,
-      placeDetails: placeDetails ?? this.placeDetails,
-      searchAllFields: searchAllFields ?? this.searchAllFields,
-      searchFields: searchFields ?? this.searchFields,
-      searchFilter: searchFilter ?? this.searchFilter,
-      searchInstanceFields: searchInstanceFields ?? this.searchInstanceFields,
-      sessionToken: sessionToken ?? this.sessionToken,
-      searchHintText: searchHintText ?? this.searchHintText,
-      searchHintStyle: searchHintStyle ?? this.searchHintStyle,
-      minCharsForSuggestions:
-          minCharsForSuggestions ?? this.minCharsForSuggestions,
-      debounceDuration: debounceDuration ?? this.debounceDuration,
-      defaultAddressText: defaultAddressText ?? this.defaultAddressText,
-      itemBuilder: itemBuilder ?? this.itemBuilder,
-      onSelected: onSelected ?? this.onSelected,
-      errorBuilder: errorBuilder ?? this.errorBuilder,
-      animationDuration: animationDuration ?? this.animationDuration,
-      autoFlipDirection: autoFlipDirection ?? this.autoFlipDirection,
-      direction: direction ?? this.direction,
-      hideOnEmpty: hideOnEmpty ?? this.hideOnEmpty,
-      hideOnError: hideOnError ?? this.hideOnError,
-      hideOnLoading: hideOnLoading ?? this.hideOnLoading,
-      loadingBuilder: loadingBuilder ?? this.loadingBuilder,
-      transitionBuilder: transitionBuilder ?? this.transitionBuilder,
-      autoFlipMinHeight: autoFlipMinHeight ?? this.autoFlipMinHeight,
-      constraints: constraints ?? this.constraints,
-      hideOnSelect: hideOnSelect ?? this.hideOnSelect,
-      hideOnUnfocus: hideOnUnfocus ?? this.hideOnUnfocus,
-      hideWithKeyboard: hideWithKeyboard ?? this.hideWithKeyboard,
-      itemSeparatorBuilder: itemSeparatorBuilder ?? this.itemSeparatorBuilder,
-      listBuilder: listBuilder ?? this.listBuilder,
-      offset: offset ?? this.offset,
-      retainOnLoading: retainOnLoading ?? this.retainOnLoading,
-      showOnFocus: showOnFocus ?? this.showOnFocus,
-      suggestionsController:
-          suggestionsController ?? this.suggestionsController,
-      decorationBuilder: decorationBuilder ?? this.decorationBuilder,
-      emptyBuilder: emptyBuilder ?? this.emptyBuilder,
-      scrollController: scrollController ?? this.scrollController,
-      focusNode: focusNode ?? this.focusNode,
-      hideKeyboardOnDrag: hideKeyboardOnDrag ?? this.hideKeyboardOnDrag,
-      builder: builder ?? this.builder,
-    );
   }
 }

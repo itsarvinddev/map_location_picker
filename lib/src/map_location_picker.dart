@@ -6,14 +6,12 @@ import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:google_maps_apis/places_new.dart' hide LatLng, Circle;
 
 import '../map_location_picker.dart' hide Circle;
+import 'card.dart';
 import 'logger.dart';
-
-/// Default radius for the map location picker.
-const _radius = 12.0;
 
 enum CardType {
   defaultCard,
-  confirmCard,
+  liquidCard,
 }
 
 /// The main widget for the map location picker.
@@ -82,6 +80,9 @@ class MapLocationPicker extends HookWidget {
 
     Widget buildSearchView() {
       Widget searchBar = PlacesAutocomplete(
+        cardType: config.cardType,
+        cardColor: config.cardColor,
+        initialValue: searchConfig?.initialValue,
         config: searchConfig ??
             SearchConfig(
               apiKey: config.apiKey,
@@ -147,18 +148,8 @@ class MapLocationPicker extends HookWidget {
                           mini: true,
                           elevation: 0,
                           onPressed: () {
-                            showModalBottomSheet(
+                            showCupertinoModalPopup(
                               context: context,
-                              isScrollControlled: true,
-                              useSafeArea: true,
-                              showDragHandle: true,
-                              enableDrag: true,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.only(
-                                  topLeft: Radius.circular(_radius),
-                                  topRight: Radius.circular(_radius),
-                                ),
-                              ),
                               builder: (context) => _buildMapTypeSelector(
                                 context,
                                 mapType,
@@ -213,7 +204,7 @@ class MapLocationPicker extends HookWidget {
                       () => _handleNext(context, geoCodingResult.value),
                       buildSearchView(),
                     ) ??
-                    _defaultBottomCard(
+                    defaultBottomCard(
                       context,
                       geoCodingResult.value,
                       address.value,
@@ -231,7 +222,7 @@ class MapLocationPicker extends HookWidget {
     return Scaffold(
       extendBodyBehindAppBar: true,
       extendBody: true,
-      backgroundColor: CupertinoColors.systemBackground,
+      backgroundColor: config.cardColor,
       body: Stack(
         children: [
           /// Google Map View
@@ -333,30 +324,32 @@ class MapLocationPicker extends HookWidget {
   }
 
   Widget _buildMapTypeSelector(
-      BuildContext context, ValueNotifier<MapType> mapType) {
+    BuildContext context,
+    ValueNotifier<MapType> mapType,
+  ) {
     final mapTypeValues = MapType.values.where((type) => type != MapType.none);
-    return SafeArea(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: mapTypeValues.map((type) {
-          final index = mapTypeValues.toList().indexOf(type);
-          return Container(
-            margin: const EdgeInsets.symmetric(horizontal: 16),
-            decoration: _buildBoxDecoration(
-                context, index, index == mapTypeValues.length - 1),
-            child: ListTile(
-              selected: mapType.value == type,
-              textColor: Theme.of(context).textTheme.labelLarge?.color,
-              leading: Icon(_mapTypeIcon(type)),
-              title: Text(_mapTypeName(type)),
-              onTap: () {
-                mapType.value = type;
-                config.onMapTypeChanged?.call(type);
-                Navigator.pop(context);
-              },
-            ),
-          );
-        }).toList(),
+    return CupertinoActionSheet(
+      title: Text("Map Types"),
+      actions: mapTypeValues.map((type) {
+        return CupertinoActionSheetAction(
+          child: Row(
+            spacing: 12,
+            children: [
+              Icon(_mapTypeIcon(type)),
+              Text(_mapTypeName(type)),
+            ],
+          ),
+          onPressed: () {
+            mapType.value = type;
+            config.onMapTypeChanged?.call(type);
+            Navigator.pop(context);
+          },
+          isDefaultAction: mapType.value == type,
+        );
+      }).toList(),
+      cancelButton: CupertinoActionSheetAction(
+        child: Text("Cancel"),
+        onPressed: () => Navigator.pop(context),
       ),
     );
   }
@@ -389,123 +382,6 @@ class MapLocationPicker extends HookWidget {
       default:
         return 'Standard Map';
     }
-  }
-
-  Widget _defaultBottomCard(
-    BuildContext context,
-    Place? result,
-    String address,
-    bool isLoading,
-    List<Place> results,
-    MapLocationPickerConfig config,
-    VoidCallback onNext,
-  ) {
-    final theme = Theme.of(context);
-    return CupertinoActionSheet(
-      title: config.bottomCardTitle.isNotEmpty
-          ? Text(config.bottomCardTitle)
-          : null,
-      actions: [
-        if (isLoading)
-          CupertinoActionSheetAction(
-            child: Text("Loading address..."),
-            onPressed: () {},
-          )
-        else
-          CupertinoActionSheetAction(
-            onPressed: onNext,
-            child: Text(address),
-          ),
-        if (config.confirmButton != null)
-          config.confirmButton?.call(context, onNext) ??
-              const SizedBox.shrink(),
-        if (results.isNotEmpty && !config.hideMoreOptions && results.length > 1)
-          CupertinoActionSheetAction(
-            child: Text(
-              "Nearby places (${results.length})",
-              style: theme.textTheme.bodyMedium,
-            ),
-            onPressed: () => _showAddressOptions(context, results, config),
-          ),
-      ],
-    );
-  }
-
-  BoxDecoration _buildBoxDecoration(
-    BuildContext context,
-    int index,
-    bool isLast,
-  ) {
-    return BoxDecoration(
-      color: CupertinoColors.systemFill,
-      borderRadius: BorderRadius.only(
-        topLeft: Radius.circular(index == 0 ? _radius : 0),
-        topRight: Radius.circular(index == 0 ? _radius : 0),
-        bottomLeft: Radius.circular(isLast ? _radius : 0),
-        bottomRight: Radius.circular(isLast ? _radius : 0),
-      ),
-      border: Border(
-        bottom: isLast
-            ? BorderSide.none
-            : BorderSide(
-                color: CupertinoColors.opaqueSeparator,
-                width: 0.5,
-              ),
-      ),
-    );
-  }
-
-  void _showAddressOptions(
-    BuildContext context,
-    List<Place> results,
-    MapLocationPickerConfig config,
-  ) {
-    final theme = Theme.of(context);
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      useSafeArea: true,
-      enableDrag: true,
-      showDragHandle: true,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.only(
-          topLeft: Radius.circular(_radius + 8),
-          topRight: Radius.circular(_radius + 8),
-        ),
-      ),
-      builder: (context) => SafeArea(
-        child: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: results.map((result) {
-              final index = results.indexOf(result);
-              return Container(
-                margin: const EdgeInsets.symmetric(horizontal: 16),
-                decoration: _buildBoxDecoration(
-                  context,
-                  index,
-                  index == results.length - 1,
-                ),
-                child: ListTile(
-                  minTileHeight: 50,
-                  title: Text(
-                    result.formattedAddress ?? "",
-                    style: TextStyle(
-                      color: theme.colorScheme.primary,
-                    ),
-                  ),
-                  onTap: () {
-                    config.onAddressSelected?.call(result);
-                    _handleNext(context, result);
-                    Navigator.pop(context);
-                  },
-                ),
-              );
-            }).toList(),
-          ),
-        ),
-      ),
-    );
   }
 
   Future<void> _getCurrentLocation(
@@ -634,26 +510,29 @@ class MapLocationPicker extends HookWidget {
       if (result != null) {
         address.value = result.formattedAddress ??
             result.adrFormatAddress ??
-            "Address not found";
+            config.noAddressFoundText;
         geoCodingResult.value = result;
         geoCodingResults.value = results;
         config.onAddressDecoded?.call(result);
       } else if (results.isNotEmpty) {
         address.value = results.first.formattedAddress ??
             results.first.adrFormatAddress ??
-            "Address not found";
+            config.noAddressFoundText;
         geoCodingResult.value = results.first;
         geoCodingResults.value = results;
         config.onAddressDecoded?.call(results.first);
       } else {
-        address.value = "Address not found";
+        address.value = config.noAddressFoundText;
         geoCodingResult.value = null;
         geoCodingResults.value = [];
+        mapLogger.i(
+          "No address found, position: $position, You can try with larger radius.",
+        );
       }
     } catch (e) {
       mapLogger.e("Geocoding error: $e");
       if (!context.mounted) return;
-      address.value = "Error fetching address";
+      address.value = config.noAddressFoundText;
       geoCodingResult.value = null;
       geoCodingResults.value = [];
     } finally {

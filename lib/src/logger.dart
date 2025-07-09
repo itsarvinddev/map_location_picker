@@ -9,25 +9,35 @@ import 'package:flutter/foundation.dart';
 
 /// Abstract class for formatting log messages.
 abstract class LogFormatter {
-  String format(String tag, String level, Object? message,
-      {Object? error, StackTrace? stackTrace});
+  String format(
+    String tag,
+    String level,
+    Object? message, {
+    Object? error,
+    StackTrace? stackTrace,
+  });
 }
 
-/// **NEW** - Formats logs in a distinct block with separators.
+/// Formats logs in a distinct block with separators.
 class BlockPrettyFormatter implements LogFormatter {
   static const _separator =
       '--------------------------------------------------------------------------------';
 
   @override
-  String format(String tag, String level, Object? message,
-      {Object? error, StackTrace? stackTrace}) {
+  String format(
+    String tag,
+    String level,
+    Object? message, {
+    Object? error,
+    StackTrace? stackTrace,
+  }) {
     final buffer = StringBuffer();
     final now = DateTime.now();
     final time =
         '${now.hour}:${now.minute.toString().padLeft(2, '0')}:${now.second.toString().padLeft(2, '0')}';
 
     // Header
-    buffer.writeln('[$level] [$tag] [$time]');
+    buffer.writeln('[$tag] [$time]');
 
     // Message Block
     buffer.writeln(_separator);
@@ -92,21 +102,29 @@ class MapLocationPickerLogger {
   MapLocationPickerLogger(this.tag, {LogFormatter? formatter})
       : _formatter = formatter ?? BlockPrettyFormatter();
 
-  /// **UPDATED** to pass error/stackTrace to the formatter
-  /// to ensure they are included inside the separator blocks.
-  void _log(String level, Object? message,
-      {Object? error, StackTrace? stackTrace}) {
+  /// Pass error/stackTrace to the formatter to ensure they are included inside the separator blocks.
+  void _log(
+    String level,
+    Object? message, {
+    Object? error,
+    StackTrace? stackTrace,
+  }) {
     if (kDebugMode) {
       // The formatter now handles the entire visual layout,
       // including error and stacktrace.
-      final formattedMessage = _formatter.format(tag, level, message,
-          error: error, stackTrace: stackTrace);
+      final formattedMessage = _formatter.format(
+        tag,
+        level,
+        message,
+        error: error,
+        stackTrace: stackTrace,
+      );
 
       // We use developer.log to prevent truncation but no longer pass
       // the error/stackTrace arguments here, as they are already in the string.
       developer.log(
         formattedMessage,
-        name: tag,
+        name: level,
         level: _levelMap[level] ?? 900,
       );
     }

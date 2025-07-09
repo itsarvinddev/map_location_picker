@@ -1,12 +1,11 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/gestures.dart';
-import 'package:flutter/material.dart';
 import 'package:freezed_annotation/freezed_annotation.dart';
 import 'package:google_maps_apis/places_new.dart' hide LatLng, Circle;
 import 'package:map_location_picker/map_location_picker.dart';
 
-part 'map_picker.freezed.dart';
+part 'map_config.freezed.dart';
 
 typedef SearchBarBuilder = Widget Function(
   BuildContext context,
@@ -99,5 +98,8 @@ abstract class MapLocationPickerConfig with _$MapLocationPickerConfig {
     @Default(<ClusterManager>{}) Set<ClusterManager> clusterManagers,
     @Default(<GroundOverlay>{}) Set<GroundOverlay> groundOverlays,
     @Default(<Heatmap>{}) Set<Heatmap> heatmaps,
+    @Default(CardType.defaultCard) CardType cardType,
+    @Default(CupertinoColors.systemGrey6) Color cardColor,
+    @Default("No address found") String noAddressFoundText,
   }) = _MapLocationPickerConfig;
 }

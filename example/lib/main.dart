@@ -1,4 +1,5 @@
 import 'package:example/key.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:map_location_picker/map_location_picker.dart';
 
@@ -197,6 +198,21 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
                     ),
                   ),
                 ),
+
+                // Liquid Card Picker
+                _buildOptionCard(
+                  icon: Icons.square_rounded,
+                  title: "Liquid Card",
+                  description: "Card options: default, liquid",
+                  onTap: () => _openLocationPicker(
+                    MapLocationPickerConfig(
+                      apiKey: YOUR_API_KEY,
+                      mainMarkerIcon: _customMarkerIcon,
+                      cardType: CardType.liquidCard,
+                      cardColor: CupertinoColors.systemFill,
+                    ),
+                  ),
+                ),
               ],
             ),
           ],
@@ -273,10 +289,6 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
                 Navigator.pop(context, result);
               }
             },
-          ),
-          searchConfig: const SearchConfig(
-            apiKey: YOUR_API_KEY,
-            searchHintText: "Search for a location",
           ),
         ),
       ),
