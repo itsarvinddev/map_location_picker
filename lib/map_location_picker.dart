@@ -1,11 +1,12 @@
 library;
 
 export 'package:geolocator/geolocator.dart';
+export 'package:google_maps_apis/geocoding.dart';
+export 'package:google_maps_apis/places.dart';
 export 'package:google_maps_flutter/google_maps_flutter.dart';
-export 'package:google_maps_webapi/geocoding.dart';
-export 'package:google_maps_webapi/places.dart';
 
 export 'src/autocomplete_service.dart';
 export 'src/autocomplete_view.dart';
+export 'src/configs/map_picker.dart';
 export 'src/geocoding_service.dart';
 export 'src/map_location_picker.dart';

@@ -256,13 +256,14 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
       MaterialPageRoute(
         builder: (context) => MapLocationPicker(
           config: config.copyWith(
-            initialPosition: _pickedLocation ?? const LatLng(37.422, -122.084),
+            initialPosition:
+                _pickedLocation ?? const LatLng(28.8993468, 76.6250249),
             onNext: (result) {
               if (result != null) {
                 setState(() {
                   _pickedLocation = LatLng(
-                    result.geometry.location.lat,
-                    result.geometry.location.lng,
+                    result.location?.latitude ?? 0,
+                    result.location?.longitude ?? 0,
                   );
                   _formattedAddress =
                       result.formattedAddress ?? "Address not available";

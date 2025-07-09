@@ -4,24 +4,36 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:flutter_typeahead/flutter_typeahead.dart';
-import 'package:http/http.dart';
+import 'package:google_maps_apis/places_new.dart';
 import 'package:map_location_picker/map_location_picker.dart';
 
 import 'logger.dart';
 
 /// The autocomplete view for the map location picker.
+/// [PlacesAutocomplete] is a widget that shows a list of suggestions as the user types.
+/// It is a wrapper around [CupertinoTypeAheadField] and [AutoCompleteService].
+///
+/// ```dart
+/// PlacesAutocomplete(
+///   config: SearchConfig(
+///     apiKey: "YOUR_API_KEY",
+///     placesApi: PlacesAPINew(apiKey: "YOUR_API_KEY"),
+///   ),
+/// );
+/// ```
+///
 class PlacesAutocomplete extends HookWidget {
   /// The configuration for the autocomplete view.
   final SearchConfig config;
 
   /// The initial value for the autocomplete view.
-  final Prediction? initialValue;
+  final Suggestion? initialValue;
 
   /// The callback for when a place is selected.
-  final void Function(PlacesDetailsResponse?)? onGetDetails;
+  final void Function(Place?)? onGetDetails;
 
   /// The callback for when a place is selected.
-  final void Function(Prediction)? onSelected;
+  final void Function(Suggestion)? onSelected;
 
   /// The constructor for the autocomplete view.
   const PlacesAutocomplete({
@@ -34,25 +46,27 @@ class PlacesAutocomplete extends HookWidget {
 
   @override
   Widget build(BuildContext context) {
+    /// Text controller for the search field.
     final textController = useTextEditingController(
-        text: initialValue?.description ?? config.defaultAddressText);
-
-    final focusNode = useFocusNode();
-
-    final service = useMemoized(
-      () => AutoCompleteService(
-        httpClient: config.baseClient,
-        apiHeaders: config.baseApiHeaders,
-        baseUrl: config.baseBaseUrl,
-      ),
+      text: initialValue?.placePrediction?.text?.text ??
+          config.defaultAddressText,
     );
 
-    return CupertinoTypeAheadField<Prediction>(
+    /// Focus node for the search field. handle focus and unfocus.
+    final focusNode = useFocusNode();
+
+    /// Auto complete service.
+    final service = useMemoized(
+      () => AutoCompleteService(placesApi: config.placesApi),
+    );
+
+    /// Cupertino type ahead field. It is a text field that shows a list of suggestions as the user types.
+    return CupertinoTypeAheadField<Suggestion>(
       controller: textController,
-      itemBuilder: config.itemBuilder ?? _defaultItemBuilder(context),
+      itemBuilder: config.itemBuilder ?? _defaultItemBuilder(),
       suggestionsCallback: (query) => _getSuggestions(query, service),
       onSelected: (value) {
-        _handleSelection(value, context, textController);
+        _handleSelection(value, context, textController, service);
         config.onSelected?.call(value);
         focusNode.unfocus();
       },
@@ -80,8 +94,7 @@ class PlacesAutocomplete extends HookWidget {
       offset: config.offset ?? Offset(0, 12),
       retainOnLoading: config.retainOnLoading,
       showOnFocus: config.showOnFocus,
-      suggestionsController:
-          config.suggestionsController as SuggestionsController<Prediction>?,
+      suggestionsController: config.suggestionsController,
       decorationBuilder: config.decorationBuilder ??
           (context, child) {
             return Material(
@@ -95,105 +108,143 @@ class PlacesAutocomplete extends HookWidget {
       scrollController: config.scrollController,
       focusNode: config.focusNode ?? focusNode,
       hideKeyboardOnDrag: config.hideKeyboardOnDrag,
-      builder: (context, controller, focusNode) => CupertinoSearchTextField(
-        controller: controller,
-        focusNode: focusNode,
-        placeholder: config.searchHintText,
-        placeholderStyle: config.searchHintStyle,
-        decoration: BoxDecoration(
-          color: CupertinoColors.tertiarySystemBackground,
-          borderRadius: BorderRadius.circular(12),
-        ),
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-        keyboardType: TextInputType.streetAddress,
-        style: CupertinoTheme.of(context).textTheme.textStyle.copyWith(
-              fontSize: 16,
-            ),
-      ),
+      builder: config.builder ??
+          (context, controller, focusNode) => CupertinoSearchTextField(
+                controller: controller,
+                focusNode: focusNode,
+                placeholder: config.searchHintText,
+                placeholderStyle: config.searchHintStyle,
+                decoration: BoxDecoration(
+                  color: CupertinoColors.tertiarySystemBackground,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                keyboardType: TextInputType.streetAddress,
+                style: CupertinoTheme.of(context).textTheme.textStyle.copyWith(
+                      fontSize: 16,
+                    ),
+              ),
     );
   }
 
-  Widget Function(BuildContext, Prediction) _defaultItemBuilder(
-      BuildContext context) {
-    return (context, content) => ListTile(
-          contentPadding: const EdgeInsets.symmetric(horizontal: 16),
-          title: Text(
-            content.description ?? "",
+  Widget Function(BuildContext, Suggestion) _defaultItemBuilder() {
+    return (context, content) {
+      final mainText =
+          content.placePrediction?.structuredFormat?.mainText?.text ?? "";
+      final secondaryText =
+          content.placePrediction?.structuredFormat?.secondaryText?.text ?? "";
+
+      final style = Theme.of(context).textTheme.titleMedium?.copyWith(
+            color: CupertinoColors.systemGrey,
+          );
+
+      return ListTile(
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16),
+        title: Text.rich(
+          TextSpan(
+            children: [
+              if (mainText.isNotEmpty)
+                TextSpan(
+                  text: mainText,
+                  style: style?.copyWith(
+                    color: Theme.of(context).textTheme.bodyLarge?.color,
+                  ),
+                ),
+              TextSpan(
+                text: " ",
+              ),
+              if (secondaryText.isNotEmpty)
+                TextSpan(
+                  text: secondaryText,
+                  style: style,
+                ),
+            ],
           ),
-          subtitle: Text(
-            content.structuredFormatting?.secondaryText ??
-                content.structuredFormatting?.mainText ??
-                "",
-          ),
-        );
+        ),
+        // subtitle: Text(
+        //   content.placePrediction?.structuredFormat?.mainText?.text ??
+        //       "See locations",
+        // ),
+      );
+    };
   }
 
-  Future<List<Prediction>> _getSuggestions(
-      String query, AutoCompleteService service) async {
+  /// Get suggestions from the autocomplete service.
+  Future<List<Suggestion>> _getSuggestions(
+    String query,
+    AutoCompleteService service,
+  ) async {
     if (query.length < config.minCharsForSuggestions) return [];
     return service.search(
       query: query,
       apiKey: config.apiKey,
-      language: config.suggestionsLanguage,
+      allFields: config.searchAllFields,
+      fields: config.searchFields,
+      filter: config.searchFilter,
+      instanceFields: config.searchInstanceFields,
       sessionToken: config.sessionToken,
-      region: config.suggestionsRegion,
-      components: config.suggestionsComponents,
-      location: config.suggestionsLocation,
-      offset: config.suggestionsOffset,
-      origin: config.suggestionsOrigin,
-      radius: config.suggestionsRadius,
-      strictbounds: config.suggestionsStrictbounds,
-      types: config.suggestionsTypes,
     );
   }
 
+  /// Handle the selection of a suggestion.
   void _handleSelection(
-    Prediction value,
+    Suggestion value,
     BuildContext context,
     TextEditingController controller,
+    AutoCompleteService service,
   ) async {
-    controller.selection =
-        TextSelection.collapsed(offset: controller.text.length);
-    await _getPlaceDetails(value.placeId ?? value.id ?? "", context);
-    onSelected?.call(value);
-  }
-
-  Future<void> _getPlaceDetails(String placeId, BuildContext context) async {
     try {
-      final places = GoogleMapsPlaces(
-        apiKey: config.apiKey,
-        httpClient: config.baseClient,
-        apiHeaders: config.baseApiHeaders,
-        baseUrl: config.baseBaseUrl,
-      );
-
-      final response = await places.getDetailsByPlaceId(
-        placeId,
-        region: config.baseRegion,
-        sessionToken: config.baseSessionToken,
-        language: config.baseLanguage,
-        fields: config.baseFields,
-      );
-
-      if (_isErrorResponse(response)) {
-        _showErrorSnackbar(response.errorMessage, context);
+      controller.selection =
+          TextSelection.collapsed(offset: controller.text.length);
+      final placeId = value.placePrediction?.placeId ?? "";
+      if (placeId.isEmpty) {
+        mapLogger.i("Place ID is empty, skipping place details.");
         return;
       }
-      onGetDetails?.call(response);
+      await _getPlaceDetails(placeId, context, service);
+      onSelected?.call(value);
     } catch (e) {
       mapLogger.e(e);
     }
   }
 
-  bool _isErrorResponse(PlacesDetailsResponse response) {
-    return response.hasNoResults ||
-        response.isDenied ||
-        response.isInvalid ||
-        response.isNotFound ||
-        response.unknownError ||
-        response.isOverQueryLimit;
+  /// Get the details of a place.
+  Future<void> _getPlaceDetails(
+    String placeId,
+    BuildContext context,
+    AutoCompleteService service,
+  ) async {
+    try {
+      final places = service.placesApi ?? PlacesAPINew(apiKey: config.apiKey);
+      final response = await places.getDetails(
+        id: placeId,
+        fields: config.baseFields,
+        allFields: config.placesAllFields,
+        filter: config.placeDetailsFilter,
+        instanceFields: config.placeDetails,
+      );
+
+      if (_isErrorResponse(response)) {
+        _showErrorSnackbar(response.error?.error?.message, context);
+        return;
+      }
+      onGetDetails?.call(response.body);
+    } catch (e) {
+      mapLogger.e(e);
+    }
   }
 
+  /// Check if the response is an error response.
+  bool _isErrorResponse(GoogleHTTPResponse<Place?> response) {
+    final isError = response.error != null && !response.isSuccessful;
+    if (isError) {
+      mapLogger.e(response.error?.error?.toJsonString());
+    }
+    return isError;
+  }
+
+  /// Show an error snackbar.
   void _showErrorSnackbar(String? message, BuildContext context) {
     if (context.mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -203,32 +254,35 @@ class PlacesAutocomplete extends HookWidget {
   }
 }
 
-class SearchConfig<Prediction> {
+/// The configuration for the autocomplete view.
+/// [SearchConfig] is a class that contains the configuration for the autocomplete view.
+///
+/// ```dart
+/// final config = SearchConfig(
+///   apiKey: "YOUR_API_KEY",
+///   placesApi: PlacesAPINew(apiKey: "YOUR_API_KEY"),
+/// );
+/// ```
+///
+class SearchConfig {
   final String apiKey;
-  final Client? baseClient;
-  final String? baseRegion;
-  final String? baseSessionToken;
-  final String? baseLanguage;
+  final PlacesAPINew? placesApi;
+  final bool placesAllFields;
+  final PlaceDetailsFilter? placeDetailsFilter;
+  final Place? placeDetails;
+  final SessionTokenHandler? sessionToken;
+  final bool searchAllFields;
+  final List<String>? searchFields;
+  final AutocompleteSearchFilter? searchFilter;
+  final PlacesSuggestions? searchInstanceFields;
   final List<String> baseFields;
-  final Map<String, String>? baseApiHeaders;
-  final String? baseBaseUrl;
-  final String? suggestionsLanguage;
-  final String? suggestionsRegion;
-  final List<Component> suggestionsComponents;
-  final Location? suggestionsLocation;
-  final num? suggestionsOffset;
-  final Location? suggestionsOrigin;
-  final num? suggestionsRadius;
-  final bool suggestionsStrictbounds;
-  final List<String> suggestionsTypes;
-  final String? sessionToken;
   final String searchHintText;
   final TextStyle? searchHintStyle;
   final int minCharsForSuggestions;
   final Duration debounceDuration;
   final String defaultAddressText;
-  final Widget Function(BuildContext, Prediction)? itemBuilder;
-  final void Function(Prediction)? onSelected;
+  final Widget Function(BuildContext, Suggestion)? itemBuilder;
+  final void Function(Suggestion)? onSelected;
   final Widget Function(BuildContext, Object)? errorBuilder;
   final Duration animationDuration;
   final bool autoFlipDirection;
@@ -249,33 +303,28 @@ class SearchConfig<Prediction> {
   final Offset? offset;
   final bool retainOnLoading;
   final bool showOnFocus;
-  final SuggestionsController<Prediction>? suggestionsController;
+  final SuggestionsController<Suggestion>? suggestionsController;
   final Widget Function(BuildContext, Widget)? decorationBuilder;
   final Widget Function(BuildContext)? emptyBuilder;
   final ScrollController? scrollController;
   final FocusNode? focusNode;
   final bool hideKeyboardOnDrag;
+  final Widget Function(BuildContext, TextEditingController, FocusNode)?
+      builder;
 
   const SearchConfig({
     this.apiKey = "",
-    this.baseClient,
-    this.baseRegion,
-    this.baseSessionToken,
-    this.baseLanguage,
     this.baseFields = const [],
-    this.baseApiHeaders,
-    this.baseBaseUrl,
-    this.suggestionsLanguage,
-    this.suggestionsRegion,
-    this.suggestionsComponents = const [],
-    this.suggestionsLocation,
-    this.suggestionsOffset,
-    this.suggestionsOrigin,
-    this.suggestionsRadius,
-    this.suggestionsStrictbounds = false,
-    this.suggestionsTypes = const [],
+    this.placesApi,
+    this.placesAllFields = true,
+    this.placeDetailsFilter,
+    this.placeDetails,
+    this.searchAllFields = true,
+    this.searchFields,
+    this.searchFilter,
+    this.searchInstanceFields,
     this.sessionToken,
-    this.searchHintText = "Start typing to search",
+    this.searchHintText = "Search for place, address, landmark, etc.",
     this.searchHintStyle,
     this.minCharsForSuggestions = 3,
     this.debounceDuration = const Duration(milliseconds: 500),
@@ -307,34 +356,36 @@ class SearchConfig<Prediction> {
     this.scrollController,
     this.focusNode,
     this.hideKeyboardOnDrag = true,
+    this.builder,
   });
 
+  /// Copy with the configuration for the autocomplete view.
+  ///
+  /// ```dart
+  /// final config = config.copyWith(
+  ///   apiKey: "YOUR_API_KEY",
+  ///   placesApi: PlacesAPINew(apiKey: "YOUR_API_KEY"),
+  /// );
+  /// ```
+  ///
   SearchConfig copyWith({
     String? apiKey,
-    Client? baseClient,
-    String? baseRegion,
-    String? baseSessionToken,
-    String? baseLanguage,
-    List<String>? baseFields,
-    Map<String, String>? baseApiHeaders,
-    String? baseBaseUrl,
-    String? suggestionsLanguage,
-    String? suggestionsRegion,
-    List<Component>? suggestionsComponents,
-    Location? suggestionsLocation,
-    num? suggestionsOffset,
-    Location? suggestionsOrigin,
-    num? suggestionsRadius,
-    bool? suggestionsStrictbounds,
-    List<String>? suggestionsTypes,
-    String? sessionToken,
+    PlacesAPINew? placesApi,
+    bool? placesAllFields,
+    PlaceDetailsFilter? placeDetailsFilter,
+    Place? placeDetails,
+    bool? searchAllFields,
+    List<String>? searchFields,
+    AutocompleteSearchFilter? searchFilter,
+    PlacesSuggestions? searchInstanceFields,
+    SessionTokenHandler? sessionToken,
     String? searchHintText,
     TextStyle? searchHintStyle,
     int? minCharsForSuggestions,
     Duration? debounceDuration,
     String? defaultAddressText,
-    Widget Function(BuildContext, Prediction)? itemBuilder,
-    void Function(Prediction)? onSelected,
+    Widget Function(BuildContext, Suggestion)? itemBuilder,
+    void Function(Suggestion)? onSelected,
     Widget Function(BuildContext, Object)? errorBuilder,
     Duration? animationDuration,
     bool? autoFlipDirection,
@@ -354,33 +405,24 @@ class SearchConfig<Prediction> {
     Offset? offset,
     bool? retainOnLoading,
     bool? showOnFocus,
-    SuggestionsController<Prediction>? suggestionsController,
+    SuggestionsController<Suggestion>? suggestionsController,
     Widget Function(BuildContext, Widget)? decorationBuilder,
     Widget Function(BuildContext)? emptyBuilder,
     ScrollController? scrollController,
     FocusNode? focusNode,
     bool? hideKeyboardOnDrag,
+    Widget Function(BuildContext, TextEditingController, FocusNode)? builder,
   }) {
     return SearchConfig(
       apiKey: apiKey ?? this.apiKey,
-      baseClient: baseClient ?? this.baseClient,
-      baseRegion: baseRegion ?? this.baseRegion,
-      baseSessionToken: baseSessionToken ?? this.baseSessionToken,
-      baseLanguage: baseLanguage ?? this.baseLanguage,
-      baseFields: baseFields ?? this.baseFields,
-      baseApiHeaders: baseApiHeaders ?? this.baseApiHeaders,
-      baseBaseUrl: baseBaseUrl ?? this.baseBaseUrl,
-      suggestionsLanguage: suggestionsLanguage ?? this.suggestionsLanguage,
-      suggestionsRegion: suggestionsRegion ?? this.suggestionsRegion,
-      suggestionsComponents:
-          suggestionsComponents ?? this.suggestionsComponents,
-      suggestionsLocation: suggestionsLocation ?? this.suggestionsLocation,
-      suggestionsOffset: suggestionsOffset ?? this.suggestionsOffset,
-      suggestionsOrigin: suggestionsOrigin ?? this.suggestionsOrigin,
-      suggestionsRadius: suggestionsRadius ?? this.suggestionsRadius,
-      suggestionsStrictbounds:
-          suggestionsStrictbounds ?? this.suggestionsStrictbounds,
-      suggestionsTypes: suggestionsTypes ?? this.suggestionsTypes,
+      placesApi: placesApi ?? this.placesApi,
+      placesAllFields: placesAllFields ?? this.placesAllFields,
+      placeDetailsFilter: placeDetailsFilter ?? this.placeDetailsFilter,
+      placeDetails: placeDetails ?? this.placeDetails,
+      searchAllFields: searchAllFields ?? this.searchAllFields,
+      searchFields: searchFields ?? this.searchFields,
+      searchFilter: searchFilter ?? this.searchFilter,
+      searchInstanceFields: searchInstanceFields ?? this.searchInstanceFields,
       sessionToken: sessionToken ?? this.sessionToken,
       searchHintText: searchHintText ?? this.searchHintText,
       searchHintStyle: searchHintStyle ?? this.searchHintStyle,
@@ -388,6 +430,8 @@ class SearchConfig<Prediction> {
           minCharsForSuggestions ?? this.minCharsForSuggestions,
       debounceDuration: debounceDuration ?? this.debounceDuration,
       defaultAddressText: defaultAddressText ?? this.defaultAddressText,
+      itemBuilder: itemBuilder ?? this.itemBuilder,
+      onSelected: onSelected ?? this.onSelected,
       errorBuilder: errorBuilder ?? this.errorBuilder,
       animationDuration: animationDuration ?? this.animationDuration,
       autoFlipDirection: autoFlipDirection ?? this.autoFlipDirection,
@@ -414,6 +458,7 @@ class SearchConfig<Prediction> {
       scrollController: scrollController ?? this.scrollController,
       focusNode: focusNode ?? this.focusNode,
       hideKeyboardOnDrag: hideKeyboardOnDrag ?? this.hideKeyboardOnDrag,
+      builder: builder ?? this.builder,
     );
   }
 }

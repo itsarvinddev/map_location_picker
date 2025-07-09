@@ -1,22 +1,20 @@
 import 'dart:async';
 
 import 'package:flutter/cupertino.dart';
-import 'package:flutter/foundation.dart';
-import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
-import 'package:geolocator/geolocator.dart';
-import 'package:google_maps_flutter/google_maps_flutter.dart';
-import 'package:google_maps_webapi/geocoding.dart';
-import 'package:google_maps_webapi/places.dart';
-import 'package:http/http.dart';
+import 'package:google_maps_apis/places_new.dart' hide LatLng, Circle;
 
-import 'autocomplete_view.dart';
-import 'geocoding_service.dart';
+import '../map_location_picker.dart' hide Circle;
 import 'logger.dart';
 
 /// Default radius for the map location picker.
-const _radius = 16.0;
+const _radius = 12.0;
+
+enum CardType {
+  defaultCard,
+  confirmCard,
+}
 
 /// The main widget for the map location picker.
 class MapLocationPicker extends HookWidget {
@@ -45,8 +43,8 @@ class MapLocationPicker extends HookWidget {
     final mapControllerCompleter =
         useMemoized(() => Completer<GoogleMapController>());
     final markers = useState<Set<Marker>>({});
-    final geoCodingResult = useState<GeocodingResult?>(null);
-    final geoCodingResults = useState<List<GeocodingResult>>([]);
+    final geoCodingResult = useState<Place?>(null);
+    final geoCodingResults = useState<List<Place>>([]);
     final mapType = useState(config.initialMapType);
 
     final effectiveGeoCodingService = useMemoized(
@@ -54,28 +52,25 @@ class MapLocationPicker extends HookWidget {
           geoCodingConfig ??
           GeoCodingConfig(
             apiKey: config.apiKey,
-            httpClient: config.baseClient,
-            apiHeaders: config.baseApiHeaders,
-            baseUrl: config.baseUrl,
+            placesApi: config.placesApi,
           ),
     );
 
     /// Initialize map
     useEffect(() {
+      if (!context.mounted) return;
+      if (config.initialPosition == const LatLng(0, 0)) return;
       Future.microtask(() {
-        if (!context.mounted) return;
         markers.value = _createMarkers(position.value);
-        if (config.initialPosition != const LatLng(0, 0)) {
-          _getAddressForPosition(
-            position.value,
-            effectiveGeoCodingService,
-            address,
-            isLoading,
-            geoCodingResult,
-            geoCodingResults,
-            context,
-          );
-        }
+        _getAddressForPosition(
+          position.value,
+          effectiveGeoCodingService,
+          address,
+          isLoading,
+          geoCodingResult,
+          geoCodingResults,
+          context,
+        );
       });
       return;
     }, const []);
@@ -90,9 +85,7 @@ class MapLocationPicker extends HookWidget {
         config: searchConfig ??
             SearchConfig(
               apiKey: config.apiKey,
-              baseClient: config.baseClient,
-              baseApiHeaders: config.baseApiHeaders,
-              baseBaseUrl: config.baseUrl,
+              placesApi: config.placesApi,
             ),
         onGetDetails: (details) => _handlePlaceDetails(
           details,
@@ -103,6 +96,7 @@ class MapLocationPicker extends HookWidget {
           effectiveGeoCodingService,
           isLoading,
           geoCodingResult,
+          geoCodingResults,
           markers,
         ),
       );
@@ -213,6 +207,7 @@ class MapLocationPicker extends HookWidget {
                 config.bottomCardBuilder?.call(
                       context,
                       geoCodingResult.value,
+                      geoCodingResults.value,
                       address.value,
                       isLoading.value,
                       () => _handleNext(context, geoCodingResult.value),
@@ -351,6 +346,7 @@ class MapLocationPicker extends HookWidget {
                 context, index, index == mapTypeValues.length - 1),
             child: ListTile(
               selected: mapType.value == type,
+              textColor: Theme.of(context).textTheme.labelLarge?.color,
               leading: Icon(_mapTypeIcon(type)),
               title: Text(_mapTypeName(type)),
               onTap: () {
@@ -397,10 +393,10 @@ class MapLocationPicker extends HookWidget {
 
   Widget _defaultBottomCard(
     BuildContext context,
-    GeocodingResult? result,
+    Place? result,
     String address,
     bool isLoading,
-    List<GeocodingResult> results,
+    List<Place> results,
     MapLocationPickerConfig config,
     VoidCallback onNext,
   ) {
@@ -417,15 +413,17 @@ class MapLocationPicker extends HookWidget {
           )
         else
           CupertinoActionSheetAction(
-            child: Text(address),
             onPressed: onNext,
-            isDefaultAction: true,
+            child: Text(address),
           ),
-        if (results.isNotEmpty && !config.hideMoreOptions)
+        if (config.confirmButton != null)
+          config.confirmButton?.call(context, onNext) ??
+              const SizedBox.shrink(),
+        if (results.isNotEmpty && !config.hideMoreOptions && results.length > 1)
           CupertinoActionSheetAction(
             child: Text(
-              "Show ${results.length} more options",
-              style: theme.textTheme.bodySmall,
+              "Nearby places (${results.length})",
+              style: theme.textTheme.bodyMedium,
             ),
             onPressed: () => _showAddressOptions(context, results, config),
           ),
@@ -438,7 +436,6 @@ class MapLocationPicker extends HookWidget {
     int index,
     bool isLast,
   ) {
-    final theme = Theme.of(context);
     return BoxDecoration(
       color: CupertinoColors.systemFill,
       borderRadius: BorderRadius.only(
@@ -451,8 +448,8 @@ class MapLocationPicker extends HookWidget {
         bottom: isLast
             ? BorderSide.none
             : BorderSide(
-                color: theme.colorScheme.outlineVariant,
-                width: 1,
+                color: CupertinoColors.opaqueSeparator,
+                width: 0.5,
               ),
       ),
     );
@@ -460,7 +457,7 @@ class MapLocationPicker extends HookWidget {
 
   void _showAddressOptions(
     BuildContext context,
-    List<GeocodingResult> results,
+    List<Place> results,
     MapLocationPickerConfig config,
   ) {
     final theme = Theme.of(context);
@@ -485,8 +482,12 @@ class MapLocationPicker extends HookWidget {
               return Container(
                 margin: const EdgeInsets.symmetric(horizontal: 16),
                 decoration: _buildBoxDecoration(
-                    context, index, index == results.length - 1),
+                  context,
+                  index,
+                  index == results.length - 1,
+                ),
                 child: ListTile(
+                  minTileHeight: 50,
                   title: Text(
                     result.formattedAddress ?? "",
                     style: TextStyle(
@@ -513,53 +514,59 @@ class MapLocationPicker extends HookWidget {
     GeoCodingConfig geoCodingService,
     ValueNotifier<String> address,
     ValueNotifier<bool> isLoading,
-    ValueNotifier<GeocodingResult?> geoCodingResult,
-    ValueNotifier<List<GeocodingResult>> geoCodingResults,
+    ValueNotifier<Place?> geoCodingResult,
+    ValueNotifier<List<Place>> geoCodingResults,
     ValueNotifier<Set<Marker>> markers,
     BuildContext context,
   ) async {
     try {
       isLoading.value = true;
-      if (config.hasLocationPermission) {
-        final permission = await Geolocator.checkPermission();
-        if (permission == LocationPermission.denied) {
-          final newPermission = await Geolocator.requestPermission();
-          if (newPermission != LocationPermission.whileInUse &&
-              newPermission != LocationPermission.always) {
-            return;
-          }
-        }
 
-        final currentPosition = await Geolocator.getCurrentPosition(
-          locationSettings: config.locationSettings,
-        );
-
-        final newPosition =
-            LatLng(currentPosition.latitude, currentPosition.longitude);
-
-        position.value = newPosition;
-        markers.value = _createMarkers(newPosition);
-
-        final controller = await mapControllerCompleter.future;
-        controller.animateCamera(
-          CameraUpdate.newCameraPosition(
-            CameraPosition(
-              target: newPosition,
-              zoom: config.initialZoom,
-            ),
-          ),
-        );
-
-        await _getAddressForPosition(
-          newPosition,
-          geoCodingService,
-          address,
-          isLoading,
-          geoCodingResult,
-          geoCodingResults,
-          context,
-        );
+      final serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      if (!serviceEnabled) {
+        mapLogger.i("Location service is not enabled");
+        return;
       }
+
+      final permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        final newPermission = await Geolocator.requestPermission();
+        if (newPermission != LocationPermission.whileInUse &&
+            newPermission != LocationPermission.always) {
+          mapLogger.i("Location permission is not while in use or always");
+          return;
+        }
+      }
+
+      final currentPosition = await Geolocator.getCurrentPosition(
+        locationSettings: config.locationSettings,
+      );
+
+      final newPosition =
+          LatLng(currentPosition.latitude, currentPosition.longitude);
+
+      position.value = newPosition;
+      markers.value = _createMarkers(newPosition);
+
+      final controller = await mapControllerCompleter.future;
+      controller.animateCamera(
+        CameraUpdate.newCameraPosition(
+          CameraPosition(
+            target: newPosition,
+            zoom: config.initialZoom,
+          ),
+        ),
+      );
+
+      await _getAddressForPosition(
+        newPosition,
+        geoCodingService,
+        address,
+        isLoading,
+        geoCodingResult,
+        geoCodingResults,
+        context,
+      );
     } catch (e) {
       mapLogger.e("Error getting current location: $e");
       if (config.onLocationError != null) {
@@ -577,8 +584,8 @@ class MapLocationPicker extends HookWidget {
     GeoCodingConfig geoCodingService,
     ValueNotifier<String> address,
     ValueNotifier<bool> isLoading,
-    ValueNotifier<GeocodingResult?> geoCodingResult,
-    ValueNotifier<List<GeocodingResult>> geoCodingResults,
+    ValueNotifier<Place?> geoCodingResult,
+    ValueNotifier<List<Place>> geoCodingResults,
     ValueNotifier<Set<Marker>> markers,
     BuildContext context,
   ) async {
@@ -610,29 +617,45 @@ class MapLocationPicker extends HookWidget {
     GeoCodingConfig geoCodingService,
     ValueNotifier<String> address,
     ValueNotifier<bool> isLoading,
-    ValueNotifier<GeocodingResult?> geoCodingResult,
-    ValueNotifier<List<GeocodingResult>> geoCodingResults,
+    ValueNotifier<Place?> geoCodingResult,
+    ValueNotifier<List<Place>> geoCodingResults,
     BuildContext context,
   ) async {
     isLoading.value = true;
     try {
-      final response = await geoCodingService.reverseGeocode(position);
+      final response = await geoCodingService.reverseGeocode(
+        position: position,
+        radius: config.geocodingRadius,
+      );
+      if (!context.mounted) return;
       final result = response.$1;
       final results = response.$2;
 
-      if (!context.mounted) return;
       if (result != null) {
-        address.value = result.formattedAddress ?? "Address not found";
+        address.value = result.formattedAddress ??
+            result.adrFormatAddress ??
+            "Address not found";
         geoCodingResult.value = result;
         geoCodingResults.value = results;
         config.onAddressDecoded?.call(result);
+      } else if (results.isNotEmpty) {
+        address.value = results.first.formattedAddress ??
+            results.first.adrFormatAddress ??
+            "Address not found";
+        geoCodingResult.value = results.first;
+        geoCodingResults.value = results;
+        config.onAddressDecoded?.call(results.first);
       } else {
         address.value = "Address not found";
+        geoCodingResult.value = null;
+        geoCodingResults.value = [];
       }
     } catch (e) {
       mapLogger.e("Geocoding error: $e");
       if (!context.mounted) return;
       address.value = "Error fetching address";
+      geoCodingResult.value = null;
+      geoCodingResults.value = [];
     } finally {
       if (context.mounted) {
         isLoading.value = false;
@@ -641,24 +664,26 @@ class MapLocationPicker extends HookWidget {
   }
 
   void _handlePlaceDetails(
-    PlacesDetailsResponse? details,
+    Place? details,
     BuildContext context,
     ValueNotifier<LatLng> position,
     Completer<GoogleMapController> mapControllerCompleter,
     ValueNotifier<String> address,
     GeoCodingConfig geoCodingService,
     ValueNotifier<bool> isLoading,
-    ValueNotifier<GeocodingResult?> geoCodingResult,
+    ValueNotifier<Place?> geoCodingResult,
+    ValueNotifier<List<Place>> geoCodingResults,
     ValueNotifier<Set<Marker>> markers,
   ) {
     try {
       isLoading.value = true;
       if (details == null) return;
-      final location = details.result.geometry?.location;
+      final location = details.location;
       if (location != null) {
-        final newPosition = LatLng(location.lat, location.lng);
+        if (location.latitude == null || location.longitude == null) return;
+        final newPosition = LatLng(location.latitude!, location.longitude!);
         position.value = newPosition;
-        address.value = details.result.formattedAddress ?? "";
+        address.value = details.formattedAddress ?? "";
 
         // Update the map position
         mapControllerCompleter.future.then((controller) {
@@ -672,16 +697,8 @@ class MapLocationPicker extends HookWidget {
           );
           markers.value = _createMarkers(newPosition);
         });
-
-        // Create a geocoding result from place details
-        final result = GeocodingResult(
-          geometry: details.result.geometry!,
-          formattedAddress: details.result.formattedAddress,
-          placeId: details.result.placeId,
-          types: details.result.types,
-        );
-
-        geoCodingResult.value = result;
+        geoCodingResult.value = details;
+        geoCodingResults.value = [details];
         config.onSuggestionSelected?.call(details);
       }
     } catch (e) {
@@ -691,340 +708,7 @@ class MapLocationPicker extends HookWidget {
     }
   }
 
-  void _handleNext(BuildContext context, GeocodingResult? result) {
+  void _handleNext(BuildContext context, Place? result) {
     config.onNext?.call(result);
-  }
-}
-
-class MapLocationPickerConfig {
-  // Core configuration
-  final String apiKey;
-  final Client? baseClient;
-  final Map<String, String>? baseApiHeaders;
-  final String? baseUrl;
-  final LatLng initialPosition;
-  final double initialZoom;
-  final MapType initialMapType;
-
-  // Visual customization
-  final bool myLocationButtonEnabled;
-  final bool myLocationEnabled;
-  final bool zoomControlsEnabled;
-  final MinMaxZoomPreference minMaxZoomPreference;
-  final Function(CameraPosition)? onCameraMove;
-  final EdgeInsets padding;
-  final bool compassEnabled;
-  final bool liteModeEnabled;
-  final String? mapStyle;
-  final Color? floatingControlsColor;
-  final Color? floatingControlsIconColor;
-  final IconData? mapTypeIcon;
-  final IconData? locationIcon;
-  final BitmapDescriptor? mainMarkerIcon;
-
-  final bool hideBottomCardOnKeyboard;
-  final String bottomCardTitle;
-  final Widget Function(
-    BuildContext context,
-    GeocodingResult? result,
-    String address,
-    bool isLoading,
-    VoidCallback onNext,
-    Widget searchBar,
-  )? bottomCardBuilder;
-
-  final Widget Function(
-    BuildContext context,
-    Widget searchBar,
-  )? searchBarBuilder;
-
-  // Location services
-  final bool hasLocationPermission;
-  final LocationSettings? locationSettings;
-  final Function(dynamic error)? onLocationError;
-
-  // Behavior flags
-  final bool hideMoreOptions;
-  final Widget? mapTypeButton;
-  final Widget? locationButton;
-  final String fabTooltip;
-
-  // Additional markers
-  final Map<String, LatLng>? additionalMarkers;
-  final Map<String, BitmapDescriptor>? customMarkerIcons;
-  final Map<String, InfoWindow>? customInfoWindows;
-  final Map<String, VoidCallback>? onMarkerTapped;
-
-  // Callbacks
-  final Function(GoogleMapController)? onMapCreated;
-  final Function(MapType)? onMapTypeChanged;
-  final Function(PlacesDetailsResponse?)? onSuggestionSelected;
-  final Function(GeocodingResult?)? onNext;
-  final Function(GeocodingResult?)? onAddressDecoded;
-  final Function(GeocodingResult)? onAddressSelected;
-
-  // Google Maps advanced properties
-  final bool buildingsEnabled;
-  final CameraTargetBounds cameraTargetBounds;
-  final Set<Circle> circles;
-  final String? cloudMapId;
-  final bool fortyFiveDegreeImageryEnabled;
-  final Set<Factory<OneSequenceGestureRecognizer>> gestureRecognizers;
-  final bool indoorViewEnabled;
-  final TextDirection? layoutDirection;
-  final bool mapToolbarEnabled;
-  final VoidCallback? onCameraIdle;
-  final VoidCallback? onCameraMoveStarted;
-  final ArgumentCallback<LatLng>? onLongPress;
-  final Set<Polygon> polygons;
-  final Set<Polyline> polylines;
-  final bool rotateGesturesEnabled;
-  final bool scrollGesturesEnabled;
-  final Set<TileOverlay> tileOverlays;
-  final bool tiltGesturesEnabled;
-  final bool trafficEnabled;
-  final WebGestureHandling? webGestureHandling;
-  final bool zoomGesturesEnabled;
-  final Set<ClusterManager> clusterManagers;
-  final Set<GroundOverlay> groundOverlays;
-  final Set<Heatmap> heatmaps;
-
-  const MapLocationPickerConfig({
-    required this.apiKey,
-    this.bottomCardBuilder,
-    this.searchBarBuilder,
-    this.baseClient,
-    this.baseApiHeaders,
-    this.baseUrl,
-    this.initialPosition = const LatLng(28.8993468, 76.6250249),
-    this.initialZoom = 14.0,
-    this.initialMapType = MapType.normal,
-    this.myLocationButtonEnabled = false,
-    this.myLocationEnabled = false,
-    this.zoomControlsEnabled = false,
-    this.minMaxZoomPreference = MinMaxZoomPreference.unbounded,
-    this.onCameraMove,
-    this.padding = EdgeInsets.zero,
-    this.compassEnabled = true,
-    this.liteModeEnabled = false,
-    this.mapStyle,
-    this.hideBottomCardOnKeyboard = true,
-    this.hasLocationPermission = true,
-    this.locationSettings,
-    this.onLocationError,
-    this.hideMoreOptions = false,
-    this.mapTypeButton,
-    this.locationButton,
-    this.fabTooltip = 'My Location',
-    this.bottomCardTitle = 'Select your location',
-    this.additionalMarkers,
-    this.customMarkerIcons,
-    this.customInfoWindows,
-    this.onMarkerTapped,
-    this.floatingControlsColor,
-    this.floatingControlsIconColor,
-    this.mapTypeIcon = CupertinoIcons.layers,
-    this.locationIcon = Icons.my_location_outlined,
-    this.mainMarkerIcon,
-    this.onMapCreated,
-    this.onMapTypeChanged,
-    this.onSuggestionSelected,
-    this.onNext,
-    this.onAddressDecoded,
-    this.onAddressSelected,
-    this.buildingsEnabled = true,
-    this.cameraTargetBounds = CameraTargetBounds.unbounded,
-    this.circles = const <Circle>{},
-    this.cloudMapId,
-    this.fortyFiveDegreeImageryEnabled = false,
-    this.gestureRecognizers = const <Factory<OneSequenceGestureRecognizer>>{},
-    this.indoorViewEnabled = false,
-    this.layoutDirection,
-    this.mapToolbarEnabled = true,
-    this.onCameraIdle,
-    this.onCameraMoveStarted,
-    this.onLongPress,
-    this.polygons = const <Polygon>{},
-    this.polylines = const <Polyline>{},
-    this.rotateGesturesEnabled = true,
-    this.scrollGesturesEnabled = true,
-    this.tileOverlays = const <TileOverlay>{},
-    this.tiltGesturesEnabled = true,
-    this.trafficEnabled = false,
-    this.webGestureHandling,
-    this.zoomGesturesEnabled = true,
-    this.clusterManagers = const <ClusterManager>{},
-    this.groundOverlays = const <GroundOverlay>{},
-    this.heatmaps = const <Heatmap>{},
-  });
-
-  MapLocationPickerConfig copyWith({
-    // Core configuration
-    String? apiKey,
-    Client? baseClient,
-    Map<String, String>? baseApiHeaders,
-    String? baseUrl,
-    LatLng? initialPosition,
-    double? initialZoom,
-    MapType? initialMapType,
-
-    // Visual customization
-    bool? myLocationButtonEnabled,
-    bool? myLocationEnabled,
-    bool? zoomControlsEnabled,
-    MinMaxZoomPreference? minMaxZoomPreference,
-    Function(CameraPosition)? onCameraMove,
-    EdgeInsets? padding,
-    bool? compassEnabled,
-    bool? liteModeEnabled,
-    String? mapStyle,
-    Color? floatingControlsColor,
-    Color? floatingControlsIconColor,
-    IconData? mapTypeIcon,
-    IconData? locationIcon,
-    BitmapDescriptor? mainMarkerIcon,
-
-    // Search bar options
-    bool? hideSearchBar,
-    EdgeInsetsGeometry? topCardMargin,
-    Color? topCardColor,
-    ShapeBorder? topCardShape,
-    BorderRadiusGeometry? borderRadius,
-
-    // Bottom card options
-    bool? hideBottomCard,
-    bool? hideBottomCardOnKeyboard,
-    ShapeBorder? bottomCardShape,
-    EdgeInsetsGeometry? bottomCardMargin,
-    Icon? bottomCardIcon,
-    String? bottomCardTooltip,
-    Color? bottomCardColor,
-    TextStyle? bottomCardTextStyle,
-    Widget Function(
-      BuildContext context,
-      GeocodingResult? result,
-      String address,
-      bool isLoading,
-      VoidCallback onNext,
-      Widget searchBar,
-    )? bottomCardBuilder,
-
-    // Search bar options
-    Widget Function(
-      BuildContext context,
-      Widget searchBar,
-    )? searchBarBuilder,
-
-    // Location services
-    bool? hasLocationPermission,
-    LocationSettings? locationSettings,
-    Function(dynamic error)? onLocationError,
-
-    // Behavior flags
-    bool? hideBackButton,
-    bool? popOnNext,
-    bool? hideMoreOptions,
-    Widget? mapTypeButton,
-    Widget? locationButton,
-    String? fabTooltip,
-    String? bottomCardTitle,
-
-    // Additional markers
-    Map<String, LatLng>? additionalMarkers,
-    Map<String, BitmapDescriptor>? customMarkerIcons,
-    Map<String, InfoWindow>? customInfoWindows,
-    Map<String, VoidCallback>? onMarkerTapped,
-
-    // Safe area
-    bool? safeAreaBottom,
-    bool? safeAreaLeft,
-    bool? safeAreaMaintainBottomViewPadding,
-    EdgeInsets? safeAreaMinimum,
-    bool? safeAreaRight,
-    bool? safeAreaTop,
-
-    // Callbacks
-    Function(GoogleMapController)? onMapCreated,
-    Function(MapType)? onMapTypeChanged,
-    Function(PlacesDetailsResponse?)? onSuggestionSelected,
-    Function(GeocodingResult?)? onNext,
-    Function(GeocodingResult?)? onAddressDecoded,
-    Function(GeocodingResult)? onAddressSelected,
-
-    // Google Maps advanced properties
-    bool? buildingsEnabled,
-    CameraTargetBounds? cameraTargetBounds,
-    Set<Circle>? circles,
-    String? cloudMapId,
-    bool? fortyFiveDegreeImageryEnabled,
-    Set<Factory<OneSequenceGestureRecognizer>>? gestureRecognizers,
-    bool? indoorViewEnabled,
-    TextDirection? layoutDirection,
-    bool? mapToolbarEnabled,
-    VoidCallback? onCameraIdle,
-    VoidCallback? onCameraMoveStarted,
-    ArgumentCallback<LatLng>? onLongPress,
-    Set<Polygon>? polygons,
-    Set<Polyline>? polylines,
-    bool? rotateGesturesEnabled,
-    bool? scrollGesturesEnabled,
-    Set<TileOverlay>? tileOverlays,
-    bool? tiltGesturesEnabled,
-    bool? trafficEnabled,
-    WebGestureHandling? webGestureHandling,
-    bool? zoomGesturesEnabled,
-    Set<ClusterManager>? clusterManagers,
-    Set<GroundOverlay>? groundOverlays,
-    Set<Heatmap>? heatmaps,
-  }) {
-    return MapLocationPickerConfig(
-      apiKey: apiKey ?? this.apiKey,
-      baseClient: baseClient ?? this.baseClient,
-      baseApiHeaders: baseApiHeaders ?? this.baseApiHeaders,
-      baseUrl: baseUrl ?? this.baseUrl,
-      initialPosition: initialPosition ?? this.initialPosition,
-      initialZoom: initialZoom ?? this.initialZoom,
-      initialMapType: initialMapType ?? this.initialMapType,
-      myLocationButtonEnabled:
-          myLocationButtonEnabled ?? this.myLocationButtonEnabled,
-      myLocationEnabled: myLocationEnabled ?? this.myLocationEnabled,
-      zoomControlsEnabled: zoomControlsEnabled ?? this.zoomControlsEnabled,
-      minMaxZoomPreference: minMaxZoomPreference ?? this.minMaxZoomPreference,
-      onCameraMove: onCameraMove ?? this.onCameraMove,
-      padding: padding ?? this.padding,
-      compassEnabled: compassEnabled ?? this.compassEnabled,
-      liteModeEnabled: liteModeEnabled ?? this.liteModeEnabled,
-      mapStyle: mapStyle ?? this.mapStyle,
-      hideBottomCardOnKeyboard:
-          hideBottomCardOnKeyboard ?? this.hideBottomCardOnKeyboard,
-      bottomCardBuilder: bottomCardBuilder ?? this.bottomCardBuilder,
-      searchBarBuilder: searchBarBuilder ?? this.searchBarBuilder,
-      hasLocationPermission:
-          hasLocationPermission ?? this.hasLocationPermission,
-      locationSettings: locationSettings ?? this.locationSettings,
-      onLocationError: onLocationError ?? this.onLocationError,
-      hideMoreOptions: hideMoreOptions ?? this.hideMoreOptions,
-      mapTypeButton: mapTypeButton ?? this.mapTypeButton,
-      locationButton: locationButton ?? this.locationButton,
-      fabTooltip: fabTooltip ?? this.fabTooltip,
-      bottomCardTitle: bottomCardTitle ?? this.bottomCardTitle,
-      mapTypeIcon: mapTypeIcon ?? this.mapTypeIcon,
-      locationIcon: locationIcon ?? this.locationIcon,
-      mainMarkerIcon: mainMarkerIcon ?? this.mainMarkerIcon,
-      floatingControlsColor:
-          floatingControlsColor ?? this.floatingControlsColor,
-      floatingControlsIconColor:
-          floatingControlsIconColor ?? this.floatingControlsIconColor,
-      onMapCreated: onMapCreated ?? this.onMapCreated,
-      onMapTypeChanged: onMapTypeChanged ?? this.onMapTypeChanged,
-      additionalMarkers: additionalMarkers ?? this.additionalMarkers,
-      customMarkerIcons: customMarkerIcons ?? this.customMarkerIcons,
-      customInfoWindows: customInfoWindows ?? this.customInfoWindows,
-      onMarkerTapped: onMarkerTapped ?? this.onMarkerTapped,
-      onSuggestionSelected: onSuggestionSelected ?? this.onSuggestionSelected,
-      onAddressDecoded: onAddressDecoded ?? this.onAddressDecoded,
-      onAddressSelected: onAddressSelected ?? this.onAddressSelected,
-      onNext: onNext ?? this.onNext,
-    );
   }
 }

@@ -1,3 +1,9 @@
+## 3.0.0
+
+- google_maps_apis package added.
+- now new places api is used for geocoding and autocomplete.
+- new bottom card options added.
+
 ## 2.0.3
 
 - add context.mounted check for geocoding result.

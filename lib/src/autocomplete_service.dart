@@ -1,75 +1,76 @@
-import "package:google_maps_webapi/places.dart";
-import 'package:http/http.dart';
+import 'package:google_maps_apis/places_new.dart';
 
 import 'logger.dart';
 
 /// The autocomplete service for the map location picker.
+/// [AutoCompleteService] service is used to search for places and get the details of the place.
+///
+/// ```dart
+/// final service = AutoCompleteService(
+///   placesApi: PlacesAPINew(apiKey: "YOUR_API_KEY"),
+/// );
+/// ```
+///
 class AutoCompleteService {
   /// The HTTP client to use for the autocomplete service.
-  final Client? httpClient;
+  final PlacesAPINew? placesApi;
 
-  /// The API headers to use for the autocomplete service.
-  final Map<String, String>? apiHeaders;
+  AutoCompleteService({this.placesApi});
 
-  /// The base URL to use for the autocomplete service.
-  final String? baseUrl;
-
-  AutoCompleteService({this.httpClient, this.apiHeaders, this.baseUrl});
-
-  Future<List<Prediction>> search({
+  Future<List<Suggestion>> search({
     required String query,
     required String apiKey,
-    String? sessionToken,
-    num? offset,
-    Location? origin,
-    Location? location,
-    num? radius,
-    String? language,
-    List<String> types = const [],
-    List<Component> components = const [],
-    bool strictbounds = false,
-    String? region,
+    AutocompleteSearchFilter? filter,
+
+    /// if true, all fields will be returned.
+    /// if false, only the fields specified in the fields parameter will be returned.
+    /// ensure [allFields] is false if you are using [fields] parameter.
+    bool allFields = true,
+
+    /// the fields to return.
+    /// Ensure that allFields = true or fields != null, or instanceFields != null with some field != null.
+    /// [Pricing note](https://developers.google.com/maps/documentation/places/web-service/autocomplete#pricing)
+    ///
+    /// ```
+    ///  Each field group (Basic, Contact, Atmosphere) has a separate billing weight.
+    ///  So selecting more fields increases cost.
+    ///  Examples:
+    ///  fields=name,geometry = cheaper
+    ///  fields=name,geometry,reviews,photos = more expensive.
+    /// ```
+    List<String>? fields,
+    PlacesSuggestions? instanceFields,
+    SessionTokenHandler? sessionToken,
   }) async {
     try {
-      final places = GoogleMapsPlaces(
-        apiKey: apiKey,
-        httpClient: httpClient,
-        apiHeaders: apiHeaders,
-        baseUrl: baseUrl,
+      if (query.isEmpty) return [];
+      final places = placesApi ?? PlacesAPINew(apiKey: apiKey);
+      sessionToken ??= SessionTokenHandler();
+      final response = await places.searchAutocomplete(
+        filter: filter ??
+            AutocompleteSearchFilter(
+              input: query,
+              sessionToken: sessionToken.token,
+            ),
+        allFields: allFields,
+        fields: fields,
+        instanceFields: instanceFields,
       );
 
-      final response = await places.autocomplete(
-        query,
-        region: region,
-        language: language,
-        components: components,
-        location: location,
-        offset: offset,
-        origin: origin,
-        radius: radius,
-        sessionToken: sessionToken,
-        strictbounds: strictbounds,
-        types: types,
-      );
-
-      if (_isErrorResponse(response)) {
-        if (query.isNotEmpty) mapLogger.e(response.errorMessage);
-        return [];
-      }
-
-      return response.predictions;
+      if (_isErrorResponse(response)) return <Suggestion>[];
+      final suggestions = response.body?.suggestions ?? <Suggestion>[];
+      return suggestions;
     } catch (err) {
       mapLogger.e(err);
-      return [];
+      return <Suggestion>[];
     }
   }
 
-  bool _isErrorResponse(PlacesAutocompleteResponse response) {
-    return response.hasNoResults ||
-        response.isDenied ||
-        response.isInvalid ||
-        response.isNotFound ||
-        response.unknownError ||
-        response.isOverQueryLimit;
+  bool _isErrorResponse(GoogleHTTPResponse<PlacesSuggestions?> response) {
+    final isError = response.error != null && !response.isSuccessful;
+    if (isError) {
+      mapLogger.e(response.error?.error?.toJsonString());
+    }
+    return isError;
   }
 }
