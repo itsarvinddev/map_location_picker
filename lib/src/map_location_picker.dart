@@ -82,6 +82,7 @@ class MapLocationPicker extends HookWidget {
       Widget searchBar = PlacesAutocomplete(
         cardType: config.cardType,
         cardColor: config.cardColor,
+        cardRadius: config.cardRadius,
         initialValue: searchConfig?.initialValue,
         config: searchConfig ??
             SearchConfig(
@@ -148,8 +149,10 @@ class MapLocationPicker extends HookWidget {
                           mini: true,
                           elevation: 0,
                           onPressed: () {
-                            showCupertinoModalPopup(
+                            showModalBottomSheet(
                               context: context,
+                              backgroundColor: Colors.transparent,
+                              barrierColor: Colors.black38,
                               builder: (context) => _buildMapTypeSelector(
                                 context,
                                 mapType,
@@ -219,6 +222,7 @@ class MapLocationPicker extends HookWidget {
       );
     }
 
+    final hasFocus = FocusManager.instance.primaryFocus?.hasFocus ?? false;
     return Scaffold(
       extendBodyBehindAppBar: true,
       extendBody: true,
@@ -246,9 +250,17 @@ class MapLocationPicker extends HookWidget {
             onMapCreated: (controller) {
               mapControllerCompleter.complete(controller);
               config.onMapCreated?.call(controller);
+              if (hasFocus) {
+                FocusManager.instance.primaryFocus?.unfocus();
+              }
             },
             minMaxZoomPreference: config.minMaxZoomPreference,
-            onCameraMove: config.onCameraMove,
+            onCameraMove: (position) {
+              config.onCameraMove?.call(position);
+              if (hasFocus) {
+                FocusManager.instance.primaryFocus?.unfocus();
+              }
+            },
             markers: markers.value,
             myLocationButtonEnabled: config.myLocationButtonEnabled,
             myLocationEnabled: config.myLocationEnabled,
@@ -328,28 +340,42 @@ class MapLocationPicker extends HookWidget {
     ValueNotifier<MapType> mapType,
   ) {
     final mapTypeValues = MapType.values.where((type) => type != MapType.none);
-    return CupertinoActionSheet(
-      title: Text("Map Types"),
-      actions: mapTypeValues.map((type) {
-        return CupertinoActionSheetAction(
-          child: Row(
-            spacing: 12,
-            children: [
-              Icon(_mapTypeIcon(type)),
-              Text(_mapTypeName(type)),
-            ],
-          ),
-          onPressed: () {
-            mapType.value = type;
-            config.onMapTypeChanged?.call(type);
-            Navigator.pop(context);
-          },
-          isDefaultAction: mapType.value == type,
-        );
-      }).toList(),
-      cancelButton: CupertinoActionSheetAction(
-        child: Text("Cancel"),
-        onPressed: () => Navigator.pop(context),
+    return Material(
+      type: MaterialType.transparency,
+      elevation: 0,
+      borderRadius:
+          config.cardRadius ?? BorderRadius.circular(CustomMapCard.kRadius),
+      child: CupertinoActionSheet(
+        title: Text("Map type"),
+        message: Text("Select the map type you want to see."),
+        actions: mapTypeValues.map((type) {
+          return CupertinoActionSheetAction(
+            child: CupertinoListTile(
+              padding: EdgeInsets.zero,
+              leading: Icon(_mapTypeIcon(type), size: 20),
+              title: Text(
+                _mapTypeName(type),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                textAlign: TextAlign.start,
+                // style: theme.textTheme.titleMedium,
+              ),
+              trailing:
+                  mapType.value == type ? Icon(Icons.check, size: 20) : null,
+            ),
+            onPressed: () {
+              mapType.value = type;
+              config.onMapTypeChanged?.call(type);
+              Navigator.pop(context);
+            },
+          );
+        }).toList(),
+        cancelButton: CupertinoButton(
+          child: Text("Cancel"),
+          minimumSize: const Size(double.infinity, 40),
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          onPressed: () => Navigator.pop(context),
+        ),
       ),
     );
   }
@@ -553,7 +579,7 @@ class MapLocationPicker extends HookWidget {
     ValueNotifier<Place?> geoCodingResult,
     ValueNotifier<List<Place>> geoCodingResults,
     ValueNotifier<Set<Marker>> markers,
-  ) {
+  ) async {
     try {
       isLoading.value = true;
       if (details == null) return;
@@ -576,9 +602,16 @@ class MapLocationPicker extends HookWidget {
           );
           markers.value = _createMarkers(newPosition);
         });
-        geoCodingResult.value = details;
-        geoCodingResults.value = [details];
         config.onSuggestionSelected?.call(details);
+        await _getAddressForPosition(
+          newPosition,
+          geoCodingService,
+          address,
+          isLoading,
+          geoCodingResult,
+          geoCodingResults,
+          context,
+        );
       }
     } catch (e) {
       mapLogger.e("Error handling place details: $e");

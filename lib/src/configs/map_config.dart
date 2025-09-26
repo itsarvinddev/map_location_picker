@@ -40,7 +40,7 @@ abstract class MapLocationPickerConfig with _$MapLocationPickerConfig {
     @Default(false) bool zoomControlsEnabled,
     @Default(MinMaxZoomPreference.unbounded)
     MinMaxZoomPreference minMaxZoomPreference,
-    @Default(null) Function(CameraPosition)? onCameraMove,
+    @Default(null) void Function(CameraPosition)? onCameraMove,
     @Default(EdgeInsets.zero) EdgeInsets padding,
     @Default(true) bool compassEnabled,
     @Default(false) bool liteModeEnabled,
@@ -99,7 +99,8 @@ abstract class MapLocationPickerConfig with _$MapLocationPickerConfig {
     @Default(<GroundOverlay>{}) Set<GroundOverlay> groundOverlays,
     @Default(<Heatmap>{}) Set<Heatmap> heatmaps,
     @Default(CardType.defaultCard) CardType cardType,
-    @Default(CupertinoColors.systemGrey6) Color cardColor,
+    @Default(null) Color? cardColor,
+    @Default(null) BorderRadiusGeometry? cardRadius,
     @Default("No address found") String noAddressFoundText,
   }) = _MapLocationPickerConfig;
 }

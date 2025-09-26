@@ -40,6 +40,8 @@ class PlacesAutocomplete extends HookWidget {
 
   final Color? cardColor;
 
+  final BorderRadiusGeometry? cardRadius;
+
   /// The constructor for the autocomplete view.
   const PlacesAutocomplete({
     super.key,
@@ -49,6 +51,7 @@ class PlacesAutocomplete extends HookWidget {
     this.onSelected,
     this.cardType = CardType.defaultCard,
     this.cardColor,
+    this.cardRadius,
   });
 
   @override
@@ -58,9 +61,6 @@ class PlacesAutocomplete extends HookWidget {
       text: initialValue?.placePrediction?.text?.text ??
           config.defaultAddressText,
     );
-
-    /// Focus node for the search field. handle focus and unfocus.
-    final focusNode = useFocusNode();
 
     /// Auto complete service.
     final service = useMemoized(
@@ -75,7 +75,7 @@ class PlacesAutocomplete extends HookWidget {
       onSelected: (value) {
         _handleSelection(value, context, textController, service);
         config.onSelected?.call(value);
-        focusNode.unfocus();
+        FocusManager.instance.primaryFocus?.unfocus();
       },
       errorBuilder: config.errorBuilder,
       animationDuration: config.animationDuration,
@@ -107,23 +107,17 @@ class PlacesAutocomplete extends HookWidget {
       suggestionsController: config.suggestionsController,
       decorationBuilder: config.decorationBuilder ??
           (context, child) {
-            return cardType == CardType.defaultCard
-                ? Material(
-                    type: MaterialType.card,
-                    elevation: 0,
-                    borderRadius: BorderRadius.circular(12),
-                    child: child,
-                  )
-                : LiquidCard(
-                    radius: 12,
-                    padding: EdgeInsets.zero,
-                    color: cardColor,
-                    child: child,
-                  );
+            return CustomMapCard(
+              radius:
+                  cardRadius ?? BorderRadius.circular(CustomMapCard.kRadius),
+              padding: EdgeInsets.zero,
+              color: cardColor,
+              child: child,
+            );
           },
       emptyBuilder: config.emptyBuilder,
       scrollController: config.scrollController,
-      focusNode: config.focusNode ?? focusNode,
+      focusNode: config.focusNode,
       hideKeyboardOnDrag: config.hideKeyboardOnDrag,
       builder: config.builder ??
           (context, controller, focusNode) {
@@ -133,24 +127,22 @@ class PlacesAutocomplete extends HookWidget {
               placeholder: config.searchHintText,
               placeholderStyle: config.searchHintStyle,
               decoration: BoxDecoration(
-                color: cardColor,
-                borderRadius: BorderRadius.circular(12),
+                color: cardType == CardType.liquidCard ? null : cardColor,
+                borderRadius: BorderRadius.circular(CustomMapCard.kRadius),
               ),
               padding: const EdgeInsets.symmetric(
                 horizontal: 12,
                 vertical: 10,
               ),
               keyboardType: TextInputType.streetAddress,
-              style: CupertinoTheme.of(context).textTheme.textStyle,
             );
-            return cardType == CardType.defaultCard
-                ? child
-                : LiquidCard(
-                    radius: 12,
-                    padding: EdgeInsets.zero,
-                    color: cardColor,
-                    child: child,
-                  );
+            return CustomMapCard(
+              radius:
+                  cardRadius ?? BorderRadius.circular(CustomMapCard.kRadius),
+              padding: EdgeInsets.zero,
+              color: cardColor,
+              child: child,
+            );
           },
     );
   }
@@ -163,7 +155,7 @@ class PlacesAutocomplete extends HookWidget {
           content.placePrediction?.structuredFormat?.secondaryText?.text ?? "";
 
       final style = Theme.of(context).textTheme.titleMedium?.copyWith(
-            color: CupertinoColors.systemGrey,
+            color: Colors.grey[600],
           );
 
       return ListTile(

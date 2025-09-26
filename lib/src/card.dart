@@ -6,34 +6,38 @@ import 'package:google_maps_apis/places_new.dart';
 
 import '../map_location_picker.dart';
 
-/// Default radius for the map location picker.
-const _radius = 12.0;
-
 /// The default bottom card for the map location picker.
-class LiquidCard extends StatelessWidget {
+class CustomMapCard extends StatelessWidget {
   final Widget child;
-  final double radius;
+  final BorderRadiusGeometry? radius;
   final EdgeInsets? padding;
   final Color? color;
-  const LiquidCard({
+  const CustomMapCard({
     super.key,
     required this.child,
-    required this.radius,
+    this.radius,
     this.padding,
     this.color,
   });
 
+  /// Default radius for the map location picker.
+  static const kRadius = 12.0;
+
   @override
   Widget build(BuildContext context) {
     return ClipRRect(
-      borderRadius: BorderRadius.circular(radius),
+      borderRadius: radius ?? BorderRadius.circular(kRadius),
+      clipBehavior: Clip.antiAlias,
       child: BackdropFilter(
         filter: ImageFilter.blur(sigmaX: 5, sigmaY: 5),
         child: Container(
           padding: padding ?? const EdgeInsets.symmetric(horizontal: 16),
           decoration: BoxDecoration(
-            color: color,
-            borderRadius: BorderRadius.circular(radius),
+            color: color ?? Theme.of(context).colorScheme.surface,
+            borderRadius: radius ?? BorderRadius.circular(kRadius + 0.5),
+            border: Border.all(
+                color: Theme.of(context).colorScheme.outlineVariant,
+                width: 0.5),
           ),
           child: child,
         ),
@@ -52,102 +56,88 @@ Widget defaultBottomCard(
   VoidCallback onNext,
 ) {
   final theme = Theme.of(context);
-  return config.cardType == CardType.defaultCard
-      ? CupertinoActionSheet(
-          title: config.bottomCardTitle.isNotEmpty
-              ? Text(config.bottomCardTitle)
-              : null,
-          actions: [
-            if (isLoading)
-              CupertinoActionSheetAction(
-                child: Text("Loading address..."),
-                onPressed: () {},
-              )
-            else
-              CupertinoActionSheetAction(
-                onPressed: onNext,
-                child: Text(address),
-              ),
-            if (config.confirmButton != null)
-              config.confirmButton?.call(context, onNext) ??
-                  const SizedBox.shrink(),
-            if (results.isNotEmpty &&
-                !config.hideMoreOptions &&
-                results.length > 1)
-              CupertinoActionSheetAction(
+  return Padding(
+    padding: const EdgeInsets.only(top: 12),
+    child: CustomMapCard(
+      radius: config.cardRadius ?? BorderRadius.circular(CustomMapCard.kRadius),
+      color: config.cardColor,
+      child: SafeArea(
+        top: false,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              title: isLoading
+                  ? const Text(
+                      "Loading address...",
+                      textAlign: TextAlign.start,
+                    )
+                  : result?.addressComponents?.first.longText != null
+                      ? Text(
+                          (result?.addressComponents?.first.longText ?? "")
+                                  .substring(0, 1)
+                                  .toUpperCase() +
+                              (result?.addressComponents?.first.longText ?? "")
+                                  .substring(1),
+                          style: theme.textTheme.titleMedium,
+                        )
+                      : null,
+              subtitle: isLoading
+                  ? const Text(
+                      "Fetching location details.",
+                      textAlign: TextAlign.start,
+                    )
+                  : Text(
+                      address,
+                      maxLines: 3,
+                      overflow: TextOverflow.ellipsis,
+                      textAlign: TextAlign.start,
+                    ),
+            ),
+            config.confirmButton?.call(context, onNext) ??
+                ((!isLoading && result != null)
+                    ? CupertinoButton.filled(
+                        minimumSize: const Size(double.infinity, 40),
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        child: const Text("Confirm Address"),
+                        onPressed: onNext,
+                        pressedOpacity: 0.9,
+                      )
+                    : CupertinoButton.filled(
+                        minimumSize: const Size(double.infinity, 40),
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        child: isLoading
+                            ? const CircularProgressIndicator.adaptive(
+                                backgroundColor: Colors.grey,
+                              )
+                            : Text(address),
+                        onPressed: () {},
+                      )),
+            if (results.length > 1 && !config.hideMoreOptions) ...[
+              const SizedBox(height: 12),
+              CupertinoButton.tinted(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 2,
+                ),
+                minimumSize: const Size(100, 10),
                 child: Text(
-                  "Nearby places (${results.length})",
+                  isLoading
+                      ? "Loading nearby places..."
+                      : "${results.length} places found nearby",
                   style: theme.textTheme.bodyMedium,
                 ),
-                onPressed: () => _showAddressOptions(context, results, config),
+                pressedOpacity: 0.9,
+                onPressed: isLoading
+                    ? () {}
+                    : () => _showAddressOptions(context, results, config),
               ),
+            ],
           ],
-        )
-      : Padding(
-          padding: const EdgeInsets.only(top: 12),
-          child: LiquidCard(
-            radius: _radius,
-            color: config.cardColor,
-            child: SafeArea(
-              top: false,
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  ListTile(
-                    title: isLoading
-                        ? const Text(
-                            "Loading address...",
-                            textAlign: TextAlign.center,
-                          )
-                        : Text(
-                            address,
-                            style: theme.textTheme.titleMedium,
-                            maxLines: 3,
-                            overflow: TextOverflow.ellipsis,
-                            textAlign: TextAlign.start,
-                          ),
-                  ),
-                  config.confirmButton?.call(context, onNext) ??
-                      ((!isLoading && result != null)
-                          ? CupertinoButton.filled(
-                              minimumSize: const Size(double.infinity, 40),
-                              padding:
-                                  const EdgeInsets.symmetric(horizontal: 16),
-                              child: const Text("Confirm Address"),
-                              onPressed: onNext,
-                            )
-                          : CupertinoButton.filled(
-                              minimumSize: const Size(double.infinity, 40),
-                              padding:
-                                  const EdgeInsets.symmetric(horizontal: 16),
-                              child: isLoading
-                                  ? const CircularProgressIndicator.adaptive(
-                                      backgroundColor: Colors.grey,
-                                    )
-                                  : Text(address),
-                              onPressed: () {},
-                            )),
-                  if (results.length > 1) ...[
-                    const SizedBox(height: 12),
-                    CupertinoButton.tinted(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 2,
-                      ),
-                      minimumSize: const Size(200, 10),
-                      child: Text(
-                        "Show Nearby Places (${results.length})",
-                        style: theme.textTheme.bodyMedium,
-                      ),
-                      onPressed: () =>
-                          _showAddressOptions(context, results, config),
-                    ),
-                  ],
-                ],
-              ),
-            ),
-          ),
-        );
+        ),
+      ),
+    ),
+  );
 }
 
 BoxDecoration buildBoxDecoration(
@@ -158,10 +148,10 @@ BoxDecoration buildBoxDecoration(
   return BoxDecoration(
     color: CupertinoColors.systemFill,
     borderRadius: BorderRadius.only(
-      topLeft: Radius.circular(index == 0 ? _radius : 0),
-      topRight: Radius.circular(index == 0 ? _radius : 0),
-      bottomLeft: Radius.circular(isLast ? _radius : 0),
-      bottomRight: Radius.circular(isLast ? _radius : 0),
+      topLeft: Radius.circular(index == 0 ? CustomMapCard.kRadius : 0),
+      topRight: Radius.circular(index == 0 ? CustomMapCard.kRadius : 0),
+      bottomLeft: Radius.circular(isLast ? CustomMapCard.kRadius : 0),
+      bottomRight: Radius.circular(isLast ? CustomMapCard.kRadius : 0),
     ),
     border: Border(
       bottom: isLast
@@ -179,25 +169,32 @@ void _showAddressOptions(
   List<Place> results,
   MapLocationPickerConfig config,
 ) {
-  final theme = Theme.of(context);
-  showCupertinoModalPopup(
+  showModalBottomSheet(
     context: context,
+    backgroundColor: Colors.transparent,
+    barrierColor: Colors.black38,
     builder: (context) => CupertinoActionSheet(
-      title: Text("Nearby ${results.length} places found"),
+      title: Text("${results.length} places found nearby"),
+      message: Text("tap to select"),
       actions: results.map((result) {
         return CupertinoActionSheetAction(
-          child: Row(
-            children: [
-              Expanded(
-                child: Text(
-                  result.formattedAddress ?? "",
-                  style: theme.textTheme.titleMedium,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  textAlign: TextAlign.start,
-                ),
-              ),
-            ],
+          child: CupertinoListTile(
+            padding: EdgeInsets.zero,
+            title: Text(
+              (result.addressComponents?.first.longText ?? "")
+                      .substring(0, 1)
+                      .toUpperCase() +
+                  (result.addressComponents?.first.longText ?? "").substring(1),
+              style: Theme.of(context).textTheme.titleMedium,
+            ),
+            subtitle: Text(
+              result.formattedAddress ?? "",
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              textAlign: TextAlign.start,
+              style: Theme.of(context).textTheme.bodyMedium,
+            ),
+            leading: Icon(Icons.pin_drop, size: 20),
           ),
           onPressed: () {
             config.onAddressSelected?.call(result);
@@ -206,8 +203,10 @@ void _showAddressOptions(
           },
         );
       }).toList(),
-      cancelButton: CupertinoActionSheetAction(
+      cancelButton: CupertinoButton(
         child: Text("Cancel"),
+        minimumSize: const Size(double.infinity, 40),
+        padding: const EdgeInsets.symmetric(horizontal: 16),
         onPressed: () => Navigator.pop(context),
       ),
     ),

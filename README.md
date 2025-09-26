@@ -23,14 +23,18 @@
 
 <table>
   <tr>
-    <td>Map Preview</td>
-    <td>Address Display</td>
-    <td>Picker Options</td>
+    <td>Default View</td>
+    <td>Dark Mode</td>
+    <td>Custom Markers</td>
+    <td>Custom Map Type</td>
+    <td>Liquid Card</td>
   </tr>
   <tr>
-    <td><img src="https://raw.githubusercontent.com/itsarvinddev/map_location_picker/master/assets/one24.png" width=270 height=480 alt=""></td>
-    <td><img src="https://raw.githubusercontent.com/itsarvinddev/map_location_picker/master/assets/one31.png" width=270 height=480 alt=""></td>
-    <td><img src="https://raw.githubusercontent.com/itsarvinddev/map_location_picker/master/assets/one44.png" width=270 height=480 alt=""></td>
+    <td><img src="https://raw.githubusercontent.com/itsarvinddev/map_location_picker/master/assets/iphone_14_pro_1_0.png" width=210 alt=""></td>
+    <td><img src="https://raw.githubusercontent.com/itsarvinddev/map_location_picker/master/assets/iphone_14_pro_2_1.png" width=210 alt=""></td>
+    <td><img src="https://raw.githubusercontent.com/itsarvinddev/map_location_picker/master/assets/iphone_14_pro_3_2.png" width=210 alt=""></td>
+    <td><img src="https://raw.githubusercontent.com/itsarvinddev/map_location_picker/master/assets/iphone_14_pro_4_3.png" width=210 alt=""></td>
+    <td><img src="https://raw.githubusercontent.com/itsarvinddev/map_location_picker/master/assets/iphone_14_pro_5_4.png" width=210 alt=""></td>
   </tr>
 </table>
 
@@ -403,7 +407,11 @@ GMSServices.provideAPIKey("YOUR_IOS_API_KEY")
 Add to `web/index.html`:
 
 ```html
-<script src="https://maps.googleapis.com/maps/api/js?key=YOUR_WEB_API_KEY"></script>
+<head>
+  <!-- Other stuff -->
+  <!-- Add your Google Maps API key -->
+  <script src="https://maps.googleapis.com/maps/api/js?key=YOUR_API_KEY"></script>
+</head>
 ```
 
 ## 💻 Example App

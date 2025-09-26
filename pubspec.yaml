@@ -1,17 +1,17 @@
 name: map_location_picker
 description: Google Map location picker for flutter Based on google_maps_flutter.
-version: 3.0.0
+version: 3.0.1
 homepage: https://github.com/itsarvinddev/map_location_picker
 repository: https://github.com/itsarvinddev/map_location_picker
 issue_tracker: https://github.com/itsarvinddev/map_location_picker/issues
 documentation: https://github.com/itsarvinddev/map_location_picker/blob/master/README.md
 screenshots:
     - description: "Map Location Picker Decoded Address"
-      path: assets/one31.png
+      path: assets/iphone_14_pro_1_0.png
     - description: "Map Location Picker Places autocomplete"
-      path: assets/one44.png
+      path: assets/iphone_14_pro_3_2.png
     - description: "Map Location Picker dark mode"
-      path: assets/one42.png
+      path: assets/iphone_14_pro_5_4.png
 
 topics:
     - map-picker
