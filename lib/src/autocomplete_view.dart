@@ -42,6 +42,8 @@ class PlacesAutocomplete extends HookWidget {
 
   final BorderRadiusGeometry? cardRadius;
 
+  final BoxBorder? cardBorder;
+
   /// The constructor for the autocomplete view.
   const PlacesAutocomplete({
     super.key,
@@ -52,6 +54,7 @@ class PlacesAutocomplete extends HookWidget {
     this.cardType = CardType.defaultCard,
     this.cardColor,
     this.cardRadius,
+    this.cardBorder,
   });
 
   @override
@@ -112,6 +115,7 @@ class PlacesAutocomplete extends HookWidget {
                   cardRadius ?? BorderRadius.circular(CustomMapCard.kRadius),
               padding: EdgeInsets.zero,
               color: cardColor,
+              border: cardBorder,
               child: child,
             );
           },
@@ -141,6 +145,7 @@ class PlacesAutocomplete extends HookWidget {
                   cardRadius ?? BorderRadius.circular(CustomMapCard.kRadius),
               padding: EdgeInsets.zero,
               color: cardColor,
+              border: cardBorder,
               child: child,
             );
           },

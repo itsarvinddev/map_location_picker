@@ -83,6 +83,7 @@ class MapLocationPicker extends HookWidget {
         cardType: config.cardType,
         cardColor: config.cardColor,
         cardRadius: config.cardRadius,
+        cardBorder: config.cardBorder,
         initialValue: searchConfig?.initialValue,
         config: searchConfig ??
             SearchConfig(

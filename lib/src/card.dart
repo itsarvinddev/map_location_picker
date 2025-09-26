@@ -12,12 +12,14 @@ class CustomMapCard extends StatelessWidget {
   final BorderRadiusGeometry? radius;
   final EdgeInsets? padding;
   final Color? color;
+  final BoxBorder? border;
   const CustomMapCard({
     super.key,
     required this.child,
     this.radius,
     this.padding,
     this.color,
+    this.border,
   });
 
   /// Default radius for the map location picker.
@@ -35,9 +37,10 @@ class CustomMapCard extends StatelessWidget {
           decoration: BoxDecoration(
             color: color ?? Theme.of(context).colorScheme.surface,
             borderRadius: radius ?? BorderRadius.circular(kRadius + 0.5),
-            border: Border.all(
-                color: Theme.of(context).colorScheme.outlineVariant,
-                width: 0.5),
+            border: border ??
+                Border.all(
+                    color: Theme.of(context).colorScheme.outlineVariant,
+                    width: 0.5),
           ),
           child: child,
         ),
@@ -61,6 +64,7 @@ Widget defaultBottomCard(
     child: CustomMapCard(
       radius: config.cardRadius ?? BorderRadius.circular(CustomMapCard.kRadius),
       color: config.cardColor,
+      border: config.cardBorder,
       child: SafeArea(
         top: false,
         child: Column(

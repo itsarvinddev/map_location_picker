@@ -101,6 +101,7 @@ abstract class MapLocationPickerConfig with _$MapLocationPickerConfig {
     @Default(CardType.defaultCard) CardType cardType,
     @Default(null) Color? cardColor,
     @Default(null) BorderRadiusGeometry? cardRadius,
+    @Default(null) BoxBorder? cardBorder,
     @Default("No address found") String noAddressFoundText,
   }) = _MapLocationPickerConfig;
 }

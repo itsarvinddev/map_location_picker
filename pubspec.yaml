@@ -40,7 +40,6 @@ dependencies:
 
     google_maps_flutter: ^2.12.3
     flutter_typeahead: ^5.2.0
-    google_maps_apis: ^3.0.1
     geolocator: ^14.0.2
     flutter_hooks: ^0.21.2
     freezed_annotation: ^3.1.0
@@ -51,3 +50,7 @@ dev_dependencies:
     freezed: ^3.1.0
     build_runner: ^2.5.4
     lints: ^6.0.0
+    google_maps_apis:
+        git:
+            url: https://github.com/itsarvinddev/google_maps_apis.git
+            ref: e234f2092f89eaa86ccceead89fdf6ed43c3d27b
