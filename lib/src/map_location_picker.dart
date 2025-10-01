@@ -428,16 +428,13 @@ class MapLocationPicker extends HookWidget {
     BuildContext context,
   ) async {
     try {
-      mapLogger.i("Getting current location");
       isLoading.value = true;
       final serviceEnabled = await Geolocator.isLocationServiceEnabled();
-      mapLogger.i("Location service is enabled: $serviceEnabled");
       if (!serviceEnabled) {
         mapLogger.i("Location service is not enabled");
         return;
       }
       final permission = await Geolocator.checkPermission();
-      mapLogger.i("Location permission: $permission");
       if (permission == LocationPermission.denied) {
         final newPermission = await Geolocator.requestPermission();
         if (newPermission != LocationPermission.whileInUse ||
@@ -450,8 +447,6 @@ class MapLocationPicker extends HookWidget {
       final currentPosition = await Geolocator.getCurrentPosition(
         locationSettings: config.locationSettings,
       );
-
-      mapLogger.i("Current position: $currentPosition");
 
       final newPosition =
           LatLng(currentPosition.latitude, currentPosition.longitude);
@@ -468,7 +463,6 @@ class MapLocationPicker extends HookWidget {
           ),
         ),
       );
-      mapLogger.i("Getting address for position");
       await _getAddressForPosition(
         newPosition,
         geoCodingService,
@@ -478,7 +472,6 @@ class MapLocationPicker extends HookWidget {
         geoCodingResults,
         context,
       );
-      mapLogger.i("Address for position: ${address.value}");
     } catch (e) {
       mapLogger.e("Error getting current location: $e");
       if (config.onLocationError != null) {
