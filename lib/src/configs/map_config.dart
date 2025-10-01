@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/gestures.dart';
 import 'package:freezed_annotation/freezed_annotation.dart';
 import 'package:google_maps_apis/places_new.dart' hide LatLng, Circle;
+import 'package:http/http.dart' as http;
 import 'package:map_location_picker/map_location_picker.dart';
 
 part 'map_config.freezed.dart';
@@ -17,8 +18,8 @@ typedef ConfirmButtonBuilder = Widget Function(
 )?;
 typedef BottomCardBuilder = Widget Function(
   BuildContext context,
-  Place? place,
-  List<Place> places,
+  GeocodingResult? place,
+  List<GeocodingResult> places,
   String formattedAddress,
   bool isLoading,
   VoidCallback onPlaceSelected,
@@ -30,12 +31,13 @@ abstract class MapLocationPickerConfig with _$MapLocationPickerConfig {
   const factory MapLocationPickerConfig({
     // Core configuration
     @Default('') String apiKey,
+    @Default(null) String? language,
     @Default(null) PlacesAPINew? placesApi,
-    @Default(500) double geocodingRadius,
-    @Default(true) bool geocodingAllFields,
-    @Default(null) List<String>? geocodingFields,
-    @Default(null) PlacesResponse? geocodingInstanceFields,
-    @Default(null) NearbySearchFilter? geocodingFilter,
+    @Default(null) http.Client? geocodingHttpClient,
+    @Default(null) Map<String, String>? geocodingApiHeaders,
+    @Default(null) String? geocodingBaseUrl,
+    @Default(null) List<String>? geocodingLocationType,
+    @Default(null) List<String>? geocodingResultType,
     @Default(LatLng(28.8993468, 76.6250249)) LatLng initialPosition,
     @Default(14.0) double initialZoom,
     @Default(MapType.normal) MapType initialMapType,
@@ -73,9 +75,9 @@ abstract class MapLocationPickerConfig with _$MapLocationPickerConfig {
     @Default(null) Function(GoogleMapController)? onMapCreated,
     @Default(null) Function(MapType)? onMapTypeChanged,
     @Default(null) Function(Place?)? onSuggestionSelected,
-    @Default(null) Function(Place?)? onNext,
-    @Default(null) Function(Place?)? onAddressDecoded,
-    @Default(null) Function(Place)? onAddressSelected,
+    @Default(null) Function(GeocodingResult?)? onNext,
+    @Default(null) Function(GeocodingResult?)? onAddressDecoded,
+    @Default(null) Function(GeocodingResult)? onAddressSelected,
     @Default(true) bool buildingsEnabled,
     @Default(CameraTargetBounds.unbounded)
     CameraTargetBounds cameraTargetBounds,

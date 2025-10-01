@@ -274,12 +274,12 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
           config: config.copyWith(
             initialPosition:
                 _pickedLocation ?? const LatLng(28.8993468, 76.6250249),
-            onNext: (result) {
+            onNext: (GeocodingResult? result) {
               if (result != null) {
                 setState(() {
                   _pickedLocation = LatLng(
-                    result.location?.latitude ?? 0,
-                    result.location?.longitude ?? 0,
+                    result.geometry?.location.lat ?? 0,
+                    result.geometry?.location.lng ?? 0,
                   );
                   _formattedAddress =
                       result.formattedAddress ?? "Address not available";

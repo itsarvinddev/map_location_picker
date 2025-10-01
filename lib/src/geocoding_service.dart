@@ -1,78 +1,63 @@
-import 'package:google_maps_apis/places_new.dart' hide LatLng;
-import 'package:google_maps_flutter/google_maps_flutter.dart' hide Circle;
-
-import 'logger.dart';
+import 'package:http/http.dart' as http;
+import 'package:map_location_picker/map_location_picker.dart';
 
 /// The geocoding service to use for the map location picker.
 class GeoCodingConfig {
-  /// The HTTP client to use for the geo decoding.
-  final PlacesAPINew? placesApi;
-
   /// The API key for the geocoding service.
   final String apiKey;
 
+  /// The HTTP client to use for the geocoding service.
+  final http.Client? httpClient;
+
+  /// The API headers to use for the geocoding service.
+  final Map<String, String>? apiHeaders;
+  final String? baseUrl;
+  final String? language;
+  final List<String> locationType;
+  final List<String> resultType;
+
   GeoCodingConfig({
-    this.placesApi,
     required this.apiKey,
+    this.httpClient,
+    this.apiHeaders,
+    this.baseUrl,
+    this.language,
+    this.locationType = const [],
+    this.resultType = const [],
   });
 
-  Future<(Place?, List<Place>)> reverseGeocode({
-    required LatLng position,
-    NearbySearchFilter? filter,
-
-    /// if true, all fields will be returned.
-    /// if false, only the fields specified in the fields parameter will be returned.
-    /// ensure [allFields] is false if you are using [fields] parameter.
-    bool allFields = true,
-
-    /// the fields to return.
-    /// Ensure that allFields = true or fields != null, or instanceFields != null with some field != null.
-    /// [Pricing note](https://developers.google.com/maps/documentation/places/web-service/autocomplete#pricing)
-    ///
-    /// ```
-    ///  Each field group (Basic, Contact, Atmosphere) has a separate billing weight.
-    ///  So selecting more fields increases cost.
-    ///  Examples:
-    ///  fields=name,geometry = cheaper
-    ///  fields=name,geometry,reviews,photos = more expensive.
-    /// ```
-    ///
-    List<String>? fields,
-    PlacesResponse? instanceFields,
-    double radius = 500,
-  }) async {
-    final geocoding = placesApi ?? PlacesAPINew(apiKey: apiKey);
-    final response = await geocoding.searchNearby(
-      filter: filter ??
-          NearbySearchFilter(
-            locationRestriction: LocationRestrictionCircle(
-              circle: Circle(
-                center: ReferencePoint(
-                  latitude: position.latitude,
-                  longitude: position.longitude,
-                ),
-                radius: radius,
-              ),
-            ),
-            rankPreference: RankPreferenceType.relevance,
-          ),
-      allFields: allFields,
-      fields: fields,
-      instanceFields: instanceFields,
+  Future<(GeocodingResult?, List<GeocodingResult>)> reverseGeocode(
+    LatLng position,
+  ) async {
+    final geocoding = GoogleMapsGeocoding(
+      apiKey: apiKey,
+      httpClient: httpClient,
+      apiHeaders: apiHeaders,
+      baseUrl: baseUrl,
     );
-    if (_isErrorResponse(response)) return (null, <Place>[]);
+
+    final response = await geocoding.searchByLocation(
+      Location(lat: position.latitude, lng: position.longitude),
+      language: language,
+      locationType: locationType,
+      resultType: resultType,
+    );
+    if (_isErrorResponse(response)) return (null, <GeocodingResult>[]);
     return (
-      response.body?.places.firstOrNull,
-      response.body?.places ?? <Place>[]
+      response.results?.isNotEmpty ?? false
+          ? response.results?.firstOrNull
+          : null,
+      response.results ?? <GeocodingResult>[]
     );
   }
 
-  bool _isErrorResponse(GoogleHTTPResponse<PlacesResponse?> response) {
-    final isError = response.error != null && !response.isSuccessful;
-    if (isError) {
-      mapLogger.e(response.error?.error?.toJsonString());
-    }
-    return isError;
+  bool _isErrorResponse(GeocodingResponse response) {
+    return response.hasNoResults ||
+        response.isDenied ||
+        response.isInvalid ||
+        response.isNotFound ||
+        response.unknownError ||
+        response.isOverQueryLimit;
   }
 }
 

@@ -16,12 +16,13 @@ T _$identity<T>(T value) => value;
 mixin _$MapLocationPickerConfig {
 // Core configuration
   String get apiKey;
+  String? get language;
   PlacesAPINew? get placesApi;
-  double get geocodingRadius;
-  bool get geocodingAllFields;
-  List<String>? get geocodingFields;
-  PlacesResponse? get geocodingInstanceFields;
-  NearbySearchFilter? get geocodingFilter;
+  http.Client? get geocodingHttpClient;
+  Map<String, String>? get geocodingApiHeaders;
+  String? get geocodingBaseUrl;
+  List<String>? get geocodingLocationType;
+  List<String>? get geocodingResultType;
   LatLng get initialPosition;
   double get initialZoom;
   MapType get initialMapType;
@@ -58,9 +59,9 @@ mixin _$MapLocationPickerConfig {
   Function(GoogleMapController)? get onMapCreated;
   Function(MapType)? get onMapTypeChanged;
   Function(Place?)? get onSuggestionSelected;
-  Function(Place?)? get onNext;
-  Function(Place?)? get onAddressDecoded;
-  Function(Place)? get onAddressSelected;
+  Function(GeocodingResult?)? get onNext;
+  Function(GeocodingResult?)? get onAddressDecoded;
+  Function(GeocodingResult)? get onAddressSelected;
   bool get buildingsEnabled;
   CameraTargetBounds get cameraTargetBounds;
   Set<Circle> get circles;
@@ -105,17 +106,19 @@ mixin _$MapLocationPickerConfig {
         (other.runtimeType == runtimeType &&
             other is MapLocationPickerConfig &&
             (identical(other.apiKey, apiKey) || other.apiKey == apiKey) &&
+            (identical(other.language, language) ||
+                other.language == language) &&
             const DeepCollectionEquality().equals(other.placesApi, placesApi) &&
-            (identical(other.geocodingRadius, geocodingRadius) ||
-                other.geocodingRadius == geocodingRadius) &&
-            (identical(other.geocodingAllFields, geocodingAllFields) ||
-                other.geocodingAllFields == geocodingAllFields) &&
+            (identical(other.geocodingHttpClient, geocodingHttpClient) ||
+                other.geocodingHttpClient == geocodingHttpClient) &&
             const DeepCollectionEquality()
-                .equals(other.geocodingFields, geocodingFields) &&
-            const DeepCollectionEquality().equals(
-                other.geocodingInstanceFields, geocodingInstanceFields) &&
+                .equals(other.geocodingApiHeaders, geocodingApiHeaders) &&
+            (identical(other.geocodingBaseUrl, geocodingBaseUrl) ||
+                other.geocodingBaseUrl == geocodingBaseUrl) &&
             const DeepCollectionEquality()
-                .equals(other.geocodingFilter, geocodingFilter) &&
+                .equals(other.geocodingLocationType, geocodingLocationType) &&
+            const DeepCollectionEquality()
+                .equals(other.geocodingResultType, geocodingResultType) &&
             (identical(other.initialPosition, initialPosition) ||
                 other.initialPosition == initialPosition) &&
             (identical(other.initialZoom, initialZoom) ||
@@ -216,12 +219,13 @@ mixin _$MapLocationPickerConfig {
   int get hashCode => Object.hashAll([
         runtimeType,
         apiKey,
+        language,
         const DeepCollectionEquality().hash(placesApi),
-        geocodingRadius,
-        geocodingAllFields,
-        const DeepCollectionEquality().hash(geocodingFields),
-        const DeepCollectionEquality().hash(geocodingInstanceFields),
-        const DeepCollectionEquality().hash(geocodingFilter),
+        geocodingHttpClient,
+        const DeepCollectionEquality().hash(geocodingApiHeaders),
+        geocodingBaseUrl,
+        const DeepCollectionEquality().hash(geocodingLocationType),
+        const DeepCollectionEquality().hash(geocodingResultType),
         initialPosition,
         initialZoom,
         initialMapType,
@@ -294,7 +298,7 @@ mixin _$MapLocationPickerConfig {
 
   @override
   String toString() {
-    return 'MapLocationPickerConfig(apiKey: $apiKey, placesApi: $placesApi, geocodingRadius: $geocodingRadius, geocodingAllFields: $geocodingAllFields, geocodingFields: $geocodingFields, geocodingInstanceFields: $geocodingInstanceFields, geocodingFilter: $geocodingFilter, initialPosition: $initialPosition, initialZoom: $initialZoom, initialMapType: $initialMapType, myLocationButtonEnabled: $myLocationButtonEnabled, myLocationEnabled: $myLocationEnabled, zoomControlsEnabled: $zoomControlsEnabled, minMaxZoomPreference: $minMaxZoomPreference, onCameraMove: $onCameraMove, padding: $padding, compassEnabled: $compassEnabled, liteModeEnabled: $liteModeEnabled, mapStyle: $mapStyle, floatingControlsColor: $floatingControlsColor, floatingControlsIconColor: $floatingControlsIconColor, mapTypeIcon: $mapTypeIcon, locationIcon: $locationIcon, mainMarkerIcon: $mainMarkerIcon, hideBottomCardOnKeyboard: $hideBottomCardOnKeyboard, bottomCardTitle: $bottomCardTitle, bottomCardType: $bottomCardType, confirmButton: $confirmButton, bottomCardBuilder: $bottomCardBuilder, searchBarBuilder: $searchBarBuilder, locationSettings: $locationSettings, onLocationError: $onLocationError, hideMoreOptions: $hideMoreOptions, mapTypeButton: $mapTypeButton, locationButton: $locationButton, fabTooltip: $fabTooltip, additionalMarkers: $additionalMarkers, customMarkerIcons: $customMarkerIcons, customInfoWindows: $customInfoWindows, onMarkerTapped: $onMarkerTapped, onMapCreated: $onMapCreated, onMapTypeChanged: $onMapTypeChanged, onSuggestionSelected: $onSuggestionSelected, onNext: $onNext, onAddressDecoded: $onAddressDecoded, onAddressSelected: $onAddressSelected, buildingsEnabled: $buildingsEnabled, cameraTargetBounds: $cameraTargetBounds, circles: $circles, cloudMapId: $cloudMapId, fortyFiveDegreeImageryEnabled: $fortyFiveDegreeImageryEnabled, gestureRecognizers: $gestureRecognizers, indoorViewEnabled: $indoorViewEnabled, layoutDirection: $layoutDirection, mapToolbarEnabled: $mapToolbarEnabled, onCameraIdle: $onCameraIdle, onCameraMoveStarted: $onCameraMoveStarted, onLongPress: $onLongPress, polygons: $polygons, polylines: $polylines, rotateGesturesEnabled: $rotateGesturesEnabled, scrollGesturesEnabled: $scrollGesturesEnabled, tileOverlays: $tileOverlays, tiltGesturesEnabled: $tiltGesturesEnabled, trafficEnabled: $trafficEnabled, webGestureHandling: $webGestureHandling, zoomGesturesEnabled: $zoomGesturesEnabled, clusterManagers: $clusterManagers, groundOverlays: $groundOverlays, heatmaps: $heatmaps, cardType: $cardType, cardColor: $cardColor, cardRadius: $cardRadius, cardBorder: $cardBorder, noAddressFoundText: $noAddressFoundText)';
+    return 'MapLocationPickerConfig(apiKey: $apiKey, language: $language, placesApi: $placesApi, geocodingHttpClient: $geocodingHttpClient, geocodingApiHeaders: $geocodingApiHeaders, geocodingBaseUrl: $geocodingBaseUrl, geocodingLocationType: $geocodingLocationType, geocodingResultType: $geocodingResultType, initialPosition: $initialPosition, initialZoom: $initialZoom, initialMapType: $initialMapType, myLocationButtonEnabled: $myLocationButtonEnabled, myLocationEnabled: $myLocationEnabled, zoomControlsEnabled: $zoomControlsEnabled, minMaxZoomPreference: $minMaxZoomPreference, onCameraMove: $onCameraMove, padding: $padding, compassEnabled: $compassEnabled, liteModeEnabled: $liteModeEnabled, mapStyle: $mapStyle, floatingControlsColor: $floatingControlsColor, floatingControlsIconColor: $floatingControlsIconColor, mapTypeIcon: $mapTypeIcon, locationIcon: $locationIcon, mainMarkerIcon: $mainMarkerIcon, hideBottomCardOnKeyboard: $hideBottomCardOnKeyboard, bottomCardTitle: $bottomCardTitle, bottomCardType: $bottomCardType, confirmButton: $confirmButton, bottomCardBuilder: $bottomCardBuilder, searchBarBuilder: $searchBarBuilder, locationSettings: $locationSettings, onLocationError: $onLocationError, hideMoreOptions: $hideMoreOptions, mapTypeButton: $mapTypeButton, locationButton: $locationButton, fabTooltip: $fabTooltip, additionalMarkers: $additionalMarkers, customMarkerIcons: $customMarkerIcons, customInfoWindows: $customInfoWindows, onMarkerTapped: $onMarkerTapped, onMapCreated: $onMapCreated, onMapTypeChanged: $onMapTypeChanged, onSuggestionSelected: $onSuggestionSelected, onNext: $onNext, onAddressDecoded: $onAddressDecoded, onAddressSelected: $onAddressSelected, buildingsEnabled: $buildingsEnabled, cameraTargetBounds: $cameraTargetBounds, circles: $circles, cloudMapId: $cloudMapId, fortyFiveDegreeImageryEnabled: $fortyFiveDegreeImageryEnabled, gestureRecognizers: $gestureRecognizers, indoorViewEnabled: $indoorViewEnabled, layoutDirection: $layoutDirection, mapToolbarEnabled: $mapToolbarEnabled, onCameraIdle: $onCameraIdle, onCameraMoveStarted: $onCameraMoveStarted, onLongPress: $onLongPress, polygons: $polygons, polylines: $polylines, rotateGesturesEnabled: $rotateGesturesEnabled, scrollGesturesEnabled: $scrollGesturesEnabled, tileOverlays: $tileOverlays, tiltGesturesEnabled: $tiltGesturesEnabled, trafficEnabled: $trafficEnabled, webGestureHandling: $webGestureHandling, zoomGesturesEnabled: $zoomGesturesEnabled, clusterManagers: $clusterManagers, groundOverlays: $groundOverlays, heatmaps: $heatmaps, cardType: $cardType, cardColor: $cardColor, cardRadius: $cardRadius, cardBorder: $cardBorder, noAddressFoundText: $noAddressFoundText)';
   }
 }
 
@@ -306,12 +310,13 @@ abstract mixin class $MapLocationPickerConfigCopyWith<$Res> {
   @useResult
   $Res call(
       {String apiKey,
+      String? language,
       PlacesAPINew? placesApi,
-      double geocodingRadius,
-      bool geocodingAllFields,
-      List<String>? geocodingFields,
-      PlacesResponse? geocodingInstanceFields,
-      NearbySearchFilter? geocodingFilter,
+      http.Client? geocodingHttpClient,
+      Map<String, String>? geocodingApiHeaders,
+      String? geocodingBaseUrl,
+      List<String>? geocodingLocationType,
+      List<String>? geocodingResultType,
       LatLng initialPosition,
       double initialZoom,
       MapType initialMapType,
@@ -348,9 +353,9 @@ abstract mixin class $MapLocationPickerConfigCopyWith<$Res> {
       Function(GoogleMapController)? onMapCreated,
       Function(MapType)? onMapTypeChanged,
       Function(Place?)? onSuggestionSelected,
-      Function(Place?)? onNext,
-      Function(Place?)? onAddressDecoded,
-      Function(Place)? onAddressSelected,
+      Function(GeocodingResult?)? onNext,
+      Function(GeocodingResult?)? onAddressDecoded,
+      Function(GeocodingResult)? onAddressSelected,
       bool buildingsEnabled,
       CameraTargetBounds cameraTargetBounds,
       Set<Circle> circles,
@@ -396,12 +401,13 @@ class _$MapLocationPickerConfigCopyWithImpl<$Res>
   @override
   $Res call({
     Object? apiKey = null,
+    Object? language = freezed,
     Object? placesApi = freezed,
-    Object? geocodingRadius = null,
-    Object? geocodingAllFields = null,
-    Object? geocodingFields = freezed,
-    Object? geocodingInstanceFields = freezed,
-    Object? geocodingFilter = freezed,
+    Object? geocodingHttpClient = freezed,
+    Object? geocodingApiHeaders = freezed,
+    Object? geocodingBaseUrl = freezed,
+    Object? geocodingLocationType = freezed,
+    Object? geocodingResultType = freezed,
     Object? initialPosition = null,
     Object? initialZoom = null,
     Object? initialMapType = null,
@@ -476,30 +482,34 @@ class _$MapLocationPickerConfigCopyWithImpl<$Res>
           ? _self.apiKey
           : apiKey // ignore: cast_nullable_to_non_nullable
               as String,
+      language: freezed == language
+          ? _self.language
+          : language // ignore: cast_nullable_to_non_nullable
+              as String?,
       placesApi: freezed == placesApi
           ? _self.placesApi
           : placesApi // ignore: cast_nullable_to_non_nullable
               as PlacesAPINew?,
-      geocodingRadius: null == geocodingRadius
-          ? _self.geocodingRadius
-          : geocodingRadius // ignore: cast_nullable_to_non_nullable
-              as double,
-      geocodingAllFields: null == geocodingAllFields
-          ? _self.geocodingAllFields
-          : geocodingAllFields // ignore: cast_nullable_to_non_nullable
-              as bool,
-      geocodingFields: freezed == geocodingFields
-          ? _self.geocodingFields
-          : geocodingFields // ignore: cast_nullable_to_non_nullable
+      geocodingHttpClient: freezed == geocodingHttpClient
+          ? _self.geocodingHttpClient
+          : geocodingHttpClient // ignore: cast_nullable_to_non_nullable
+              as http.Client?,
+      geocodingApiHeaders: freezed == geocodingApiHeaders
+          ? _self.geocodingApiHeaders
+          : geocodingApiHeaders // ignore: cast_nullable_to_non_nullable
+              as Map<String, String>?,
+      geocodingBaseUrl: freezed == geocodingBaseUrl
+          ? _self.geocodingBaseUrl
+          : geocodingBaseUrl // ignore: cast_nullable_to_non_nullable
+              as String?,
+      geocodingLocationType: freezed == geocodingLocationType
+          ? _self.geocodingLocationType
+          : geocodingLocationType // ignore: cast_nullable_to_non_nullable
               as List<String>?,
-      geocodingInstanceFields: freezed == geocodingInstanceFields
-          ? _self.geocodingInstanceFields
-          : geocodingInstanceFields // ignore: cast_nullable_to_non_nullable
-              as PlacesResponse?,
-      geocodingFilter: freezed == geocodingFilter
-          ? _self.geocodingFilter
-          : geocodingFilter // ignore: cast_nullable_to_non_nullable
-              as NearbySearchFilter?,
+      geocodingResultType: freezed == geocodingResultType
+          ? _self.geocodingResultType
+          : geocodingResultType // ignore: cast_nullable_to_non_nullable
+              as List<String>?,
       initialPosition: null == initialPosition
           ? _self.initialPosition
           : initialPosition // ignore: cast_nullable_to_non_nullable
@@ -647,15 +657,15 @@ class _$MapLocationPickerConfigCopyWithImpl<$Res>
       onNext: freezed == onNext
           ? _self.onNext
           : onNext // ignore: cast_nullable_to_non_nullable
-              as Function(Place?)?,
+              as Function(GeocodingResult?)?,
       onAddressDecoded: freezed == onAddressDecoded
           ? _self.onAddressDecoded
           : onAddressDecoded // ignore: cast_nullable_to_non_nullable
-              as Function(Place?)?,
+              as Function(GeocodingResult?)?,
       onAddressSelected: freezed == onAddressSelected
           ? _self.onAddressSelected
           : onAddressSelected // ignore: cast_nullable_to_non_nullable
-              as Function(Place)?,
+              as Function(GeocodingResult)?,
       buildingsEnabled: null == buildingsEnabled
           ? _self.buildingsEnabled
           : buildingsEnabled // ignore: cast_nullable_to_non_nullable
@@ -871,12 +881,13 @@ extension MapLocationPickerConfigPatterns on MapLocationPickerConfig {
   TResult maybeWhen<TResult extends Object?>(
     TResult Function(
             String apiKey,
+            String? language,
             PlacesAPINew? placesApi,
-            double geocodingRadius,
-            bool geocodingAllFields,
-            List<String>? geocodingFields,
-            PlacesResponse? geocodingInstanceFields,
-            NearbySearchFilter? geocodingFilter,
+            http.Client? geocodingHttpClient,
+            Map<String, String>? geocodingApiHeaders,
+            String? geocodingBaseUrl,
+            List<String>? geocodingLocationType,
+            List<String>? geocodingResultType,
             LatLng initialPosition,
             double initialZoom,
             MapType initialMapType,
@@ -913,9 +924,9 @@ extension MapLocationPickerConfigPatterns on MapLocationPickerConfig {
             Function(GoogleMapController)? onMapCreated,
             Function(MapType)? onMapTypeChanged,
             Function(Place?)? onSuggestionSelected,
-            Function(Place?)? onNext,
-            Function(Place?)? onAddressDecoded,
-            Function(Place)? onAddressSelected,
+            Function(GeocodingResult?)? onNext,
+            Function(GeocodingResult?)? onAddressDecoded,
+            Function(GeocodingResult)? onAddressSelected,
             bool buildingsEnabled,
             CameraTargetBounds cameraTargetBounds,
             Set<Circle> circles,
@@ -953,12 +964,13 @@ extension MapLocationPickerConfigPatterns on MapLocationPickerConfig {
       case _MapLocationPickerConfig() when $default != null:
         return $default(
             _that.apiKey,
+            _that.language,
             _that.placesApi,
-            _that.geocodingRadius,
-            _that.geocodingAllFields,
-            _that.geocodingFields,
-            _that.geocodingInstanceFields,
-            _that.geocodingFilter,
+            _that.geocodingHttpClient,
+            _that.geocodingApiHeaders,
+            _that.geocodingBaseUrl,
+            _that.geocodingLocationType,
+            _that.geocodingResultType,
             _that.initialPosition,
             _that.initialZoom,
             _that.initialMapType,
@@ -1049,12 +1061,13 @@ extension MapLocationPickerConfigPatterns on MapLocationPickerConfig {
   TResult when<TResult extends Object?>(
     TResult Function(
             String apiKey,
+            String? language,
             PlacesAPINew? placesApi,
-            double geocodingRadius,
-            bool geocodingAllFields,
-            List<String>? geocodingFields,
-            PlacesResponse? geocodingInstanceFields,
-            NearbySearchFilter? geocodingFilter,
+            http.Client? geocodingHttpClient,
+            Map<String, String>? geocodingApiHeaders,
+            String? geocodingBaseUrl,
+            List<String>? geocodingLocationType,
+            List<String>? geocodingResultType,
             LatLng initialPosition,
             double initialZoom,
             MapType initialMapType,
@@ -1091,9 +1104,9 @@ extension MapLocationPickerConfigPatterns on MapLocationPickerConfig {
             Function(GoogleMapController)? onMapCreated,
             Function(MapType)? onMapTypeChanged,
             Function(Place?)? onSuggestionSelected,
-            Function(Place?)? onNext,
-            Function(Place?)? onAddressDecoded,
-            Function(Place)? onAddressSelected,
+            Function(GeocodingResult?)? onNext,
+            Function(GeocodingResult?)? onAddressDecoded,
+            Function(GeocodingResult)? onAddressSelected,
             bool buildingsEnabled,
             CameraTargetBounds cameraTargetBounds,
             Set<Circle> circles,
@@ -1130,12 +1143,13 @@ extension MapLocationPickerConfigPatterns on MapLocationPickerConfig {
       case _MapLocationPickerConfig():
         return $default(
             _that.apiKey,
+            _that.language,
             _that.placesApi,
-            _that.geocodingRadius,
-            _that.geocodingAllFields,
-            _that.geocodingFields,
-            _that.geocodingInstanceFields,
-            _that.geocodingFilter,
+            _that.geocodingHttpClient,
+            _that.geocodingApiHeaders,
+            _that.geocodingBaseUrl,
+            _that.geocodingLocationType,
+            _that.geocodingResultType,
             _that.initialPosition,
             _that.initialZoom,
             _that.initialMapType,
@@ -1225,12 +1239,13 @@ extension MapLocationPickerConfigPatterns on MapLocationPickerConfig {
   TResult? whenOrNull<TResult extends Object?>(
     TResult? Function(
             String apiKey,
+            String? language,
             PlacesAPINew? placesApi,
-            double geocodingRadius,
-            bool geocodingAllFields,
-            List<String>? geocodingFields,
-            PlacesResponse? geocodingInstanceFields,
-            NearbySearchFilter? geocodingFilter,
+            http.Client? geocodingHttpClient,
+            Map<String, String>? geocodingApiHeaders,
+            String? geocodingBaseUrl,
+            List<String>? geocodingLocationType,
+            List<String>? geocodingResultType,
             LatLng initialPosition,
             double initialZoom,
             MapType initialMapType,
@@ -1267,9 +1282,9 @@ extension MapLocationPickerConfigPatterns on MapLocationPickerConfig {
             Function(GoogleMapController)? onMapCreated,
             Function(MapType)? onMapTypeChanged,
             Function(Place?)? onSuggestionSelected,
-            Function(Place?)? onNext,
-            Function(Place?)? onAddressDecoded,
-            Function(Place)? onAddressSelected,
+            Function(GeocodingResult?)? onNext,
+            Function(GeocodingResult?)? onAddressDecoded,
+            Function(GeocodingResult)? onAddressSelected,
             bool buildingsEnabled,
             CameraTargetBounds cameraTargetBounds,
             Set<Circle> circles,
@@ -1306,12 +1321,13 @@ extension MapLocationPickerConfigPatterns on MapLocationPickerConfig {
       case _MapLocationPickerConfig() when $default != null:
         return $default(
             _that.apiKey,
+            _that.language,
             _that.placesApi,
-            _that.geocodingRadius,
-            _that.geocodingAllFields,
-            _that.geocodingFields,
-            _that.geocodingInstanceFields,
-            _that.geocodingFilter,
+            _that.geocodingHttpClient,
+            _that.geocodingApiHeaders,
+            _that.geocodingBaseUrl,
+            _that.geocodingLocationType,
+            _that.geocodingResultType,
             _that.initialPosition,
             _that.initialZoom,
             _that.initialMapType,
@@ -1391,12 +1407,13 @@ extension MapLocationPickerConfigPatterns on MapLocationPickerConfig {
 class _MapLocationPickerConfig implements MapLocationPickerConfig {
   const _MapLocationPickerConfig(
       {this.apiKey = '',
+      this.language = null,
       this.placesApi = null,
-      this.geocodingRadius = 500,
-      this.geocodingAllFields = true,
-      final List<String>? geocodingFields = null,
-      this.geocodingInstanceFields = null,
-      this.geocodingFilter = null,
+      this.geocodingHttpClient = null,
+      final Map<String, String>? geocodingApiHeaders = null,
+      this.geocodingBaseUrl = null,
+      final List<String>? geocodingLocationType = null,
+      final List<String>? geocodingResultType = null,
       this.initialPosition = const LatLng(28.8993468, 76.6250249),
       this.initialZoom = 14.0,
       this.initialMapType = MapType.normal,
@@ -1466,7 +1483,9 @@ class _MapLocationPickerConfig implements MapLocationPickerConfig {
       this.cardRadius = null,
       this.cardBorder = null,
       this.noAddressFoundText = "No address found"})
-      : _geocodingFields = geocodingFields,
+      : _geocodingApiHeaders = geocodingApiHeaders,
+        _geocodingLocationType = geocodingLocationType,
+        _geocodingResultType = geocodingResultType,
         _additionalMarkers = additionalMarkers,
         _customMarkerIcons = customMarkerIcons,
         _customInfoWindows = customInfoWindows,
@@ -1486,30 +1505,52 @@ class _MapLocationPickerConfig implements MapLocationPickerConfig {
   final String apiKey;
   @override
   @JsonKey()
+  final String? language;
+  @override
+  @JsonKey()
   final PlacesAPINew? placesApi;
   @override
   @JsonKey()
-  final double geocodingRadius;
+  final http.Client? geocodingHttpClient;
+  final Map<String, String>? _geocodingApiHeaders;
   @override
   @JsonKey()
-  final bool geocodingAllFields;
-  final List<String>? _geocodingFields;
-  @override
-  @JsonKey()
-  List<String>? get geocodingFields {
-    final value = _geocodingFields;
+  Map<String, String>? get geocodingApiHeaders {
+    final value = _geocodingApiHeaders;
     if (value == null) return null;
-    if (_geocodingFields is EqualUnmodifiableListView) return _geocodingFields;
+    if (_geocodingApiHeaders is EqualUnmodifiableMapView)
+      return _geocodingApiHeaders;
     // ignore: implicit_dynamic_type
-    return EqualUnmodifiableListView(value);
+    return EqualUnmodifiableMapView(value);
   }
 
   @override
   @JsonKey()
-  final PlacesResponse? geocodingInstanceFields;
+  final String? geocodingBaseUrl;
+  final List<String>? _geocodingLocationType;
   @override
   @JsonKey()
-  final NearbySearchFilter? geocodingFilter;
+  List<String>? get geocodingLocationType {
+    final value = _geocodingLocationType;
+    if (value == null) return null;
+    if (_geocodingLocationType is EqualUnmodifiableListView)
+      return _geocodingLocationType;
+    // ignore: implicit_dynamic_type
+    return EqualUnmodifiableListView(value);
+  }
+
+  final List<String>? _geocodingResultType;
+  @override
+  @JsonKey()
+  List<String>? get geocodingResultType {
+    final value = _geocodingResultType;
+    if (value == null) return null;
+    if (_geocodingResultType is EqualUnmodifiableListView)
+      return _geocodingResultType;
+    // ignore: implicit_dynamic_type
+    return EqualUnmodifiableListView(value);
+  }
+
   @override
   @JsonKey()
   final LatLng initialPosition;
@@ -1655,13 +1696,13 @@ class _MapLocationPickerConfig implements MapLocationPickerConfig {
   final Function(Place?)? onSuggestionSelected;
   @override
   @JsonKey()
-  final Function(Place?)? onNext;
+  final Function(GeocodingResult?)? onNext;
   @override
   @JsonKey()
-  final Function(Place?)? onAddressDecoded;
+  final Function(GeocodingResult?)? onAddressDecoded;
   @override
   @JsonKey()
-  final Function(Place)? onAddressSelected;
+  final Function(GeocodingResult)? onAddressSelected;
   @override
   @JsonKey()
   final bool buildingsEnabled;
@@ -1814,17 +1855,19 @@ class _MapLocationPickerConfig implements MapLocationPickerConfig {
         (other.runtimeType == runtimeType &&
             other is _MapLocationPickerConfig &&
             (identical(other.apiKey, apiKey) || other.apiKey == apiKey) &&
+            (identical(other.language, language) ||
+                other.language == language) &&
             const DeepCollectionEquality().equals(other.placesApi, placesApi) &&
-            (identical(other.geocodingRadius, geocodingRadius) ||
-                other.geocodingRadius == geocodingRadius) &&
-            (identical(other.geocodingAllFields, geocodingAllFields) ||
-                other.geocodingAllFields == geocodingAllFields) &&
+            (identical(other.geocodingHttpClient, geocodingHttpClient) ||
+                other.geocodingHttpClient == geocodingHttpClient) &&
             const DeepCollectionEquality()
-                .equals(other._geocodingFields, _geocodingFields) &&
-            const DeepCollectionEquality().equals(
-                other.geocodingInstanceFields, geocodingInstanceFields) &&
+                .equals(other._geocodingApiHeaders, _geocodingApiHeaders) &&
+            (identical(other.geocodingBaseUrl, geocodingBaseUrl) ||
+                other.geocodingBaseUrl == geocodingBaseUrl) &&
             const DeepCollectionEquality()
-                .equals(other.geocodingFilter, geocodingFilter) &&
+                .equals(other._geocodingLocationType, _geocodingLocationType) &&
+            const DeepCollectionEquality()
+                .equals(other._geocodingResultType, _geocodingResultType) &&
             (identical(other.initialPosition, initialPosition) ||
                 other.initialPosition == initialPosition) &&
             (identical(other.initialZoom, initialZoom) ||
@@ -1925,12 +1968,13 @@ class _MapLocationPickerConfig implements MapLocationPickerConfig {
   int get hashCode => Object.hashAll([
         runtimeType,
         apiKey,
+        language,
         const DeepCollectionEquality().hash(placesApi),
-        geocodingRadius,
-        geocodingAllFields,
-        const DeepCollectionEquality().hash(_geocodingFields),
-        const DeepCollectionEquality().hash(geocodingInstanceFields),
-        const DeepCollectionEquality().hash(geocodingFilter),
+        geocodingHttpClient,
+        const DeepCollectionEquality().hash(_geocodingApiHeaders),
+        geocodingBaseUrl,
+        const DeepCollectionEquality().hash(_geocodingLocationType),
+        const DeepCollectionEquality().hash(_geocodingResultType),
         initialPosition,
         initialZoom,
         initialMapType,
@@ -2003,7 +2047,7 @@ class _MapLocationPickerConfig implements MapLocationPickerConfig {
 
   @override
   String toString() {
-    return 'MapLocationPickerConfig(apiKey: $apiKey, placesApi: $placesApi, geocodingRadius: $geocodingRadius, geocodingAllFields: $geocodingAllFields, geocodingFields: $geocodingFields, geocodingInstanceFields: $geocodingInstanceFields, geocodingFilter: $geocodingFilter, initialPosition: $initialPosition, initialZoom: $initialZoom, initialMapType: $initialMapType, myLocationButtonEnabled: $myLocationButtonEnabled, myLocationEnabled: $myLocationEnabled, zoomControlsEnabled: $zoomControlsEnabled, minMaxZoomPreference: $minMaxZoomPreference, onCameraMove: $onCameraMove, padding: $padding, compassEnabled: $compassEnabled, liteModeEnabled: $liteModeEnabled, mapStyle: $mapStyle, floatingControlsColor: $floatingControlsColor, floatingControlsIconColor: $floatingControlsIconColor, mapTypeIcon: $mapTypeIcon, locationIcon: $locationIcon, mainMarkerIcon: $mainMarkerIcon, hideBottomCardOnKeyboard: $hideBottomCardOnKeyboard, bottomCardTitle: $bottomCardTitle, bottomCardType: $bottomCardType, confirmButton: $confirmButton, bottomCardBuilder: $bottomCardBuilder, searchBarBuilder: $searchBarBuilder, locationSettings: $locationSettings, onLocationError: $onLocationError, hideMoreOptions: $hideMoreOptions, mapTypeButton: $mapTypeButton, locationButton: $locationButton, fabTooltip: $fabTooltip, additionalMarkers: $additionalMarkers, customMarkerIcons: $customMarkerIcons, customInfoWindows: $customInfoWindows, onMarkerTapped: $onMarkerTapped, onMapCreated: $onMapCreated, onMapTypeChanged: $onMapTypeChanged, onSuggestionSelected: $onSuggestionSelected, onNext: $onNext, onAddressDecoded: $onAddressDecoded, onAddressSelected: $onAddressSelected, buildingsEnabled: $buildingsEnabled, cameraTargetBounds: $cameraTargetBounds, circles: $circles, cloudMapId: $cloudMapId, fortyFiveDegreeImageryEnabled: $fortyFiveDegreeImageryEnabled, gestureRecognizers: $gestureRecognizers, indoorViewEnabled: $indoorViewEnabled, layoutDirection: $layoutDirection, mapToolbarEnabled: $mapToolbarEnabled, onCameraIdle: $onCameraIdle, onCameraMoveStarted: $onCameraMoveStarted, onLongPress: $onLongPress, polygons: $polygons, polylines: $polylines, rotateGesturesEnabled: $rotateGesturesEnabled, scrollGesturesEnabled: $scrollGesturesEnabled, tileOverlays: $tileOverlays, tiltGesturesEnabled: $tiltGesturesEnabled, trafficEnabled: $trafficEnabled, webGestureHandling: $webGestureHandling, zoomGesturesEnabled: $zoomGesturesEnabled, clusterManagers: $clusterManagers, groundOverlays: $groundOverlays, heatmaps: $heatmaps, cardType: $cardType, cardColor: $cardColor, cardRadius: $cardRadius, cardBorder: $cardBorder, noAddressFoundText: $noAddressFoundText)';
+    return 'MapLocationPickerConfig(apiKey: $apiKey, language: $language, placesApi: $placesApi, geocodingHttpClient: $geocodingHttpClient, geocodingApiHeaders: $geocodingApiHeaders, geocodingBaseUrl: $geocodingBaseUrl, geocodingLocationType: $geocodingLocationType, geocodingResultType: $geocodingResultType, initialPosition: $initialPosition, initialZoom: $initialZoom, initialMapType: $initialMapType, myLocationButtonEnabled: $myLocationButtonEnabled, myLocationEnabled: $myLocationEnabled, zoomControlsEnabled: $zoomControlsEnabled, minMaxZoomPreference: $minMaxZoomPreference, onCameraMove: $onCameraMove, padding: $padding, compassEnabled: $compassEnabled, liteModeEnabled: $liteModeEnabled, mapStyle: $mapStyle, floatingControlsColor: $floatingControlsColor, floatingControlsIconColor: $floatingControlsIconColor, mapTypeIcon: $mapTypeIcon, locationIcon: $locationIcon, mainMarkerIcon: $mainMarkerIcon, hideBottomCardOnKeyboard: $hideBottomCardOnKeyboard, bottomCardTitle: $bottomCardTitle, bottomCardType: $bottomCardType, confirmButton: $confirmButton, bottomCardBuilder: $bottomCardBuilder, searchBarBuilder: $searchBarBuilder, locationSettings: $locationSettings, onLocationError: $onLocationError, hideMoreOptions: $hideMoreOptions, mapTypeButton: $mapTypeButton, locationButton: $locationButton, fabTooltip: $fabTooltip, additionalMarkers: $additionalMarkers, customMarkerIcons: $customMarkerIcons, customInfoWindows: $customInfoWindows, onMarkerTapped: $onMarkerTapped, onMapCreated: $onMapCreated, onMapTypeChanged: $onMapTypeChanged, onSuggestionSelected: $onSuggestionSelected, onNext: $onNext, onAddressDecoded: $onAddressDecoded, onAddressSelected: $onAddressSelected, buildingsEnabled: $buildingsEnabled, cameraTargetBounds: $cameraTargetBounds, circles: $circles, cloudMapId: $cloudMapId, fortyFiveDegreeImageryEnabled: $fortyFiveDegreeImageryEnabled, gestureRecognizers: $gestureRecognizers, indoorViewEnabled: $indoorViewEnabled, layoutDirection: $layoutDirection, mapToolbarEnabled: $mapToolbarEnabled, onCameraIdle: $onCameraIdle, onCameraMoveStarted: $onCameraMoveStarted, onLongPress: $onLongPress, polygons: $polygons, polylines: $polylines, rotateGesturesEnabled: $rotateGesturesEnabled, scrollGesturesEnabled: $scrollGesturesEnabled, tileOverlays: $tileOverlays, tiltGesturesEnabled: $tiltGesturesEnabled, trafficEnabled: $trafficEnabled, webGestureHandling: $webGestureHandling, zoomGesturesEnabled: $zoomGesturesEnabled, clusterManagers: $clusterManagers, groundOverlays: $groundOverlays, heatmaps: $heatmaps, cardType: $cardType, cardColor: $cardColor, cardRadius: $cardRadius, cardBorder: $cardBorder, noAddressFoundText: $noAddressFoundText)';
   }
 }
 
@@ -2017,12 +2061,13 @@ abstract mixin class _$MapLocationPickerConfigCopyWith<$Res>
   @useResult
   $Res call(
       {String apiKey,
+      String? language,
       PlacesAPINew? placesApi,
-      double geocodingRadius,
-      bool geocodingAllFields,
-      List<String>? geocodingFields,
-      PlacesResponse? geocodingInstanceFields,
-      NearbySearchFilter? geocodingFilter,
+      http.Client? geocodingHttpClient,
+      Map<String, String>? geocodingApiHeaders,
+      String? geocodingBaseUrl,
+      List<String>? geocodingLocationType,
+      List<String>? geocodingResultType,
       LatLng initialPosition,
       double initialZoom,
       MapType initialMapType,
@@ -2059,9 +2104,9 @@ abstract mixin class _$MapLocationPickerConfigCopyWith<$Res>
       Function(GoogleMapController)? onMapCreated,
       Function(MapType)? onMapTypeChanged,
       Function(Place?)? onSuggestionSelected,
-      Function(Place?)? onNext,
-      Function(Place?)? onAddressDecoded,
-      Function(Place)? onAddressSelected,
+      Function(GeocodingResult?)? onNext,
+      Function(GeocodingResult?)? onAddressDecoded,
+      Function(GeocodingResult)? onAddressSelected,
       bool buildingsEnabled,
       CameraTargetBounds cameraTargetBounds,
       Set<Circle> circles,
@@ -2107,12 +2152,13 @@ class __$MapLocationPickerConfigCopyWithImpl<$Res>
   @pragma('vm:prefer-inline')
   $Res call({
     Object? apiKey = null,
+    Object? language = freezed,
     Object? placesApi = freezed,
-    Object? geocodingRadius = null,
-    Object? geocodingAllFields = null,
-    Object? geocodingFields = freezed,
-    Object? geocodingInstanceFields = freezed,
-    Object? geocodingFilter = freezed,
+    Object? geocodingHttpClient = freezed,
+    Object? geocodingApiHeaders = freezed,
+    Object? geocodingBaseUrl = freezed,
+    Object? geocodingLocationType = freezed,
+    Object? geocodingResultType = freezed,
     Object? initialPosition = null,
     Object? initialZoom = null,
     Object? initialMapType = null,
@@ -2187,30 +2233,34 @@ class __$MapLocationPickerConfigCopyWithImpl<$Res>
           ? _self.apiKey
           : apiKey // ignore: cast_nullable_to_non_nullable
               as String,
+      language: freezed == language
+          ? _self.language
+          : language // ignore: cast_nullable_to_non_nullable
+              as String?,
       placesApi: freezed == placesApi
           ? _self.placesApi
           : placesApi // ignore: cast_nullable_to_non_nullable
               as PlacesAPINew?,
-      geocodingRadius: null == geocodingRadius
-          ? _self.geocodingRadius
-          : geocodingRadius // ignore: cast_nullable_to_non_nullable
-              as double,
-      geocodingAllFields: null == geocodingAllFields
-          ? _self.geocodingAllFields
-          : geocodingAllFields // ignore: cast_nullable_to_non_nullable
-              as bool,
-      geocodingFields: freezed == geocodingFields
-          ? _self._geocodingFields
-          : geocodingFields // ignore: cast_nullable_to_non_nullable
+      geocodingHttpClient: freezed == geocodingHttpClient
+          ? _self.geocodingHttpClient
+          : geocodingHttpClient // ignore: cast_nullable_to_non_nullable
+              as http.Client?,
+      geocodingApiHeaders: freezed == geocodingApiHeaders
+          ? _self._geocodingApiHeaders
+          : geocodingApiHeaders // ignore: cast_nullable_to_non_nullable
+              as Map<String, String>?,
+      geocodingBaseUrl: freezed == geocodingBaseUrl
+          ? _self.geocodingBaseUrl
+          : geocodingBaseUrl // ignore: cast_nullable_to_non_nullable
+              as String?,
+      geocodingLocationType: freezed == geocodingLocationType
+          ? _self._geocodingLocationType
+          : geocodingLocationType // ignore: cast_nullable_to_non_nullable
               as List<String>?,
-      geocodingInstanceFields: freezed == geocodingInstanceFields
-          ? _self.geocodingInstanceFields
-          : geocodingInstanceFields // ignore: cast_nullable_to_non_nullable
-              as PlacesResponse?,
-      geocodingFilter: freezed == geocodingFilter
-          ? _self.geocodingFilter
-          : geocodingFilter // ignore: cast_nullable_to_non_nullable
-              as NearbySearchFilter?,
+      geocodingResultType: freezed == geocodingResultType
+          ? _self._geocodingResultType
+          : geocodingResultType // ignore: cast_nullable_to_non_nullable
+              as List<String>?,
       initialPosition: null == initialPosition
           ? _self.initialPosition
           : initialPosition // ignore: cast_nullable_to_non_nullable
@@ -2358,15 +2408,15 @@ class __$MapLocationPickerConfigCopyWithImpl<$Res>
       onNext: freezed == onNext
           ? _self.onNext
           : onNext // ignore: cast_nullable_to_non_nullable
-              as Function(Place?)?,
+              as Function(GeocodingResult?)?,
       onAddressDecoded: freezed == onAddressDecoded
           ? _self.onAddressDecoded
           : onAddressDecoded // ignore: cast_nullable_to_non_nullable
-              as Function(Place?)?,
+              as Function(GeocodingResult?)?,
       onAddressSelected: freezed == onAddressSelected
           ? _self.onAddressSelected
           : onAddressSelected // ignore: cast_nullable_to_non_nullable
-              as Function(Place)?,
+              as Function(GeocodingResult)?,
       buildingsEnabled: null == buildingsEnabled
           ? _self.buildingsEnabled
           : buildingsEnabled // ignore: cast_nullable_to_non_nullable

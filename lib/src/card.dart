@@ -2,7 +2,6 @@ import 'dart:ui' show ImageFilter;
 
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import 'package:google_maps_apis/places_new.dart';
 
 import '../map_location_picker.dart';
 
@@ -51,10 +50,10 @@ class CustomMapCard extends StatelessWidget {
 
 Widget defaultBottomCard(
   BuildContext context,
-  Place? result,
+  GeocodingResult? result,
   String address,
   bool isLoading,
-  List<Place> results,
+  List<GeocodingResult> results,
   MapLocationPickerConfig config,
   VoidCallback onNext,
 ) {
@@ -76,12 +75,12 @@ Widget defaultBottomCard(
                       "Loading address...",
                       textAlign: TextAlign.start,
                     )
-                  : result?.addressComponents?.first.longText != null
+                  : result?.addressComponents?.first.longName != null
                       ? Text(
-                          (result?.addressComponents?.first.longText ?? "")
+                          (result?.addressComponents?.first.longName ?? "")
                                   .substring(0, 1)
                                   .toUpperCase() +
-                              (result?.addressComponents?.first.longText ?? "")
+                              (result?.addressComponents?.first.longName ?? "")
                                   .substring(1),
                           style: theme.textTheme.titleMedium,
                         )
@@ -170,7 +169,7 @@ BoxDecoration buildBoxDecoration(
 
 void _showAddressOptions(
   BuildContext context,
-  List<Place> results,
+  List<GeocodingResult> results,
   MapLocationPickerConfig config,
 ) {
   showModalBottomSheet(
@@ -185,10 +184,10 @@ void _showAddressOptions(
           child: CupertinoListTile(
             padding: EdgeInsets.zero,
             title: Text(
-              (result.addressComponents?.first.longText ?? "")
+              (result.addressComponents?.first.longName ?? "")
                       .substring(0, 1)
                       .toUpperCase() +
-                  (result.addressComponents?.first.longText ?? "").substring(1),
+                  (result.addressComponents?.first.longName ?? "").substring(1),
               style: Theme.of(context).textTheme.titleMedium,
             ),
             subtitle: Text(

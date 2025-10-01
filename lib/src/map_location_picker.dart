@@ -3,7 +3,7 @@ import 'dart:async';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
-import 'package:google_maps_apis/places_new.dart' hide LatLng, Circle;
+import 'package:google_maps_apis/places_new.dart' hide LatLng;
 
 import '../map_location_picker.dart' hide Circle;
 import 'card.dart';
@@ -41,8 +41,8 @@ class MapLocationPicker extends HookWidget {
     final mapControllerCompleter =
         useMemoized(() => Completer<GoogleMapController>());
     final markers = useState<Set<Marker>>({});
-    final geoCodingResult = useState<Place?>(null);
-    final geoCodingResults = useState<List<Place>>([]);
+    final geoCodingResult = useState<GeocodingResult?>(null);
+    final geoCodingResults = useState<List<GeocodingResult>>([]);
     final mapType = useState(config.initialMapType);
 
     final effectiveGeoCodingService = useMemoized(
@@ -50,7 +50,12 @@ class MapLocationPicker extends HookWidget {
           geoCodingConfig ??
           GeoCodingConfig(
             apiKey: config.apiKey,
-            placesApi: config.placesApi,
+            language: config.language,
+            httpClient: config.geocodingHttpClient,
+            apiHeaders: config.geocodingApiHeaders,
+            baseUrl: config.geocodingBaseUrl,
+            locationType: config.geocodingLocationType ?? const [],
+            resultType: config.geocodingResultType ?? const [],
           ),
     );
 
@@ -417,24 +422,25 @@ class MapLocationPicker extends HookWidget {
     GeoCodingConfig geoCodingService,
     ValueNotifier<String> address,
     ValueNotifier<bool> isLoading,
-    ValueNotifier<Place?> geoCodingResult,
-    ValueNotifier<List<Place>> geoCodingResults,
+    ValueNotifier<GeocodingResult?> geoCodingResult,
+    ValueNotifier<List<GeocodingResult>> geoCodingResults,
     ValueNotifier<Set<Marker>> markers,
     BuildContext context,
   ) async {
     try {
+      mapLogger.i("Getting current location");
       isLoading.value = true;
-
       final serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      mapLogger.i("Location service is enabled: $serviceEnabled");
       if (!serviceEnabled) {
         mapLogger.i("Location service is not enabled");
         return;
       }
-
       final permission = await Geolocator.checkPermission();
+      mapLogger.i("Location permission: $permission");
       if (permission == LocationPermission.denied) {
         final newPermission = await Geolocator.requestPermission();
-        if (newPermission != LocationPermission.whileInUse &&
+        if (newPermission != LocationPermission.whileInUse ||
             newPermission != LocationPermission.always) {
           mapLogger.i("Location permission is not while in use or always");
           return;
@@ -444,6 +450,8 @@ class MapLocationPicker extends HookWidget {
       final currentPosition = await Geolocator.getCurrentPosition(
         locationSettings: config.locationSettings,
       );
+
+      mapLogger.i("Current position: $currentPosition");
 
       final newPosition =
           LatLng(currentPosition.latitude, currentPosition.longitude);
@@ -460,7 +468,7 @@ class MapLocationPicker extends HookWidget {
           ),
         ),
       );
-
+      mapLogger.i("Getting address for position");
       await _getAddressForPosition(
         newPosition,
         geoCodingService,
@@ -470,6 +478,7 @@ class MapLocationPicker extends HookWidget {
         geoCodingResults,
         context,
       );
+      mapLogger.i("Address for position: ${address.value}");
     } catch (e) {
       mapLogger.e("Error getting current location: $e");
       if (config.onLocationError != null) {
@@ -487,8 +496,8 @@ class MapLocationPicker extends HookWidget {
     GeoCodingConfig geoCodingService,
     ValueNotifier<String> address,
     ValueNotifier<bool> isLoading,
-    ValueNotifier<Place?> geoCodingResult,
-    ValueNotifier<List<Place>> geoCodingResults,
+    ValueNotifier<GeocodingResult?> geoCodingResult,
+    ValueNotifier<List<GeocodingResult>> geoCodingResults,
     ValueNotifier<Set<Marker>> markers,
     BuildContext context,
   ) async {
@@ -520,19 +529,14 @@ class MapLocationPicker extends HookWidget {
     GeoCodingConfig geoCodingService,
     ValueNotifier<String> address,
     ValueNotifier<bool> isLoading,
-    ValueNotifier<Place?> geoCodingResult,
-    ValueNotifier<List<Place>> geoCodingResults,
+    ValueNotifier<GeocodingResult?> geoCodingResult,
+    ValueNotifier<List<GeocodingResult>> geoCodingResults,
     BuildContext context,
   ) async {
     isLoading.value = true;
     try {
       final response = await geoCodingService.reverseGeocode(
-        position: position,
-        radius: config.geocodingRadius,
-        allFields: config.geocodingAllFields,
-        fields: config.geocodingFields,
-        instanceFields: config.geocodingInstanceFields,
-        filter: config.geocodingFilter,
+        position,
       );
       if (!context.mounted) return;
       final result = response.$1;
@@ -540,14 +544,14 @@ class MapLocationPicker extends HookWidget {
 
       if (result != null) {
         address.value = result.formattedAddress ??
-            result.adrFormatAddress ??
+            result.formattedAddress ??
             config.noAddressFoundText;
         geoCodingResult.value = result;
         geoCodingResults.value = results;
         config.onAddressDecoded?.call(result);
       } else if (results.isNotEmpty) {
         address.value = results.first.formattedAddress ??
-            results.first.adrFormatAddress ??
+            results.first.formattedAddress ??
             config.noAddressFoundText;
         geoCodingResult.value = results.first;
         geoCodingResults.value = results;
@@ -581,8 +585,8 @@ class MapLocationPicker extends HookWidget {
     ValueNotifier<String> address,
     GeoCodingConfig geoCodingService,
     ValueNotifier<bool> isLoading,
-    ValueNotifier<Place?> geoCodingResult,
-    ValueNotifier<List<Place>> geoCodingResults,
+    ValueNotifier<GeocodingResult?> geoCodingResult,
+    ValueNotifier<List<GeocodingResult>> geoCodingResults,
     ValueNotifier<Set<Marker>> markers,
   ) async {
     try {
@@ -591,7 +595,8 @@ class MapLocationPicker extends HookWidget {
       final location = details.location;
       if (location != null) {
         if (location.latitude == null || location.longitude == null) return;
-        final newPosition = LatLng(location.latitude!, location.longitude!);
+        final newPosition =
+            LatLng(location.latitude ?? 0, location.longitude ?? 0);
         position.value = newPosition;
         address.value = details.formattedAddress ?? "";
 
@@ -625,7 +630,7 @@ class MapLocationPicker extends HookWidget {
     }
   }
 
-  void _handleNext(BuildContext context, Place? result) {
+  void _handleNext(BuildContext context, GeocodingResult? result) {
     config.onNext?.call(result);
   }
 }
