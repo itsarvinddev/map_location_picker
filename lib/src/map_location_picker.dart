@@ -529,6 +529,10 @@ class MapLocationPicker extends HookWidget {
       final response = await geoCodingService.reverseGeocode(
         position: position,
         radius: config.geocodingRadius,
+        allFields: config.geocodingAllFields,
+        fields: config.geocodingFields,
+        instanceFields: config.geocodingInstanceFields,
+        filter: config.geocodingFilter,
       );
       if (!context.mounted) return;
       final result = response.$1;

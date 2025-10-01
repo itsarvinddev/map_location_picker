@@ -18,6 +18,10 @@ mixin _$MapLocationPickerConfig {
   String get apiKey;
   PlacesAPINew? get placesApi;
   double get geocodingRadius;
+  bool get geocodingAllFields;
+  List<String>? get geocodingFields;
+  PlacesResponse? get geocodingInstanceFields;
+  NearbySearchFilter? get geocodingFilter;
   LatLng get initialPosition;
   double get initialZoom;
   MapType get initialMapType;
@@ -104,6 +108,14 @@ mixin _$MapLocationPickerConfig {
             const DeepCollectionEquality().equals(other.placesApi, placesApi) &&
             (identical(other.geocodingRadius, geocodingRadius) ||
                 other.geocodingRadius == geocodingRadius) &&
+            (identical(other.geocodingAllFields, geocodingAllFields) ||
+                other.geocodingAllFields == geocodingAllFields) &&
+            const DeepCollectionEquality()
+                .equals(other.geocodingFields, geocodingFields) &&
+            const DeepCollectionEquality().equals(
+                other.geocodingInstanceFields, geocodingInstanceFields) &&
+            const DeepCollectionEquality()
+                .equals(other.geocodingFilter, geocodingFilter) &&
             (identical(other.initialPosition, initialPosition) ||
                 other.initialPosition == initialPosition) &&
             (identical(other.initialZoom, initialZoom) ||
@@ -157,10 +169,8 @@ mixin _$MapLocationPickerConfig {
                 other.hideMoreOptions == hideMoreOptions) &&
             (identical(other.mapTypeButton, mapTypeButton) ||
                 other.mapTypeButton == mapTypeButton) &&
-            (identical(other.locationButton, locationButton) ||
-                other.locationButton == locationButton) &&
-            (identical(other.fabTooltip, fabTooltip) ||
-                other.fabTooltip == fabTooltip) &&
+            (identical(other.locationButton, locationButton) || other.locationButton == locationButton) &&
+            (identical(other.fabTooltip, fabTooltip) || other.fabTooltip == fabTooltip) &&
             const DeepCollectionEquality().equals(other.additionalMarkers, additionalMarkers) &&
             const DeepCollectionEquality().equals(other.customMarkerIcons, customMarkerIcons) &&
             const DeepCollectionEquality().equals(other.customInfoWindows, customInfoWindows) &&
@@ -208,6 +218,10 @@ mixin _$MapLocationPickerConfig {
         apiKey,
         const DeepCollectionEquality().hash(placesApi),
         geocodingRadius,
+        geocodingAllFields,
+        const DeepCollectionEquality().hash(geocodingFields),
+        const DeepCollectionEquality().hash(geocodingInstanceFields),
+        const DeepCollectionEquality().hash(geocodingFilter),
         initialPosition,
         initialZoom,
         initialMapType,
@@ -280,7 +294,7 @@ mixin _$MapLocationPickerConfig {
 
   @override
   String toString() {
-    return 'MapLocationPickerConfig(apiKey: $apiKey, placesApi: $placesApi, geocodingRadius: $geocodingRadius, initialPosition: $initialPosition, initialZoom: $initialZoom, initialMapType: $initialMapType, myLocationButtonEnabled: $myLocationButtonEnabled, myLocationEnabled: $myLocationEnabled, zoomControlsEnabled: $zoomControlsEnabled, minMaxZoomPreference: $minMaxZoomPreference, onCameraMove: $onCameraMove, padding: $padding, compassEnabled: $compassEnabled, liteModeEnabled: $liteModeEnabled, mapStyle: $mapStyle, floatingControlsColor: $floatingControlsColor, floatingControlsIconColor: $floatingControlsIconColor, mapTypeIcon: $mapTypeIcon, locationIcon: $locationIcon, mainMarkerIcon: $mainMarkerIcon, hideBottomCardOnKeyboard: $hideBottomCardOnKeyboard, bottomCardTitle: $bottomCardTitle, bottomCardType: $bottomCardType, confirmButton: $confirmButton, bottomCardBuilder: $bottomCardBuilder, searchBarBuilder: $searchBarBuilder, locationSettings: $locationSettings, onLocationError: $onLocationError, hideMoreOptions: $hideMoreOptions, mapTypeButton: $mapTypeButton, locationButton: $locationButton, fabTooltip: $fabTooltip, additionalMarkers: $additionalMarkers, customMarkerIcons: $customMarkerIcons, customInfoWindows: $customInfoWindows, onMarkerTapped: $onMarkerTapped, onMapCreated: $onMapCreated, onMapTypeChanged: $onMapTypeChanged, onSuggestionSelected: $onSuggestionSelected, onNext: $onNext, onAddressDecoded: $onAddressDecoded, onAddressSelected: $onAddressSelected, buildingsEnabled: $buildingsEnabled, cameraTargetBounds: $cameraTargetBounds, circles: $circles, cloudMapId: $cloudMapId, fortyFiveDegreeImageryEnabled: $fortyFiveDegreeImageryEnabled, gestureRecognizers: $gestureRecognizers, indoorViewEnabled: $indoorViewEnabled, layoutDirection: $layoutDirection, mapToolbarEnabled: $mapToolbarEnabled, onCameraIdle: $onCameraIdle, onCameraMoveStarted: $onCameraMoveStarted, onLongPress: $onLongPress, polygons: $polygons, polylines: $polylines, rotateGesturesEnabled: $rotateGesturesEnabled, scrollGesturesEnabled: $scrollGesturesEnabled, tileOverlays: $tileOverlays, tiltGesturesEnabled: $tiltGesturesEnabled, trafficEnabled: $trafficEnabled, webGestureHandling: $webGestureHandling, zoomGesturesEnabled: $zoomGesturesEnabled, clusterManagers: $clusterManagers, groundOverlays: $groundOverlays, heatmaps: $heatmaps, cardType: $cardType, cardColor: $cardColor, cardRadius: $cardRadius, cardBorder: $cardBorder, noAddressFoundText: $noAddressFoundText)';
+    return 'MapLocationPickerConfig(apiKey: $apiKey, placesApi: $placesApi, geocodingRadius: $geocodingRadius, geocodingAllFields: $geocodingAllFields, geocodingFields: $geocodingFields, geocodingInstanceFields: $geocodingInstanceFields, geocodingFilter: $geocodingFilter, initialPosition: $initialPosition, initialZoom: $initialZoom, initialMapType: $initialMapType, myLocationButtonEnabled: $myLocationButtonEnabled, myLocationEnabled: $myLocationEnabled, zoomControlsEnabled: $zoomControlsEnabled, minMaxZoomPreference: $minMaxZoomPreference, onCameraMove: $onCameraMove, padding: $padding, compassEnabled: $compassEnabled, liteModeEnabled: $liteModeEnabled, mapStyle: $mapStyle, floatingControlsColor: $floatingControlsColor, floatingControlsIconColor: $floatingControlsIconColor, mapTypeIcon: $mapTypeIcon, locationIcon: $locationIcon, mainMarkerIcon: $mainMarkerIcon, hideBottomCardOnKeyboard: $hideBottomCardOnKeyboard, bottomCardTitle: $bottomCardTitle, bottomCardType: $bottomCardType, confirmButton: $confirmButton, bottomCardBuilder: $bottomCardBuilder, searchBarBuilder: $searchBarBuilder, locationSettings: $locationSettings, onLocationError: $onLocationError, hideMoreOptions: $hideMoreOptions, mapTypeButton: $mapTypeButton, locationButton: $locationButton, fabTooltip: $fabTooltip, additionalMarkers: $additionalMarkers, customMarkerIcons: $customMarkerIcons, customInfoWindows: $customInfoWindows, onMarkerTapped: $onMarkerTapped, onMapCreated: $onMapCreated, onMapTypeChanged: $onMapTypeChanged, onSuggestionSelected: $onSuggestionSelected, onNext: $onNext, onAddressDecoded: $onAddressDecoded, onAddressSelected: $onAddressSelected, buildingsEnabled: $buildingsEnabled, cameraTargetBounds: $cameraTargetBounds, circles: $circles, cloudMapId: $cloudMapId, fortyFiveDegreeImageryEnabled: $fortyFiveDegreeImageryEnabled, gestureRecognizers: $gestureRecognizers, indoorViewEnabled: $indoorViewEnabled, layoutDirection: $layoutDirection, mapToolbarEnabled: $mapToolbarEnabled, onCameraIdle: $onCameraIdle, onCameraMoveStarted: $onCameraMoveStarted, onLongPress: $onLongPress, polygons: $polygons, polylines: $polylines, rotateGesturesEnabled: $rotateGesturesEnabled, scrollGesturesEnabled: $scrollGesturesEnabled, tileOverlays: $tileOverlays, tiltGesturesEnabled: $tiltGesturesEnabled, trafficEnabled: $trafficEnabled, webGestureHandling: $webGestureHandling, zoomGesturesEnabled: $zoomGesturesEnabled, clusterManagers: $clusterManagers, groundOverlays: $groundOverlays, heatmaps: $heatmaps, cardType: $cardType, cardColor: $cardColor, cardRadius: $cardRadius, cardBorder: $cardBorder, noAddressFoundText: $noAddressFoundText)';
   }
 }
 
@@ -294,6 +308,10 @@ abstract mixin class $MapLocationPickerConfigCopyWith<$Res> {
       {String apiKey,
       PlacesAPINew? placesApi,
       double geocodingRadius,
+      bool geocodingAllFields,
+      List<String>? geocodingFields,
+      PlacesResponse? geocodingInstanceFields,
+      NearbySearchFilter? geocodingFilter,
       LatLng initialPosition,
       double initialZoom,
       MapType initialMapType,
@@ -380,6 +398,10 @@ class _$MapLocationPickerConfigCopyWithImpl<$Res>
     Object? apiKey = null,
     Object? placesApi = freezed,
     Object? geocodingRadius = null,
+    Object? geocodingAllFields = null,
+    Object? geocodingFields = freezed,
+    Object? geocodingInstanceFields = freezed,
+    Object? geocodingFilter = freezed,
     Object? initialPosition = null,
     Object? initialZoom = null,
     Object? initialMapType = null,
@@ -462,6 +484,22 @@ class _$MapLocationPickerConfigCopyWithImpl<$Res>
           ? _self.geocodingRadius
           : geocodingRadius // ignore: cast_nullable_to_non_nullable
               as double,
+      geocodingAllFields: null == geocodingAllFields
+          ? _self.geocodingAllFields
+          : geocodingAllFields // ignore: cast_nullable_to_non_nullable
+              as bool,
+      geocodingFields: freezed == geocodingFields
+          ? _self.geocodingFields
+          : geocodingFields // ignore: cast_nullable_to_non_nullable
+              as List<String>?,
+      geocodingInstanceFields: freezed == geocodingInstanceFields
+          ? _self.geocodingInstanceFields
+          : geocodingInstanceFields // ignore: cast_nullable_to_non_nullable
+              as PlacesResponse?,
+      geocodingFilter: freezed == geocodingFilter
+          ? _self.geocodingFilter
+          : geocodingFilter // ignore: cast_nullable_to_non_nullable
+              as NearbySearchFilter?,
       initialPosition: null == initialPosition
           ? _self.initialPosition
           : initialPosition // ignore: cast_nullable_to_non_nullable
@@ -835,6 +873,10 @@ extension MapLocationPickerConfigPatterns on MapLocationPickerConfig {
             String apiKey,
             PlacesAPINew? placesApi,
             double geocodingRadius,
+            bool geocodingAllFields,
+            List<String>? geocodingFields,
+            PlacesResponse? geocodingInstanceFields,
+            NearbySearchFilter? geocodingFilter,
             LatLng initialPosition,
             double initialZoom,
             MapType initialMapType,
@@ -913,6 +955,10 @@ extension MapLocationPickerConfigPatterns on MapLocationPickerConfig {
             _that.apiKey,
             _that.placesApi,
             _that.geocodingRadius,
+            _that.geocodingAllFields,
+            _that.geocodingFields,
+            _that.geocodingInstanceFields,
+            _that.geocodingFilter,
             _that.initialPosition,
             _that.initialZoom,
             _that.initialMapType,
@@ -1005,6 +1051,10 @@ extension MapLocationPickerConfigPatterns on MapLocationPickerConfig {
             String apiKey,
             PlacesAPINew? placesApi,
             double geocodingRadius,
+            bool geocodingAllFields,
+            List<String>? geocodingFields,
+            PlacesResponse? geocodingInstanceFields,
+            NearbySearchFilter? geocodingFilter,
             LatLng initialPosition,
             double initialZoom,
             MapType initialMapType,
@@ -1082,6 +1132,10 @@ extension MapLocationPickerConfigPatterns on MapLocationPickerConfig {
             _that.apiKey,
             _that.placesApi,
             _that.geocodingRadius,
+            _that.geocodingAllFields,
+            _that.geocodingFields,
+            _that.geocodingInstanceFields,
+            _that.geocodingFilter,
             _that.initialPosition,
             _that.initialZoom,
             _that.initialMapType,
@@ -1173,6 +1227,10 @@ extension MapLocationPickerConfigPatterns on MapLocationPickerConfig {
             String apiKey,
             PlacesAPINew? placesApi,
             double geocodingRadius,
+            bool geocodingAllFields,
+            List<String>? geocodingFields,
+            PlacesResponse? geocodingInstanceFields,
+            NearbySearchFilter? geocodingFilter,
             LatLng initialPosition,
             double initialZoom,
             MapType initialMapType,
@@ -1250,6 +1308,10 @@ extension MapLocationPickerConfigPatterns on MapLocationPickerConfig {
             _that.apiKey,
             _that.placesApi,
             _that.geocodingRadius,
+            _that.geocodingAllFields,
+            _that.geocodingFields,
+            _that.geocodingInstanceFields,
+            _that.geocodingFilter,
             _that.initialPosition,
             _that.initialZoom,
             _that.initialMapType,
@@ -1331,6 +1393,10 @@ class _MapLocationPickerConfig implements MapLocationPickerConfig {
       {this.apiKey = '',
       this.placesApi = null,
       this.geocodingRadius = 500,
+      this.geocodingAllFields = true,
+      final List<String>? geocodingFields = null,
+      this.geocodingInstanceFields = null,
+      this.geocodingFilter = null,
       this.initialPosition = const LatLng(28.8993468, 76.6250249),
       this.initialZoom = 14.0,
       this.initialMapType = MapType.normal,
@@ -1400,7 +1466,8 @@ class _MapLocationPickerConfig implements MapLocationPickerConfig {
       this.cardRadius = null,
       this.cardBorder = null,
       this.noAddressFoundText = "No address found"})
-      : _additionalMarkers = additionalMarkers,
+      : _geocodingFields = geocodingFields,
+        _additionalMarkers = additionalMarkers,
         _customMarkerIcons = customMarkerIcons,
         _customInfoWindows = customInfoWindows,
         _onMarkerTapped = onMarkerTapped,
@@ -1423,6 +1490,26 @@ class _MapLocationPickerConfig implements MapLocationPickerConfig {
   @override
   @JsonKey()
   final double geocodingRadius;
+  @override
+  @JsonKey()
+  final bool geocodingAllFields;
+  final List<String>? _geocodingFields;
+  @override
+  @JsonKey()
+  List<String>? get geocodingFields {
+    final value = _geocodingFields;
+    if (value == null) return null;
+    if (_geocodingFields is EqualUnmodifiableListView) return _geocodingFields;
+    // ignore: implicit_dynamic_type
+    return EqualUnmodifiableListView(value);
+  }
+
+  @override
+  @JsonKey()
+  final PlacesResponse? geocodingInstanceFields;
+  @override
+  @JsonKey()
+  final NearbySearchFilter? geocodingFilter;
   @override
   @JsonKey()
   final LatLng initialPosition;
@@ -1730,6 +1817,14 @@ class _MapLocationPickerConfig implements MapLocationPickerConfig {
             const DeepCollectionEquality().equals(other.placesApi, placesApi) &&
             (identical(other.geocodingRadius, geocodingRadius) ||
                 other.geocodingRadius == geocodingRadius) &&
+            (identical(other.geocodingAllFields, geocodingAllFields) ||
+                other.geocodingAllFields == geocodingAllFields) &&
+            const DeepCollectionEquality()
+                .equals(other._geocodingFields, _geocodingFields) &&
+            const DeepCollectionEquality().equals(
+                other.geocodingInstanceFields, geocodingInstanceFields) &&
+            const DeepCollectionEquality()
+                .equals(other.geocodingFilter, geocodingFilter) &&
             (identical(other.initialPosition, initialPosition) ||
                 other.initialPosition == initialPosition) &&
             (identical(other.initialZoom, initialZoom) ||
@@ -1783,10 +1878,8 @@ class _MapLocationPickerConfig implements MapLocationPickerConfig {
                 other.hideMoreOptions == hideMoreOptions) &&
             (identical(other.mapTypeButton, mapTypeButton) ||
                 other.mapTypeButton == mapTypeButton) &&
-            (identical(other.locationButton, locationButton) ||
-                other.locationButton == locationButton) &&
-            (identical(other.fabTooltip, fabTooltip) ||
-                other.fabTooltip == fabTooltip) &&
+            (identical(other.locationButton, locationButton) || other.locationButton == locationButton) &&
+            (identical(other.fabTooltip, fabTooltip) || other.fabTooltip == fabTooltip) &&
             const DeepCollectionEquality().equals(other._additionalMarkers, _additionalMarkers) &&
             const DeepCollectionEquality().equals(other._customMarkerIcons, _customMarkerIcons) &&
             const DeepCollectionEquality().equals(other._customInfoWindows, _customInfoWindows) &&
@@ -1834,6 +1927,10 @@ class _MapLocationPickerConfig implements MapLocationPickerConfig {
         apiKey,
         const DeepCollectionEquality().hash(placesApi),
         geocodingRadius,
+        geocodingAllFields,
+        const DeepCollectionEquality().hash(_geocodingFields),
+        const DeepCollectionEquality().hash(geocodingInstanceFields),
+        const DeepCollectionEquality().hash(geocodingFilter),
         initialPosition,
         initialZoom,
         initialMapType,
@@ -1906,7 +2003,7 @@ class _MapLocationPickerConfig implements MapLocationPickerConfig {
 
   @override
   String toString() {
-    return 'MapLocationPickerConfig(apiKey: $apiKey, placesApi: $placesApi, geocodingRadius: $geocodingRadius, initialPosition: $initialPosition, initialZoom: $initialZoom, initialMapType: $initialMapType, myLocationButtonEnabled: $myLocationButtonEnabled, myLocationEnabled: $myLocationEnabled, zoomControlsEnabled: $zoomControlsEnabled, minMaxZoomPreference: $minMaxZoomPreference, onCameraMove: $onCameraMove, padding: $padding, compassEnabled: $compassEnabled, liteModeEnabled: $liteModeEnabled, mapStyle: $mapStyle, floatingControlsColor: $floatingControlsColor, floatingControlsIconColor: $floatingControlsIconColor, mapTypeIcon: $mapTypeIcon, locationIcon: $locationIcon, mainMarkerIcon: $mainMarkerIcon, hideBottomCardOnKeyboard: $hideBottomCardOnKeyboard, bottomCardTitle: $bottomCardTitle, bottomCardType: $bottomCardType, confirmButton: $confirmButton, bottomCardBuilder: $bottomCardBuilder, searchBarBuilder: $searchBarBuilder, locationSettings: $locationSettings, onLocationError: $onLocationError, hideMoreOptions: $hideMoreOptions, mapTypeButton: $mapTypeButton, locationButton: $locationButton, fabTooltip: $fabTooltip, additionalMarkers: $additionalMarkers, customMarkerIcons: $customMarkerIcons, customInfoWindows: $customInfoWindows, onMarkerTapped: $onMarkerTapped, onMapCreated: $onMapCreated, onMapTypeChanged: $onMapTypeChanged, onSuggestionSelected: $onSuggestionSelected, onNext: $onNext, onAddressDecoded: $onAddressDecoded, onAddressSelected: $onAddressSelected, buildingsEnabled: $buildingsEnabled, cameraTargetBounds: $cameraTargetBounds, circles: $circles, cloudMapId: $cloudMapId, fortyFiveDegreeImageryEnabled: $fortyFiveDegreeImageryEnabled, gestureRecognizers: $gestureRecognizers, indoorViewEnabled: $indoorViewEnabled, layoutDirection: $layoutDirection, mapToolbarEnabled: $mapToolbarEnabled, onCameraIdle: $onCameraIdle, onCameraMoveStarted: $onCameraMoveStarted, onLongPress: $onLongPress, polygons: $polygons, polylines: $polylines, rotateGesturesEnabled: $rotateGesturesEnabled, scrollGesturesEnabled: $scrollGesturesEnabled, tileOverlays: $tileOverlays, tiltGesturesEnabled: $tiltGesturesEnabled, trafficEnabled: $trafficEnabled, webGestureHandling: $webGestureHandling, zoomGesturesEnabled: $zoomGesturesEnabled, clusterManagers: $clusterManagers, groundOverlays: $groundOverlays, heatmaps: $heatmaps, cardType: $cardType, cardColor: $cardColor, cardRadius: $cardRadius, cardBorder: $cardBorder, noAddressFoundText: $noAddressFoundText)';
+    return 'MapLocationPickerConfig(apiKey: $apiKey, placesApi: $placesApi, geocodingRadius: $geocodingRadius, geocodingAllFields: $geocodingAllFields, geocodingFields: $geocodingFields, geocodingInstanceFields: $geocodingInstanceFields, geocodingFilter: $geocodingFilter, initialPosition: $initialPosition, initialZoom: $initialZoom, initialMapType: $initialMapType, myLocationButtonEnabled: $myLocationButtonEnabled, myLocationEnabled: $myLocationEnabled, zoomControlsEnabled: $zoomControlsEnabled, minMaxZoomPreference: $minMaxZoomPreference, onCameraMove: $onCameraMove, padding: $padding, compassEnabled: $compassEnabled, liteModeEnabled: $liteModeEnabled, mapStyle: $mapStyle, floatingControlsColor: $floatingControlsColor, floatingControlsIconColor: $floatingControlsIconColor, mapTypeIcon: $mapTypeIcon, locationIcon: $locationIcon, mainMarkerIcon: $mainMarkerIcon, hideBottomCardOnKeyboard: $hideBottomCardOnKeyboard, bottomCardTitle: $bottomCardTitle, bottomCardType: $bottomCardType, confirmButton: $confirmButton, bottomCardBuilder: $bottomCardBuilder, searchBarBuilder: $searchBarBuilder, locationSettings: $locationSettings, onLocationError: $onLocationError, hideMoreOptions: $hideMoreOptions, mapTypeButton: $mapTypeButton, locationButton: $locationButton, fabTooltip: $fabTooltip, additionalMarkers: $additionalMarkers, customMarkerIcons: $customMarkerIcons, customInfoWindows: $customInfoWindows, onMarkerTapped: $onMarkerTapped, onMapCreated: $onMapCreated, onMapTypeChanged: $onMapTypeChanged, onSuggestionSelected: $onSuggestionSelected, onNext: $onNext, onAddressDecoded: $onAddressDecoded, onAddressSelected: $onAddressSelected, buildingsEnabled: $buildingsEnabled, cameraTargetBounds: $cameraTargetBounds, circles: $circles, cloudMapId: $cloudMapId, fortyFiveDegreeImageryEnabled: $fortyFiveDegreeImageryEnabled, gestureRecognizers: $gestureRecognizers, indoorViewEnabled: $indoorViewEnabled, layoutDirection: $layoutDirection, mapToolbarEnabled: $mapToolbarEnabled, onCameraIdle: $onCameraIdle, onCameraMoveStarted: $onCameraMoveStarted, onLongPress: $onLongPress, polygons: $polygons, polylines: $polylines, rotateGesturesEnabled: $rotateGesturesEnabled, scrollGesturesEnabled: $scrollGesturesEnabled, tileOverlays: $tileOverlays, tiltGesturesEnabled: $tiltGesturesEnabled, trafficEnabled: $trafficEnabled, webGestureHandling: $webGestureHandling, zoomGesturesEnabled: $zoomGesturesEnabled, clusterManagers: $clusterManagers, groundOverlays: $groundOverlays, heatmaps: $heatmaps, cardType: $cardType, cardColor: $cardColor, cardRadius: $cardRadius, cardBorder: $cardBorder, noAddressFoundText: $noAddressFoundText)';
   }
 }
 
@@ -1922,6 +2019,10 @@ abstract mixin class _$MapLocationPickerConfigCopyWith<$Res>
       {String apiKey,
       PlacesAPINew? placesApi,
       double geocodingRadius,
+      bool geocodingAllFields,
+      List<String>? geocodingFields,
+      PlacesResponse? geocodingInstanceFields,
+      NearbySearchFilter? geocodingFilter,
       LatLng initialPosition,
       double initialZoom,
       MapType initialMapType,
@@ -2008,6 +2109,10 @@ class __$MapLocationPickerConfigCopyWithImpl<$Res>
     Object? apiKey = null,
     Object? placesApi = freezed,
     Object? geocodingRadius = null,
+    Object? geocodingAllFields = null,
+    Object? geocodingFields = freezed,
+    Object? geocodingInstanceFields = freezed,
+    Object? geocodingFilter = freezed,
     Object? initialPosition = null,
     Object? initialZoom = null,
     Object? initialMapType = null,
@@ -2090,6 +2195,22 @@ class __$MapLocationPickerConfigCopyWithImpl<$Res>
           ? _self.geocodingRadius
           : geocodingRadius // ignore: cast_nullable_to_non_nullable
               as double,
+      geocodingAllFields: null == geocodingAllFields
+          ? _self.geocodingAllFields
+          : geocodingAllFields // ignore: cast_nullable_to_non_nullable
+              as bool,
+      geocodingFields: freezed == geocodingFields
+          ? _self._geocodingFields
+          : geocodingFields // ignore: cast_nullable_to_non_nullable
+              as List<String>?,
+      geocodingInstanceFields: freezed == geocodingInstanceFields
+          ? _self.geocodingInstanceFields
+          : geocodingInstanceFields // ignore: cast_nullable_to_non_nullable
+              as PlacesResponse?,
+      geocodingFilter: freezed == geocodingFilter
+          ? _self.geocodingFilter
+          : geocodingFilter // ignore: cast_nullable_to_non_nullable
+              as NearbySearchFilter?,
       initialPosition: null == initialPosition
           ? _self.initialPosition
           : initialPosition // ignore: cast_nullable_to_non_nullable
