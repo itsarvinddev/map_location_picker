@@ -313,8 +313,8 @@ packages:
     dependency: "direct main"
     description:
       path: "."
-      ref: "32bca0757001e53c220f430c539824469c7e5d15"
-      resolved-ref: "32bca0757001e53c220f430c539824469c7e5d15"
+      ref: "8f915401f77dddf1adc44ea5f56803797da25be0"
+      resolved-ref: "8f915401f77dddf1adc44ea5f56803797da25be0"
       url: "https://github.com/itsarvinddev/google_maps_apis.git"
     source: git
     version: "3.0.1"

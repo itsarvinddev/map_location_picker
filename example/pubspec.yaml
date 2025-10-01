@@ -46,7 +46,7 @@ dependencies:
   google_maps_apis:
     git:
       url: https://github.com/itsarvinddev/google_maps_apis.git
-      ref: 32bca0757001e53c220f430c539824469c7e5d15
+      ref: 8f915401f77dddf1adc44ea5f56803797da25be0
 
 dev_dependencies:
   flutter_test:
