@@ -46,7 +46,7 @@ Add to your `pubspec.yaml`:
 
 ```yaml
 dependencies:
-  map_location_picker: ^2.0.0
+  map_location_picker: ^3.1.0
 ```
 
 ## Setup Guide

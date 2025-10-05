@@ -53,10 +53,10 @@ packages:
     dependency: transitive
     description:
       name: copy_with_extension
-      sha256: "0447e5ea09845b275fbeaa7605bc85e74da759788678760b2a6c4e06ca622410"
+      sha256: c9e09bce2fee69729ea55dbd55f7150d4cf6f7e55461091a02839c21346f1b95
       url: "https://pub.dev"
     source: hosted
-    version: "6.0.1"
+    version: "10.0.1"
   crypto:
     dependency: transitive
     description:
@@ -312,12 +312,11 @@ packages:
   google_maps_apis:
     dependency: "direct main"
     description:
-      path: "."
-      ref: "8f915401f77dddf1adc44ea5f56803797da25be0"
-      resolved-ref: "8f915401f77dddf1adc44ea5f56803797da25be0"
-      url: "https://github.com/itsarvinddev/google_maps_apis.git"
-    source: git
-    version: "3.0.1"
+      name: google_maps_apis
+      sha256: cc56434c3a4d6dbbd551ed28f8ecb637044548e42e6444dc7ce30470b6923e39
+      url: "https://pub.dev"
+    source: hosted
+    version: "4.0.0"
   google_maps_flutter:
     dependency: transitive
     description:
@@ -444,7 +443,7 @@ packages:
       path: ".."
       relative: true
     source: path
-    version: "3.0.1"
+    version: "3.0.2"
   matcher:
     dependency: transitive
     description:

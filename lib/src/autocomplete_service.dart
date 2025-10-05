@@ -1,3 +1,4 @@
+import 'package:dio/dio.dart' show CancelToken;
 import 'package:google_maps_apis/places_new.dart';
 
 import 'logger.dart';
@@ -39,13 +40,22 @@ class AutoCompleteService {
     ///  fields=name,geometry,reviews,photos = more expensive.
     /// ```
     List<String>? fields,
+
+    /// the instance fields to return.
+    /// [Pricing note](https://developers.google.com/maps/documentation/places/web-service/autocomplete#pricing)
+    ///
+    /// ```
+    ///  Each field group (Basic, Contact, Atmosphere) has a separate billing weight.
+    ///  So selecting more fields increases cost.
     PlacesSuggestions? instanceFields,
     SessionTokenHandler? sessionToken,
+    CancelToken? cancelToken,
   }) async {
     try {
       if (query.isEmpty) return [];
       final places = placesApi ?? PlacesAPINew(apiKey: apiKey);
       sessionToken ??= SessionTokenHandler();
+      cancelToken ??= CancelToken();
       final response = await places.searchAutocomplete(
         filter: filter ??
             AutocompleteSearchFilter(
@@ -55,6 +65,7 @@ class AutoCompleteService {
         allFields: allFields,
         fields: fields,
         instanceFields: instanceFields,
+        cancelToken: cancelToken,
       );
 
       if (_isErrorResponse(response)) return <Suggestion>[];

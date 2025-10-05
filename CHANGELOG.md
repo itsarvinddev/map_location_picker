@@ -1,3 +1,8 @@
+## 3.1.0
+
+- cancelToken, headers & interceptors added to the new apis only.
+- roof top geocoding api fixed.
+
 ## 3.0.0
 
 - google_maps_apis package added.

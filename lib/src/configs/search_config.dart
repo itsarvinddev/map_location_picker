@@ -1,3 +1,4 @@
+import 'package:dio/dio.dart' show CancelToken;
 import 'package:flutter/material.dart';
 import 'package:flutter_typeahead/flutter_typeahead.dart';
 import 'package:freezed_annotation/freezed_annotation.dart';
@@ -85,5 +86,6 @@ abstract class SearchConfig with _$SearchConfig {
     @Default(null) FocusNode? focusNode,
     @Default(true) bool hideKeyboardOnDrag,
     @Default(null) TextFieldBuilder builder,
+    @Default(null) CancelToken? cancelToken,
   }) = _SearchConfig;
 }

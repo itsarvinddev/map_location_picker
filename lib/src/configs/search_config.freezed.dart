@@ -59,6 +59,7 @@ mixin _$SearchConfig {
   FocusNode? get focusNode;
   bool get hideKeyboardOnDrag;
   TextFieldBuilder get builder;
+  CancelToken? get cancelToken;
 
   /// Create a copy of SearchConfig
   /// with the given fields replaced by the non-null parameter values.
@@ -158,7 +159,9 @@ mixin _$SearchConfig {
                 other.focusNode == focusNode) &&
             (identical(other.hideKeyboardOnDrag, hideKeyboardOnDrag) ||
                 other.hideKeyboardOnDrag == hideKeyboardOnDrag) &&
-            (identical(other.builder, builder) || other.builder == builder));
+            (identical(other.builder, builder) || other.builder == builder) &&
+            (identical(other.cancelToken, cancelToken) ||
+                other.cancelToken == cancelToken));
   }
 
   @override
@@ -208,12 +211,13 @@ mixin _$SearchConfig {
         scrollController,
         focusNode,
         hideKeyboardOnDrag,
-        builder
+        builder,
+        cancelToken
       ]);
 
   @override
   String toString() {
-    return 'SearchConfig(apiKey: $apiKey, placesApi: $placesApi, placesAllFields: $placesAllFields, placeDetailsFilter: $placeDetailsFilter, placeInstanceFields: $placeInstanceFields, placeFields: $placeFields, searchAllFields: $searchAllFields, searchFields: $searchFields, searchFilter: $searchFilter, searchInstanceFields: $searchInstanceFields, sessionToken: $sessionToken, searchHintText: $searchHintText, searchHintStyle: $searchHintStyle, minCharsForSuggestions: $minCharsForSuggestions, debounceDuration: $debounceDuration, defaultAddressText: $defaultAddressText, initialValue: $initialValue, itemBuilder: $itemBuilder, onSelected: $onSelected, errorBuilder: $errorBuilder, animationDuration: $animationDuration, autoFlipDirection: $autoFlipDirection, direction: $direction, hideOnEmpty: $hideOnEmpty, hideOnError: $hideOnError, hideOnLoading: $hideOnLoading, loadingBuilder: $loadingBuilder, transitionBuilder: $transitionBuilder, autoFlipMinHeight: $autoFlipMinHeight, constraints: $constraints, hideOnSelect: $hideOnSelect, hideOnUnfocus: $hideOnUnfocus, hideWithKeyboard: $hideWithKeyboard, itemSeparatorBuilder: $itemSeparatorBuilder, listBuilder: $listBuilder, offset: $offset, retainOnLoading: $retainOnLoading, showOnFocus: $showOnFocus, suggestionsController: $suggestionsController, decorationBuilder: $decorationBuilder, emptyBuilder: $emptyBuilder, scrollController: $scrollController, focusNode: $focusNode, hideKeyboardOnDrag: $hideKeyboardOnDrag, builder: $builder)';
+    return 'SearchConfig(apiKey: $apiKey, placesApi: $placesApi, placesAllFields: $placesAllFields, placeDetailsFilter: $placeDetailsFilter, placeInstanceFields: $placeInstanceFields, placeFields: $placeFields, searchAllFields: $searchAllFields, searchFields: $searchFields, searchFilter: $searchFilter, searchInstanceFields: $searchInstanceFields, sessionToken: $sessionToken, searchHintText: $searchHintText, searchHintStyle: $searchHintStyle, minCharsForSuggestions: $minCharsForSuggestions, debounceDuration: $debounceDuration, defaultAddressText: $defaultAddressText, initialValue: $initialValue, itemBuilder: $itemBuilder, onSelected: $onSelected, errorBuilder: $errorBuilder, animationDuration: $animationDuration, autoFlipDirection: $autoFlipDirection, direction: $direction, hideOnEmpty: $hideOnEmpty, hideOnError: $hideOnError, hideOnLoading: $hideOnLoading, loadingBuilder: $loadingBuilder, transitionBuilder: $transitionBuilder, autoFlipMinHeight: $autoFlipMinHeight, constraints: $constraints, hideOnSelect: $hideOnSelect, hideOnUnfocus: $hideOnUnfocus, hideWithKeyboard: $hideWithKeyboard, itemSeparatorBuilder: $itemSeparatorBuilder, listBuilder: $listBuilder, offset: $offset, retainOnLoading: $retainOnLoading, showOnFocus: $showOnFocus, suggestionsController: $suggestionsController, decorationBuilder: $decorationBuilder, emptyBuilder: $emptyBuilder, scrollController: $scrollController, focusNode: $focusNode, hideKeyboardOnDrag: $hideKeyboardOnDrag, builder: $builder, cancelToken: $cancelToken)';
   }
 }
 
@@ -268,7 +272,8 @@ abstract mixin class $SearchConfigCopyWith<$Res> {
       ScrollController? scrollController,
       FocusNode? focusNode,
       bool hideKeyboardOnDrag,
-      TextFieldBuilder builder});
+      TextFieldBuilder builder,
+      CancelToken? cancelToken});
 }
 
 /// @nodoc
@@ -328,6 +333,7 @@ class _$SearchConfigCopyWithImpl<$Res> implements $SearchConfigCopyWith<$Res> {
     Object? focusNode = freezed,
     Object? hideKeyboardOnDrag = null,
     Object? builder = freezed,
+    Object? cancelToken = freezed,
   }) {
     return _then(_self.copyWith(
       apiKey: null == apiKey
@@ -510,6 +516,10 @@ class _$SearchConfigCopyWithImpl<$Res> implements $SearchConfigCopyWith<$Res> {
           ? _self.builder
           : builder // ignore: cast_nullable_to_non_nullable
               as TextFieldBuilder,
+      cancelToken: freezed == cancelToken
+          ? _self.cancelToken
+          : cancelToken // ignore: cast_nullable_to_non_nullable
+              as CancelToken?,
     ));
   }
 }
@@ -652,7 +662,8 @@ extension SearchConfigPatterns on SearchConfig {
             ScrollController? scrollController,
             FocusNode? focusNode,
             bool hideKeyboardOnDrag,
-            TextFieldBuilder builder)?
+            TextFieldBuilder builder,
+            CancelToken? cancelToken)?
         $default, {
     required TResult orElse(),
   }) {
@@ -704,7 +715,8 @@ extension SearchConfigPatterns on SearchConfig {
             _that.scrollController,
             _that.focusNode,
             _that.hideKeyboardOnDrag,
-            _that.builder);
+            _that.builder,
+            _that.cancelToken);
       case _:
         return orElse();
     }
@@ -770,7 +782,8 @@ extension SearchConfigPatterns on SearchConfig {
             ScrollController? scrollController,
             FocusNode? focusNode,
             bool hideKeyboardOnDrag,
-            TextFieldBuilder builder)
+            TextFieldBuilder builder,
+            CancelToken? cancelToken)
         $default,
   ) {
     final _that = this;
@@ -821,7 +834,8 @@ extension SearchConfigPatterns on SearchConfig {
             _that.scrollController,
             _that.focusNode,
             _that.hideKeyboardOnDrag,
-            _that.builder);
+            _that.builder,
+            _that.cancelToken);
       case _:
         throw StateError('Unexpected subclass');
     }
@@ -886,7 +900,8 @@ extension SearchConfigPatterns on SearchConfig {
             ScrollController? scrollController,
             FocusNode? focusNode,
             bool hideKeyboardOnDrag,
-            TextFieldBuilder builder)?
+            TextFieldBuilder builder,
+            CancelToken? cancelToken)?
         $default,
   ) {
     final _that = this;
@@ -937,7 +952,8 @@ extension SearchConfigPatterns on SearchConfig {
             _that.scrollController,
             _that.focusNode,
             _that.hideKeyboardOnDrag,
-            _that.builder);
+            _that.builder,
+            _that.cancelToken);
       case _:
         return null;
     }
@@ -992,7 +1008,8 @@ class _SearchConfig implements SearchConfig {
       this.scrollController = null,
       this.focusNode = null,
       this.hideKeyboardOnDrag = true,
-      this.builder = null})
+      this.builder = null,
+      this.cancelToken = null})
       : _placeFields = placeFields,
         _searchFields = searchFields;
 
@@ -1147,6 +1164,9 @@ class _SearchConfig implements SearchConfig {
   @override
   @JsonKey()
   final TextFieldBuilder builder;
+  @override
+  @JsonKey()
+  final CancelToken? cancelToken;
 
   /// Create a copy of SearchConfig
   /// with the given fields replaced by the non-null parameter values.
@@ -1246,7 +1266,9 @@ class _SearchConfig implements SearchConfig {
                 other.focusNode == focusNode) &&
             (identical(other.hideKeyboardOnDrag, hideKeyboardOnDrag) ||
                 other.hideKeyboardOnDrag == hideKeyboardOnDrag) &&
-            (identical(other.builder, builder) || other.builder == builder));
+            (identical(other.builder, builder) || other.builder == builder) &&
+            (identical(other.cancelToken, cancelToken) ||
+                other.cancelToken == cancelToken));
   }
 
   @override
@@ -1296,12 +1318,13 @@ class _SearchConfig implements SearchConfig {
         scrollController,
         focusNode,
         hideKeyboardOnDrag,
-        builder
+        builder,
+        cancelToken
       ]);
 
   @override
   String toString() {
-    return 'SearchConfig(apiKey: $apiKey, placesApi: $placesApi, placesAllFields: $placesAllFields, placeDetailsFilter: $placeDetailsFilter, placeInstanceFields: $placeInstanceFields, placeFields: $placeFields, searchAllFields: $searchAllFields, searchFields: $searchFields, searchFilter: $searchFilter, searchInstanceFields: $searchInstanceFields, sessionToken: $sessionToken, searchHintText: $searchHintText, searchHintStyle: $searchHintStyle, minCharsForSuggestions: $minCharsForSuggestions, debounceDuration: $debounceDuration, defaultAddressText: $defaultAddressText, initialValue: $initialValue, itemBuilder: $itemBuilder, onSelected: $onSelected, errorBuilder: $errorBuilder, animationDuration: $animationDuration, autoFlipDirection: $autoFlipDirection, direction: $direction, hideOnEmpty: $hideOnEmpty, hideOnError: $hideOnError, hideOnLoading: $hideOnLoading, loadingBuilder: $loadingBuilder, transitionBuilder: $transitionBuilder, autoFlipMinHeight: $autoFlipMinHeight, constraints: $constraints, hideOnSelect: $hideOnSelect, hideOnUnfocus: $hideOnUnfocus, hideWithKeyboard: $hideWithKeyboard, itemSeparatorBuilder: $itemSeparatorBuilder, listBuilder: $listBuilder, offset: $offset, retainOnLoading: $retainOnLoading, showOnFocus: $showOnFocus, suggestionsController: $suggestionsController, decorationBuilder: $decorationBuilder, emptyBuilder: $emptyBuilder, scrollController: $scrollController, focusNode: $focusNode, hideKeyboardOnDrag: $hideKeyboardOnDrag, builder: $builder)';
+    return 'SearchConfig(apiKey: $apiKey, placesApi: $placesApi, placesAllFields: $placesAllFields, placeDetailsFilter: $placeDetailsFilter, placeInstanceFields: $placeInstanceFields, placeFields: $placeFields, searchAllFields: $searchAllFields, searchFields: $searchFields, searchFilter: $searchFilter, searchInstanceFields: $searchInstanceFields, sessionToken: $sessionToken, searchHintText: $searchHintText, searchHintStyle: $searchHintStyle, minCharsForSuggestions: $minCharsForSuggestions, debounceDuration: $debounceDuration, defaultAddressText: $defaultAddressText, initialValue: $initialValue, itemBuilder: $itemBuilder, onSelected: $onSelected, errorBuilder: $errorBuilder, animationDuration: $animationDuration, autoFlipDirection: $autoFlipDirection, direction: $direction, hideOnEmpty: $hideOnEmpty, hideOnError: $hideOnError, hideOnLoading: $hideOnLoading, loadingBuilder: $loadingBuilder, transitionBuilder: $transitionBuilder, autoFlipMinHeight: $autoFlipMinHeight, constraints: $constraints, hideOnSelect: $hideOnSelect, hideOnUnfocus: $hideOnUnfocus, hideWithKeyboard: $hideWithKeyboard, itemSeparatorBuilder: $itemSeparatorBuilder, listBuilder: $listBuilder, offset: $offset, retainOnLoading: $retainOnLoading, showOnFocus: $showOnFocus, suggestionsController: $suggestionsController, decorationBuilder: $decorationBuilder, emptyBuilder: $emptyBuilder, scrollController: $scrollController, focusNode: $focusNode, hideKeyboardOnDrag: $hideKeyboardOnDrag, builder: $builder, cancelToken: $cancelToken)';
   }
 }
 
@@ -1358,7 +1381,8 @@ abstract mixin class _$SearchConfigCopyWith<$Res>
       ScrollController? scrollController,
       FocusNode? focusNode,
       bool hideKeyboardOnDrag,
-      TextFieldBuilder builder});
+      TextFieldBuilder builder,
+      CancelToken? cancelToken});
 }
 
 /// @nodoc
@@ -1419,6 +1443,7 @@ class __$SearchConfigCopyWithImpl<$Res>
     Object? focusNode = freezed,
     Object? hideKeyboardOnDrag = null,
     Object? builder = freezed,
+    Object? cancelToken = freezed,
   }) {
     return _then(_SearchConfig(
       apiKey: null == apiKey
@@ -1601,6 +1626,10 @@ class __$SearchConfigCopyWithImpl<$Res>
           ? _self.builder
           : builder // ignore: cast_nullable_to_non_nullable
               as TextFieldBuilder,
+      cancelToken: freezed == cancelToken
+          ? _self.cancelToken
+          : cancelToken // ignore: cast_nullable_to_non_nullable
+              as CancelToken?,
     ));
   }
 }
