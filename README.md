@@ -151,7 +151,7 @@ You must then send the following in the headers:
   }
   if (Platform.isAndroid) {
     headers['X-Android-Package'] = 'Your Bundle Identifier';
-    headers['X-Android-Cert'] = 'Your Sha-1';
+    headers['X-Android-Cert'] = 'Your Sha-1 in lowercase with colons removed';
   }
    MapLocationPicker(
       geoCodingApiHeaders: headers,
