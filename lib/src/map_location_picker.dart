@@ -109,7 +109,7 @@ class MapLocationPicker extends HookWidget {
         ),
       );
 
-      /// Search Bar
+      /// Search Bar with optional back button
       return config.searchBarBuilder?.call(context, searchBar) ??
           Positioned(
             top: 0,
@@ -118,7 +118,28 @@ class MapLocationPicker extends HookWidget {
             child: SafeArea(
               child: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 12),
-                child: searchBar,
+                child: config.showBackButton
+                    ? Row(
+                        children: [
+                          CustomMapCard(
+                            radius: config.cardRadius ??
+                                BorderRadius.circular(CustomMapCard.kRadius),
+                            padding: EdgeInsets.zero,
+                            color: config.cardColor,
+                            border: config.cardBorder,
+                            child: IconButton(
+                              icon: Icon(
+                                config.backButtonIcon ?? Icons.arrow_back,
+                              ),
+                              onPressed: config.onBackPressed ??
+                                  () => Navigator.of(context).pop(),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(child: searchBar),
+                        ],
+                      )
+                    : searchBar,
               ),
             ),
           );
@@ -264,13 +285,21 @@ class MapLocationPicker extends HookWidget {
               }
             },
             minMaxZoomPreference: config.minMaxZoomPreference,
-            onCameraMove: (position) {
-              config.onCameraMove?.call(position);
+            onCameraMove: (cameraPosition) {
+              config.onCameraMove?.call(cameraPosition);
+              // Track camera target for pickOnCameraIdle
+              if (config.pickOnCameraIdle) {
+                position.value = cameraPosition.target;
+              }
               if (hasFocus) {
                 FocusManager.instance.primaryFocus?.unfocus();
               }
             },
-            markers: markers.value,
+            markers: config.centerMarkerWidget != null
+                ? (markers.value
+                    .where((m) => m.markerId != const MarkerId("main"))
+                    .toSet())
+                : markers.value,
             myLocationButtonEnabled: config.myLocationButtonEnabled,
             myLocationEnabled: config.myLocationEnabled,
             zoomControlsEnabled: config.zoomControlsEnabled,
@@ -288,7 +317,22 @@ class MapLocationPicker extends HookWidget {
             indoorViewEnabled: config.indoorViewEnabled,
             layoutDirection: config.layoutDirection,
             mapToolbarEnabled: config.mapToolbarEnabled,
-            onCameraIdle: config.onCameraIdle,
+            onCameraIdle: () {
+              config.onCameraIdle?.call();
+              // Drag-to-pick: reverse geocode when camera stops moving
+              if (config.pickOnCameraIdle) {
+                markers.value = _createMarkers(position.value);
+                _getAddressForPosition(
+                  position.value,
+                  effectiveGeoCodingService,
+                  address,
+                  isLoading,
+                  geoCodingResult,
+                  geoCodingResults,
+                  context,
+                );
+              }
+            },
             onCameraMoveStarted: config.onCameraMoveStarted,
             onLongPress: config.onLongPress,
             polygons: config.polygons,
@@ -305,6 +349,10 @@ class MapLocationPicker extends HookWidget {
             heatmaps: config.heatmaps,
           ),
           ),
+
+          /// Center marker widget overlay (stays fixed at center while map moves)
+          if (config.centerMarkerWidget != null)
+            Center(child: config.centerMarkerWidget!),
 
           /// Search view
           buildSearchView(),

@@ -87,5 +87,10 @@ abstract class SearchConfig with _$SearchConfig {
     @Default(true) bool hideKeyboardOnDrag,
     @Default(null) TextFieldBuilder builder,
     @Default(null) CancelToken? cancelToken,
+
+    /// Convenience parameter to restrict autocomplete results to specific
+    /// countries. Provide ISO 3166-1 Alpha-2 country codes (e.g. `['us', 'ca']`).
+    /// This is applied when [searchFilter] is null.
+    @Default(null) List<String>? countries,
   }) = _SearchConfig;
 }

@@ -111,6 +111,11 @@ class AutoCompleteService {
     PlacesSuggestions? instanceFields,
     SessionTokenHandler? sessionToken,
     CancelToken? cancelToken,
+
+    /// Country codes to restrict results to (ISO 3166-1 Alpha-2).
+    /// Note: On web, country restriction is not applied via JS API autocomplete
+    /// service. Use the Places API (New) search filter for server-side filtering.
+    List<String>? countries,
   }) async {
     try {
       if (query.isEmpty) return [];

@@ -209,6 +209,7 @@ class PlacesAutocomplete extends HookWidget {
       instanceFields: config.searchInstanceFields,
       sessionToken: config.sessionToken,
       cancelToken: config.cancelToken,
+      countries: config.countries,
     );
   }
 

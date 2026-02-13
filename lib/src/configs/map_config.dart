@@ -109,5 +109,25 @@ abstract class MapLocationPickerConfig with _$MapLocationPickerConfig {
     @Default(null) BorderRadiusGeometry? cardRadius,
     @Default(null) BoxBorder? cardBorder,
     @Default("No address found") String noAddressFoundText,
+
+    /// Whether to show a back/close button at the top-left of the search bar.
+    @Default(false) bool showBackButton,
+
+    /// Custom icon for the back button. Defaults to [Icons.arrow_back].
+    @Default(null) IconData? backButtonIcon,
+
+    /// Callback when the back button is pressed. If null, [Navigator.pop] is used.
+    @Default(null) VoidCallback? onBackPressed,
+
+    /// When true, the picker will reverse-geocode the camera position when the
+    /// camera stops moving (drag-to-pick mode). This allows users to drag the
+    /// map to pick a location instead of only tapping.
+    @Default(false) bool pickOnCameraIdle,
+
+    /// A custom widget to display at the center of the map as a pin marker.
+    /// When provided, this widget is rendered as an overlay at the center of the
+    /// map instead of using a Google Maps [Marker]. This is useful for animated
+    /// or custom-styled pins that stay fixed while the user drags the map.
+    @Default(null) Widget? centerMarkerWidget,
   }) = _MapLocationPickerConfig;
 }

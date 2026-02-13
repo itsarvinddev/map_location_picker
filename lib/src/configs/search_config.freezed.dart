@@ -61,6 +61,11 @@ mixin _$SearchConfig {
   TextFieldBuilder get builder;
   CancelToken? get cancelToken;
 
+  /// Convenience parameter to restrict autocomplete results to specific
+  /// countries. Provide ISO 3166-1 Alpha-2 country codes (e.g. `['us', 'ca']`).
+  /// This is applied when [searchFilter] is null.
+  List<String>? get countries;
+
   /// Create a copy of SearchConfig
   /// with the given fields replaced by the non-null parameter values.
   @JsonKey(includeFromJson: false, includeToJson: false)
@@ -161,7 +166,8 @@ mixin _$SearchConfig {
                 other.hideKeyboardOnDrag == hideKeyboardOnDrag) &&
             (identical(other.builder, builder) || other.builder == builder) &&
             (identical(other.cancelToken, cancelToken) ||
-                other.cancelToken == cancelToken));
+                other.cancelToken == cancelToken) &&
+            const DeepCollectionEquality().equals(other.countries, countries));
   }
 
   @override
@@ -212,12 +218,13 @@ mixin _$SearchConfig {
         focusNode,
         hideKeyboardOnDrag,
         builder,
-        cancelToken
+        cancelToken,
+        const DeepCollectionEquality().hash(countries)
       ]);
 
   @override
   String toString() {
-    return 'SearchConfig(apiKey: $apiKey, placesApi: $placesApi, placesAllFields: $placesAllFields, placeDetailsFilter: $placeDetailsFilter, placeInstanceFields: $placeInstanceFields, placeFields: $placeFields, searchAllFields: $searchAllFields, searchFields: $searchFields, searchFilter: $searchFilter, searchInstanceFields: $searchInstanceFields, sessionToken: $sessionToken, searchHintText: $searchHintText, searchHintStyle: $searchHintStyle, minCharsForSuggestions: $minCharsForSuggestions, debounceDuration: $debounceDuration, defaultAddressText: $defaultAddressText, initialValue: $initialValue, itemBuilder: $itemBuilder, onSelected: $onSelected, errorBuilder: $errorBuilder, animationDuration: $animationDuration, autoFlipDirection: $autoFlipDirection, direction: $direction, hideOnEmpty: $hideOnEmpty, hideOnError: $hideOnError, hideOnLoading: $hideOnLoading, loadingBuilder: $loadingBuilder, transitionBuilder: $transitionBuilder, autoFlipMinHeight: $autoFlipMinHeight, constraints: $constraints, hideOnSelect: $hideOnSelect, hideOnUnfocus: $hideOnUnfocus, hideWithKeyboard: $hideWithKeyboard, itemSeparatorBuilder: $itemSeparatorBuilder, listBuilder: $listBuilder, offset: $offset, retainOnLoading: $retainOnLoading, showOnFocus: $showOnFocus, suggestionsController: $suggestionsController, decorationBuilder: $decorationBuilder, emptyBuilder: $emptyBuilder, scrollController: $scrollController, focusNode: $focusNode, hideKeyboardOnDrag: $hideKeyboardOnDrag, builder: $builder, cancelToken: $cancelToken)';
+    return 'SearchConfig(apiKey: $apiKey, placesApi: $placesApi, placesAllFields: $placesAllFields, placeDetailsFilter: $placeDetailsFilter, placeInstanceFields: $placeInstanceFields, placeFields: $placeFields, searchAllFields: $searchAllFields, searchFields: $searchFields, searchFilter: $searchFilter, searchInstanceFields: $searchInstanceFields, sessionToken: $sessionToken, searchHintText: $searchHintText, searchHintStyle: $searchHintStyle, minCharsForSuggestions: $minCharsForSuggestions, debounceDuration: $debounceDuration, defaultAddressText: $defaultAddressText, initialValue: $initialValue, itemBuilder: $itemBuilder, onSelected: $onSelected, errorBuilder: $errorBuilder, animationDuration: $animationDuration, autoFlipDirection: $autoFlipDirection, direction: $direction, hideOnEmpty: $hideOnEmpty, hideOnError: $hideOnError, hideOnLoading: $hideOnLoading, loadingBuilder: $loadingBuilder, transitionBuilder: $transitionBuilder, autoFlipMinHeight: $autoFlipMinHeight, constraints: $constraints, hideOnSelect: $hideOnSelect, hideOnUnfocus: $hideOnUnfocus, hideWithKeyboard: $hideWithKeyboard, itemSeparatorBuilder: $itemSeparatorBuilder, listBuilder: $listBuilder, offset: $offset, retainOnLoading: $retainOnLoading, showOnFocus: $showOnFocus, suggestionsController: $suggestionsController, decorationBuilder: $decorationBuilder, emptyBuilder: $emptyBuilder, scrollController: $scrollController, focusNode: $focusNode, hideKeyboardOnDrag: $hideKeyboardOnDrag, builder: $builder, cancelToken: $cancelToken, countries: $countries)';
   }
 }
 
@@ -273,7 +280,8 @@ abstract mixin class $SearchConfigCopyWith<$Res> {
       FocusNode? focusNode,
       bool hideKeyboardOnDrag,
       TextFieldBuilder builder,
-      CancelToken? cancelToken});
+      CancelToken? cancelToken,
+      List<String>? countries});
 }
 
 /// @nodoc
@@ -334,6 +342,7 @@ class _$SearchConfigCopyWithImpl<$Res> implements $SearchConfigCopyWith<$Res> {
     Object? hideKeyboardOnDrag = null,
     Object? builder = freezed,
     Object? cancelToken = freezed,
+    Object? countries = freezed,
   }) {
     return _then(_self.copyWith(
       apiKey: null == apiKey
@@ -520,6 +529,10 @@ class _$SearchConfigCopyWithImpl<$Res> implements $SearchConfigCopyWith<$Res> {
           ? _self.cancelToken
           : cancelToken // ignore: cast_nullable_to_non_nullable
               as CancelToken?,
+      countries: freezed == countries
+          ? _self.countries
+          : countries // ignore: cast_nullable_to_non_nullable
+              as List<String>?,
     ));
   }
 }
@@ -663,7 +676,8 @@ extension SearchConfigPatterns on SearchConfig {
             FocusNode? focusNode,
             bool hideKeyboardOnDrag,
             TextFieldBuilder builder,
-            CancelToken? cancelToken)?
+            CancelToken? cancelToken,
+            List<String>? countries)?
         $default, {
     required TResult orElse(),
   }) {
@@ -716,7 +730,8 @@ extension SearchConfigPatterns on SearchConfig {
             _that.focusNode,
             _that.hideKeyboardOnDrag,
             _that.builder,
-            _that.cancelToken);
+            _that.cancelToken,
+            _that.countries);
       case _:
         return orElse();
     }
@@ -783,7 +798,8 @@ extension SearchConfigPatterns on SearchConfig {
             FocusNode? focusNode,
             bool hideKeyboardOnDrag,
             TextFieldBuilder builder,
-            CancelToken? cancelToken)
+            CancelToken? cancelToken,
+            List<String>? countries)
         $default,
   ) {
     final _that = this;
@@ -835,7 +851,8 @@ extension SearchConfigPatterns on SearchConfig {
             _that.focusNode,
             _that.hideKeyboardOnDrag,
             _that.builder,
-            _that.cancelToken);
+            _that.cancelToken,
+            _that.countries);
       case _:
         throw StateError('Unexpected subclass');
     }
@@ -901,7 +918,8 @@ extension SearchConfigPatterns on SearchConfig {
             FocusNode? focusNode,
             bool hideKeyboardOnDrag,
             TextFieldBuilder builder,
-            CancelToken? cancelToken)?
+            CancelToken? cancelToken,
+            List<String>? countries)?
         $default,
   ) {
     final _that = this;
@@ -953,7 +971,8 @@ extension SearchConfigPatterns on SearchConfig {
             _that.focusNode,
             _that.hideKeyboardOnDrag,
             _that.builder,
-            _that.cancelToken);
+            _that.cancelToken,
+            _that.countries);
       case _:
         return null;
     }
@@ -1009,9 +1028,11 @@ class _SearchConfig implements SearchConfig {
       this.focusNode = null,
       this.hideKeyboardOnDrag = true,
       this.builder = null,
-      this.cancelToken = null})
+      this.cancelToken = null,
+      final List<String>? countries = null})
       : _placeFields = placeFields,
-        _searchFields = searchFields;
+        _searchFields = searchFields,
+        _countries = countries;
 
   @override
   @JsonKey()
@@ -1168,6 +1189,24 @@ class _SearchConfig implements SearchConfig {
   @JsonKey()
   final CancelToken? cancelToken;
 
+  /// Convenience parameter to restrict autocomplete results to specific
+  /// countries. Provide ISO 3166-1 Alpha-2 country codes (e.g. `['us', 'ca']`).
+  /// This is applied when [searchFilter] is null.
+  final List<String>? _countries;
+
+  /// Convenience parameter to restrict autocomplete results to specific
+  /// countries. Provide ISO 3166-1 Alpha-2 country codes (e.g. `['us', 'ca']`).
+  /// This is applied when [searchFilter] is null.
+  @override
+  @JsonKey()
+  List<String>? get countries {
+    final value = _countries;
+    if (value == null) return null;
+    if (_countries is EqualUnmodifiableListView) return _countries;
+    // ignore: implicit_dynamic_type
+    return EqualUnmodifiableListView(value);
+  }
+
   /// Create a copy of SearchConfig
   /// with the given fields replaced by the non-null parameter values.
   @override
@@ -1268,7 +1307,9 @@ class _SearchConfig implements SearchConfig {
                 other.hideKeyboardOnDrag == hideKeyboardOnDrag) &&
             (identical(other.builder, builder) || other.builder == builder) &&
             (identical(other.cancelToken, cancelToken) ||
-                other.cancelToken == cancelToken));
+                other.cancelToken == cancelToken) &&
+            const DeepCollectionEquality()
+                .equals(other._countries, _countries));
   }
 
   @override
@@ -1319,12 +1360,13 @@ class _SearchConfig implements SearchConfig {
         focusNode,
         hideKeyboardOnDrag,
         builder,
-        cancelToken
+        cancelToken,
+        const DeepCollectionEquality().hash(_countries)
       ]);
 
   @override
   String toString() {
-    return 'SearchConfig(apiKey: $apiKey, placesApi: $placesApi, placesAllFields: $placesAllFields, placeDetailsFilter: $placeDetailsFilter, placeInstanceFields: $placeInstanceFields, placeFields: $placeFields, searchAllFields: $searchAllFields, searchFields: $searchFields, searchFilter: $searchFilter, searchInstanceFields: $searchInstanceFields, sessionToken: $sessionToken, searchHintText: $searchHintText, searchHintStyle: $searchHintStyle, minCharsForSuggestions: $minCharsForSuggestions, debounceDuration: $debounceDuration, defaultAddressText: $defaultAddressText, initialValue: $initialValue, itemBuilder: $itemBuilder, onSelected: $onSelected, errorBuilder: $errorBuilder, animationDuration: $animationDuration, autoFlipDirection: $autoFlipDirection, direction: $direction, hideOnEmpty: $hideOnEmpty, hideOnError: $hideOnError, hideOnLoading: $hideOnLoading, loadingBuilder: $loadingBuilder, transitionBuilder: $transitionBuilder, autoFlipMinHeight: $autoFlipMinHeight, constraints: $constraints, hideOnSelect: $hideOnSelect, hideOnUnfocus: $hideOnUnfocus, hideWithKeyboard: $hideWithKeyboard, itemSeparatorBuilder: $itemSeparatorBuilder, listBuilder: $listBuilder, offset: $offset, retainOnLoading: $retainOnLoading, showOnFocus: $showOnFocus, suggestionsController: $suggestionsController, decorationBuilder: $decorationBuilder, emptyBuilder: $emptyBuilder, scrollController: $scrollController, focusNode: $focusNode, hideKeyboardOnDrag: $hideKeyboardOnDrag, builder: $builder, cancelToken: $cancelToken)';
+    return 'SearchConfig(apiKey: $apiKey, placesApi: $placesApi, placesAllFields: $placesAllFields, placeDetailsFilter: $placeDetailsFilter, placeInstanceFields: $placeInstanceFields, placeFields: $placeFields, searchAllFields: $searchAllFields, searchFields: $searchFields, searchFilter: $searchFilter, searchInstanceFields: $searchInstanceFields, sessionToken: $sessionToken, searchHintText: $searchHintText, searchHintStyle: $searchHintStyle, minCharsForSuggestions: $minCharsForSuggestions, debounceDuration: $debounceDuration, defaultAddressText: $defaultAddressText, initialValue: $initialValue, itemBuilder: $itemBuilder, onSelected: $onSelected, errorBuilder: $errorBuilder, animationDuration: $animationDuration, autoFlipDirection: $autoFlipDirection, direction: $direction, hideOnEmpty: $hideOnEmpty, hideOnError: $hideOnError, hideOnLoading: $hideOnLoading, loadingBuilder: $loadingBuilder, transitionBuilder: $transitionBuilder, autoFlipMinHeight: $autoFlipMinHeight, constraints: $constraints, hideOnSelect: $hideOnSelect, hideOnUnfocus: $hideOnUnfocus, hideWithKeyboard: $hideWithKeyboard, itemSeparatorBuilder: $itemSeparatorBuilder, listBuilder: $listBuilder, offset: $offset, retainOnLoading: $retainOnLoading, showOnFocus: $showOnFocus, suggestionsController: $suggestionsController, decorationBuilder: $decorationBuilder, emptyBuilder: $emptyBuilder, scrollController: $scrollController, focusNode: $focusNode, hideKeyboardOnDrag: $hideKeyboardOnDrag, builder: $builder, cancelToken: $cancelToken, countries: $countries)';
   }
 }
 
@@ -1382,7 +1424,8 @@ abstract mixin class _$SearchConfigCopyWith<$Res>
       FocusNode? focusNode,
       bool hideKeyboardOnDrag,
       TextFieldBuilder builder,
-      CancelToken? cancelToken});
+      CancelToken? cancelToken,
+      List<String>? countries});
 }
 
 /// @nodoc
@@ -1444,6 +1487,7 @@ class __$SearchConfigCopyWithImpl<$Res>
     Object? hideKeyboardOnDrag = null,
     Object? builder = freezed,
     Object? cancelToken = freezed,
+    Object? countries = freezed,
   }) {
     return _then(_SearchConfig(
       apiKey: null == apiKey
@@ -1630,6 +1674,10 @@ class __$SearchConfigCopyWithImpl<$Res>
           ? _self.cancelToken
           : cancelToken // ignore: cast_nullable_to_non_nullable
               as CancelToken?,
+      countries: freezed == countries
+          ? _self._countries
+          : countries // ignore: cast_nullable_to_non_nullable
+              as List<String>?,
     ));
   }
 }

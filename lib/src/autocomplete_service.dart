@@ -50,6 +50,9 @@ class AutoCompleteService {
     PlacesSuggestions? instanceFields,
     SessionTokenHandler? sessionToken,
     CancelToken? cancelToken,
+
+    /// Country codes to restrict results to (ISO 3166-1 Alpha-2).
+    List<String>? countries,
   }) async {
     try {
       if (query.isEmpty) return [];
@@ -61,6 +64,7 @@ class AutoCompleteService {
             AutocompleteSearchFilter(
               input: query,
               sessionToken: sessionToken.token,
+              includedRegionCodes: countries,
             ),
         allFields: allFields,
         fields: fields,

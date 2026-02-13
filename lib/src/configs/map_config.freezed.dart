@@ -92,6 +92,26 @@ mixin _$MapLocationPickerConfig {
   BoxBorder? get cardBorder;
   String get noAddressFoundText;
 
+  /// Whether to show a back/close button at the top-left of the search bar.
+  bool get showBackButton;
+
+  /// Custom icon for the back button. Defaults to [Icons.arrow_back].
+  IconData? get backButtonIcon;
+
+  /// Callback when the back button is pressed. If null, [Navigator.pop] is used.
+  VoidCallback? get onBackPressed;
+
+  /// When true, the picker will reverse-geocode the camera position when the
+  /// camera stops moving (drag-to-pick mode). This allows users to drag the
+  /// map to pick a location instead of only tapping.
+  bool get pickOnCameraIdle;
+
+  /// A custom widget to display at the center of the map as a pin marker.
+  /// When provided, this widget is rendered as an overlay at the center of the
+  /// map instead of using a Google Maps [Marker]. This is useful for animated
+  /// or custom-styled pins that stay fixed while the user drags the map.
+  Widget? get centerMarkerWidget;
+
   /// Create a copy of MapLocationPickerConfig
   /// with the given fields replaced by the non-null parameter values.
   @JsonKey(includeFromJson: false, includeToJson: false)
@@ -212,7 +232,12 @@ mixin _$MapLocationPickerConfig {
             (identical(other.cardColor, cardColor) || other.cardColor == cardColor) &&
             (identical(other.cardRadius, cardRadius) || other.cardRadius == cardRadius) &&
             (identical(other.cardBorder, cardBorder) || other.cardBorder == cardBorder) &&
-            (identical(other.noAddressFoundText, noAddressFoundText) || other.noAddressFoundText == noAddressFoundText));
+            (identical(other.noAddressFoundText, noAddressFoundText) || other.noAddressFoundText == noAddressFoundText) &&
+            (identical(other.showBackButton, showBackButton) || other.showBackButton == showBackButton) &&
+            (identical(other.backButtonIcon, backButtonIcon) || other.backButtonIcon == backButtonIcon) &&
+            (identical(other.onBackPressed, onBackPressed) || other.onBackPressed == onBackPressed) &&
+            (identical(other.pickOnCameraIdle, pickOnCameraIdle) || other.pickOnCameraIdle == pickOnCameraIdle) &&
+            (identical(other.centerMarkerWidget, centerMarkerWidget) || other.centerMarkerWidget == centerMarkerWidget));
   }
 
   @override
@@ -293,12 +318,17 @@ mixin _$MapLocationPickerConfig {
         cardColor,
         cardRadius,
         cardBorder,
-        noAddressFoundText
+        noAddressFoundText,
+        showBackButton,
+        backButtonIcon,
+        onBackPressed,
+        pickOnCameraIdle,
+        centerMarkerWidget
       ]);
 
   @override
   String toString() {
-    return 'MapLocationPickerConfig(apiKey: $apiKey, language: $language, placesApi: $placesApi, geocodingHttpClient: $geocodingHttpClient, geocodingApiHeaders: $geocodingApiHeaders, geocodingBaseUrl: $geocodingBaseUrl, geocodingLocationType: $geocodingLocationType, geocodingResultType: $geocodingResultType, initialPosition: $initialPosition, initialZoom: $initialZoom, initialMapType: $initialMapType, myLocationButtonEnabled: $myLocationButtonEnabled, myLocationEnabled: $myLocationEnabled, zoomControlsEnabled: $zoomControlsEnabled, minMaxZoomPreference: $minMaxZoomPreference, onCameraMove: $onCameraMove, padding: $padding, compassEnabled: $compassEnabled, liteModeEnabled: $liteModeEnabled, mapStyle: $mapStyle, floatingControlsColor: $floatingControlsColor, floatingControlsIconColor: $floatingControlsIconColor, mapTypeIcon: $mapTypeIcon, locationIcon: $locationIcon, mainMarkerIcon: $mainMarkerIcon, hideBottomCardOnKeyboard: $hideBottomCardOnKeyboard, bottomCardTitle: $bottomCardTitle, bottomCardType: $bottomCardType, confirmButton: $confirmButton, bottomCardBuilder: $bottomCardBuilder, searchBarBuilder: $searchBarBuilder, locationSettings: $locationSettings, onLocationError: $onLocationError, hideMoreOptions: $hideMoreOptions, mapTypeButton: $mapTypeButton, locationButton: $locationButton, fabTooltip: $fabTooltip, additionalMarkers: $additionalMarkers, customMarkerIcons: $customMarkerIcons, customInfoWindows: $customInfoWindows, onMarkerTapped: $onMarkerTapped, onMapCreated: $onMapCreated, onMapTypeChanged: $onMapTypeChanged, onSuggestionSelected: $onSuggestionSelected, onNext: $onNext, onAddressDecoded: $onAddressDecoded, onAddressSelected: $onAddressSelected, buildingsEnabled: $buildingsEnabled, cameraTargetBounds: $cameraTargetBounds, circles: $circles, cloudMapId: $cloudMapId, fortyFiveDegreeImageryEnabled: $fortyFiveDegreeImageryEnabled, gestureRecognizers: $gestureRecognizers, indoorViewEnabled: $indoorViewEnabled, layoutDirection: $layoutDirection, mapToolbarEnabled: $mapToolbarEnabled, onCameraIdle: $onCameraIdle, onCameraMoveStarted: $onCameraMoveStarted, onLongPress: $onLongPress, polygons: $polygons, polylines: $polylines, rotateGesturesEnabled: $rotateGesturesEnabled, scrollGesturesEnabled: $scrollGesturesEnabled, tileOverlays: $tileOverlays, tiltGesturesEnabled: $tiltGesturesEnabled, trafficEnabled: $trafficEnabled, webGestureHandling: $webGestureHandling, zoomGesturesEnabled: $zoomGesturesEnabled, clusterManagers: $clusterManagers, groundOverlays: $groundOverlays, heatmaps: $heatmaps, cardType: $cardType, cardColor: $cardColor, cardRadius: $cardRadius, cardBorder: $cardBorder, noAddressFoundText: $noAddressFoundText)';
+    return 'MapLocationPickerConfig(apiKey: $apiKey, language: $language, placesApi: $placesApi, geocodingHttpClient: $geocodingHttpClient, geocodingApiHeaders: $geocodingApiHeaders, geocodingBaseUrl: $geocodingBaseUrl, geocodingLocationType: $geocodingLocationType, geocodingResultType: $geocodingResultType, initialPosition: $initialPosition, initialZoom: $initialZoom, initialMapType: $initialMapType, myLocationButtonEnabled: $myLocationButtonEnabled, myLocationEnabled: $myLocationEnabled, zoomControlsEnabled: $zoomControlsEnabled, minMaxZoomPreference: $minMaxZoomPreference, onCameraMove: $onCameraMove, padding: $padding, compassEnabled: $compassEnabled, liteModeEnabled: $liteModeEnabled, mapStyle: $mapStyle, floatingControlsColor: $floatingControlsColor, floatingControlsIconColor: $floatingControlsIconColor, mapTypeIcon: $mapTypeIcon, locationIcon: $locationIcon, mainMarkerIcon: $mainMarkerIcon, hideBottomCardOnKeyboard: $hideBottomCardOnKeyboard, bottomCardTitle: $bottomCardTitle, bottomCardType: $bottomCardType, confirmButton: $confirmButton, bottomCardBuilder: $bottomCardBuilder, searchBarBuilder: $searchBarBuilder, locationSettings: $locationSettings, onLocationError: $onLocationError, hideMoreOptions: $hideMoreOptions, mapTypeButton: $mapTypeButton, locationButton: $locationButton, fabTooltip: $fabTooltip, additionalMarkers: $additionalMarkers, customMarkerIcons: $customMarkerIcons, customInfoWindows: $customInfoWindows, onMarkerTapped: $onMarkerTapped, onMapCreated: $onMapCreated, onMapTypeChanged: $onMapTypeChanged, onSuggestionSelected: $onSuggestionSelected, onNext: $onNext, onAddressDecoded: $onAddressDecoded, onAddressSelected: $onAddressSelected, buildingsEnabled: $buildingsEnabled, cameraTargetBounds: $cameraTargetBounds, circles: $circles, cloudMapId: $cloudMapId, fortyFiveDegreeImageryEnabled: $fortyFiveDegreeImageryEnabled, gestureRecognizers: $gestureRecognizers, indoorViewEnabled: $indoorViewEnabled, layoutDirection: $layoutDirection, mapToolbarEnabled: $mapToolbarEnabled, onCameraIdle: $onCameraIdle, onCameraMoveStarted: $onCameraMoveStarted, onLongPress: $onLongPress, polygons: $polygons, polylines: $polylines, rotateGesturesEnabled: $rotateGesturesEnabled, scrollGesturesEnabled: $scrollGesturesEnabled, tileOverlays: $tileOverlays, tiltGesturesEnabled: $tiltGesturesEnabled, trafficEnabled: $trafficEnabled, webGestureHandling: $webGestureHandling, zoomGesturesEnabled: $zoomGesturesEnabled, clusterManagers: $clusterManagers, groundOverlays: $groundOverlays, heatmaps: $heatmaps, cardType: $cardType, cardColor: $cardColor, cardRadius: $cardRadius, cardBorder: $cardBorder, noAddressFoundText: $noAddressFoundText, showBackButton: $showBackButton, backButtonIcon: $backButtonIcon, onBackPressed: $onBackPressed, pickOnCameraIdle: $pickOnCameraIdle, centerMarkerWidget: $centerMarkerWidget)';
   }
 }
 
@@ -384,7 +414,12 @@ abstract mixin class $MapLocationPickerConfigCopyWith<$Res> {
       Color? cardColor,
       BorderRadiusGeometry? cardRadius,
       BoxBorder? cardBorder,
-      String noAddressFoundText});
+      String noAddressFoundText,
+      bool showBackButton,
+      IconData? backButtonIcon,
+      VoidCallback? onBackPressed,
+      bool pickOnCameraIdle,
+      Widget? centerMarkerWidget});
 }
 
 /// @nodoc
@@ -476,6 +511,11 @@ class _$MapLocationPickerConfigCopyWithImpl<$Res>
     Object? cardRadius = freezed,
     Object? cardBorder = freezed,
     Object? noAddressFoundText = null,
+    Object? showBackButton = null,
+    Object? backButtonIcon = freezed,
+    Object? onBackPressed = freezed,
+    Object? pickOnCameraIdle = null,
+    Object? centerMarkerWidget = freezed,
   }) {
     return _then(_self.copyWith(
       apiKey: null == apiKey
@@ -782,6 +822,26 @@ class _$MapLocationPickerConfigCopyWithImpl<$Res>
           ? _self.noAddressFoundText
           : noAddressFoundText // ignore: cast_nullable_to_non_nullable
               as String,
+      showBackButton: null == showBackButton
+          ? _self.showBackButton
+          : showBackButton // ignore: cast_nullable_to_non_nullable
+              as bool,
+      backButtonIcon: freezed == backButtonIcon
+          ? _self.backButtonIcon
+          : backButtonIcon // ignore: cast_nullable_to_non_nullable
+              as IconData?,
+      onBackPressed: freezed == onBackPressed
+          ? _self.onBackPressed
+          : onBackPressed // ignore: cast_nullable_to_non_nullable
+              as VoidCallback?,
+      pickOnCameraIdle: null == pickOnCameraIdle
+          ? _self.pickOnCameraIdle
+          : pickOnCameraIdle // ignore: cast_nullable_to_non_nullable
+              as bool,
+      centerMarkerWidget: freezed == centerMarkerWidget
+          ? _self.centerMarkerWidget
+          : centerMarkerWidget // ignore: cast_nullable_to_non_nullable
+              as Widget?,
     ));
   }
 }
@@ -955,7 +1015,12 @@ extension MapLocationPickerConfigPatterns on MapLocationPickerConfig {
             Color? cardColor,
             BorderRadiusGeometry? cardRadius,
             BoxBorder? cardBorder,
-            String noAddressFoundText)?
+            String noAddressFoundText,
+            bool showBackButton,
+            IconData? backButtonIcon,
+            VoidCallback? onBackPressed,
+            bool pickOnCameraIdle,
+            Widget? centerMarkerWidget)?
         $default, {
     required TResult orElse(),
   }) {
@@ -1038,7 +1103,12 @@ extension MapLocationPickerConfigPatterns on MapLocationPickerConfig {
             _that.cardColor,
             _that.cardRadius,
             _that.cardBorder,
-            _that.noAddressFoundText);
+            _that.noAddressFoundText,
+            _that.showBackButton,
+            _that.backButtonIcon,
+            _that.onBackPressed,
+            _that.pickOnCameraIdle,
+            _that.centerMarkerWidget);
       case _:
         return orElse();
     }
@@ -1135,7 +1205,12 @@ extension MapLocationPickerConfigPatterns on MapLocationPickerConfig {
             Color? cardColor,
             BorderRadiusGeometry? cardRadius,
             BoxBorder? cardBorder,
-            String noAddressFoundText)
+            String noAddressFoundText,
+            bool showBackButton,
+            IconData? backButtonIcon,
+            VoidCallback? onBackPressed,
+            bool pickOnCameraIdle,
+            Widget? centerMarkerWidget)
         $default,
   ) {
     final _that = this;
@@ -1217,7 +1292,12 @@ extension MapLocationPickerConfigPatterns on MapLocationPickerConfig {
             _that.cardColor,
             _that.cardRadius,
             _that.cardBorder,
-            _that.noAddressFoundText);
+            _that.noAddressFoundText,
+            _that.showBackButton,
+            _that.backButtonIcon,
+            _that.onBackPressed,
+            _that.pickOnCameraIdle,
+            _that.centerMarkerWidget);
       case _:
         throw StateError('Unexpected subclass');
     }
@@ -1313,7 +1393,12 @@ extension MapLocationPickerConfigPatterns on MapLocationPickerConfig {
             Color? cardColor,
             BorderRadiusGeometry? cardRadius,
             BoxBorder? cardBorder,
-            String noAddressFoundText)?
+            String noAddressFoundText,
+            bool showBackButton,
+            IconData? backButtonIcon,
+            VoidCallback? onBackPressed,
+            bool pickOnCameraIdle,
+            Widget? centerMarkerWidget)?
         $default,
   ) {
     final _that = this;
@@ -1395,7 +1480,12 @@ extension MapLocationPickerConfigPatterns on MapLocationPickerConfig {
             _that.cardColor,
             _that.cardRadius,
             _that.cardBorder,
-            _that.noAddressFoundText);
+            _that.noAddressFoundText,
+            _that.showBackButton,
+            _that.backButtonIcon,
+            _that.onBackPressed,
+            _that.pickOnCameraIdle,
+            _that.centerMarkerWidget);
       case _:
         return null;
     }
@@ -1482,7 +1572,12 @@ class _MapLocationPickerConfig implements MapLocationPickerConfig {
       this.cardColor = null,
       this.cardRadius = null,
       this.cardBorder = null,
-      this.noAddressFoundText = "No address found"})
+      this.noAddressFoundText = "No address found",
+      this.showBackButton = false,
+      this.backButtonIcon = null,
+      this.onBackPressed = null,
+      this.pickOnCameraIdle = false,
+      this.centerMarkerWidget = null})
       : _geocodingApiHeaders = geocodingApiHeaders,
         _geocodingLocationType = geocodingLocationType,
         _geocodingResultType = geocodingResultType,
@@ -1840,6 +1935,36 @@ class _MapLocationPickerConfig implements MapLocationPickerConfig {
   @JsonKey()
   final String noAddressFoundText;
 
+  /// Whether to show a back/close button at the top-left of the search bar.
+  @override
+  @JsonKey()
+  final bool showBackButton;
+
+  /// Custom icon for the back button. Defaults to [Icons.arrow_back].
+  @override
+  @JsonKey()
+  final IconData? backButtonIcon;
+
+  /// Callback when the back button is pressed. If null, [Navigator.pop] is used.
+  @override
+  @JsonKey()
+  final VoidCallback? onBackPressed;
+
+  /// When true, the picker will reverse-geocode the camera position when the
+  /// camera stops moving (drag-to-pick mode). This allows users to drag the
+  /// map to pick a location instead of only tapping.
+  @override
+  @JsonKey()
+  final bool pickOnCameraIdle;
+
+  /// A custom widget to display at the center of the map as a pin marker.
+  /// When provided, this widget is rendered as an overlay at the center of the
+  /// map instead of using a Google Maps [Marker]. This is useful for animated
+  /// or custom-styled pins that stay fixed while the user drags the map.
+  @override
+  @JsonKey()
+  final Widget? centerMarkerWidget;
+
   /// Create a copy of MapLocationPickerConfig
   /// with the given fields replaced by the non-null parameter values.
   @override
@@ -1961,7 +2086,12 @@ class _MapLocationPickerConfig implements MapLocationPickerConfig {
             (identical(other.cardColor, cardColor) || other.cardColor == cardColor) &&
             (identical(other.cardRadius, cardRadius) || other.cardRadius == cardRadius) &&
             (identical(other.cardBorder, cardBorder) || other.cardBorder == cardBorder) &&
-            (identical(other.noAddressFoundText, noAddressFoundText) || other.noAddressFoundText == noAddressFoundText));
+            (identical(other.noAddressFoundText, noAddressFoundText) || other.noAddressFoundText == noAddressFoundText) &&
+            (identical(other.showBackButton, showBackButton) || other.showBackButton == showBackButton) &&
+            (identical(other.backButtonIcon, backButtonIcon) || other.backButtonIcon == backButtonIcon) &&
+            (identical(other.onBackPressed, onBackPressed) || other.onBackPressed == onBackPressed) &&
+            (identical(other.pickOnCameraIdle, pickOnCameraIdle) || other.pickOnCameraIdle == pickOnCameraIdle) &&
+            (identical(other.centerMarkerWidget, centerMarkerWidget) || other.centerMarkerWidget == centerMarkerWidget));
   }
 
   @override
@@ -2042,12 +2172,17 @@ class _MapLocationPickerConfig implements MapLocationPickerConfig {
         cardColor,
         cardRadius,
         cardBorder,
-        noAddressFoundText
+        noAddressFoundText,
+        showBackButton,
+        backButtonIcon,
+        onBackPressed,
+        pickOnCameraIdle,
+        centerMarkerWidget
       ]);
 
   @override
   String toString() {
-    return 'MapLocationPickerConfig(apiKey: $apiKey, language: $language, placesApi: $placesApi, geocodingHttpClient: $geocodingHttpClient, geocodingApiHeaders: $geocodingApiHeaders, geocodingBaseUrl: $geocodingBaseUrl, geocodingLocationType: $geocodingLocationType, geocodingResultType: $geocodingResultType, initialPosition: $initialPosition, initialZoom: $initialZoom, initialMapType: $initialMapType, myLocationButtonEnabled: $myLocationButtonEnabled, myLocationEnabled: $myLocationEnabled, zoomControlsEnabled: $zoomControlsEnabled, minMaxZoomPreference: $minMaxZoomPreference, onCameraMove: $onCameraMove, padding: $padding, compassEnabled: $compassEnabled, liteModeEnabled: $liteModeEnabled, mapStyle: $mapStyle, floatingControlsColor: $floatingControlsColor, floatingControlsIconColor: $floatingControlsIconColor, mapTypeIcon: $mapTypeIcon, locationIcon: $locationIcon, mainMarkerIcon: $mainMarkerIcon, hideBottomCardOnKeyboard: $hideBottomCardOnKeyboard, bottomCardTitle: $bottomCardTitle, bottomCardType: $bottomCardType, confirmButton: $confirmButton, bottomCardBuilder: $bottomCardBuilder, searchBarBuilder: $searchBarBuilder, locationSettings: $locationSettings, onLocationError: $onLocationError, hideMoreOptions: $hideMoreOptions, mapTypeButton: $mapTypeButton, locationButton: $locationButton, fabTooltip: $fabTooltip, additionalMarkers: $additionalMarkers, customMarkerIcons: $customMarkerIcons, customInfoWindows: $customInfoWindows, onMarkerTapped: $onMarkerTapped, onMapCreated: $onMapCreated, onMapTypeChanged: $onMapTypeChanged, onSuggestionSelected: $onSuggestionSelected, onNext: $onNext, onAddressDecoded: $onAddressDecoded, onAddressSelected: $onAddressSelected, buildingsEnabled: $buildingsEnabled, cameraTargetBounds: $cameraTargetBounds, circles: $circles, cloudMapId: $cloudMapId, fortyFiveDegreeImageryEnabled: $fortyFiveDegreeImageryEnabled, gestureRecognizers: $gestureRecognizers, indoorViewEnabled: $indoorViewEnabled, layoutDirection: $layoutDirection, mapToolbarEnabled: $mapToolbarEnabled, onCameraIdle: $onCameraIdle, onCameraMoveStarted: $onCameraMoveStarted, onLongPress: $onLongPress, polygons: $polygons, polylines: $polylines, rotateGesturesEnabled: $rotateGesturesEnabled, scrollGesturesEnabled: $scrollGesturesEnabled, tileOverlays: $tileOverlays, tiltGesturesEnabled: $tiltGesturesEnabled, trafficEnabled: $trafficEnabled, webGestureHandling: $webGestureHandling, zoomGesturesEnabled: $zoomGesturesEnabled, clusterManagers: $clusterManagers, groundOverlays: $groundOverlays, heatmaps: $heatmaps, cardType: $cardType, cardColor: $cardColor, cardRadius: $cardRadius, cardBorder: $cardBorder, noAddressFoundText: $noAddressFoundText)';
+    return 'MapLocationPickerConfig(apiKey: $apiKey, language: $language, placesApi: $placesApi, geocodingHttpClient: $geocodingHttpClient, geocodingApiHeaders: $geocodingApiHeaders, geocodingBaseUrl: $geocodingBaseUrl, geocodingLocationType: $geocodingLocationType, geocodingResultType: $geocodingResultType, initialPosition: $initialPosition, initialZoom: $initialZoom, initialMapType: $initialMapType, myLocationButtonEnabled: $myLocationButtonEnabled, myLocationEnabled: $myLocationEnabled, zoomControlsEnabled: $zoomControlsEnabled, minMaxZoomPreference: $minMaxZoomPreference, onCameraMove: $onCameraMove, padding: $padding, compassEnabled: $compassEnabled, liteModeEnabled: $liteModeEnabled, mapStyle: $mapStyle, floatingControlsColor: $floatingControlsColor, floatingControlsIconColor: $floatingControlsIconColor, mapTypeIcon: $mapTypeIcon, locationIcon: $locationIcon, mainMarkerIcon: $mainMarkerIcon, hideBottomCardOnKeyboard: $hideBottomCardOnKeyboard, bottomCardTitle: $bottomCardTitle, bottomCardType: $bottomCardType, confirmButton: $confirmButton, bottomCardBuilder: $bottomCardBuilder, searchBarBuilder: $searchBarBuilder, locationSettings: $locationSettings, onLocationError: $onLocationError, hideMoreOptions: $hideMoreOptions, mapTypeButton: $mapTypeButton, locationButton: $locationButton, fabTooltip: $fabTooltip, additionalMarkers: $additionalMarkers, customMarkerIcons: $customMarkerIcons, customInfoWindows: $customInfoWindows, onMarkerTapped: $onMarkerTapped, onMapCreated: $onMapCreated, onMapTypeChanged: $onMapTypeChanged, onSuggestionSelected: $onSuggestionSelected, onNext: $onNext, onAddressDecoded: $onAddressDecoded, onAddressSelected: $onAddressSelected, buildingsEnabled: $buildingsEnabled, cameraTargetBounds: $cameraTargetBounds, circles: $circles, cloudMapId: $cloudMapId, fortyFiveDegreeImageryEnabled: $fortyFiveDegreeImageryEnabled, gestureRecognizers: $gestureRecognizers, indoorViewEnabled: $indoorViewEnabled, layoutDirection: $layoutDirection, mapToolbarEnabled: $mapToolbarEnabled, onCameraIdle: $onCameraIdle, onCameraMoveStarted: $onCameraMoveStarted, onLongPress: $onLongPress, polygons: $polygons, polylines: $polylines, rotateGesturesEnabled: $rotateGesturesEnabled, scrollGesturesEnabled: $scrollGesturesEnabled, tileOverlays: $tileOverlays, tiltGesturesEnabled: $tiltGesturesEnabled, trafficEnabled: $trafficEnabled, webGestureHandling: $webGestureHandling, zoomGesturesEnabled: $zoomGesturesEnabled, clusterManagers: $clusterManagers, groundOverlays: $groundOverlays, heatmaps: $heatmaps, cardType: $cardType, cardColor: $cardColor, cardRadius: $cardRadius, cardBorder: $cardBorder, noAddressFoundText: $noAddressFoundText, showBackButton: $showBackButton, backButtonIcon: $backButtonIcon, onBackPressed: $onBackPressed, pickOnCameraIdle: $pickOnCameraIdle, centerMarkerWidget: $centerMarkerWidget)';
   }
 }
 
@@ -2135,7 +2270,12 @@ abstract mixin class _$MapLocationPickerConfigCopyWith<$Res>
       Color? cardColor,
       BorderRadiusGeometry? cardRadius,
       BoxBorder? cardBorder,
-      String noAddressFoundText});
+      String noAddressFoundText,
+      bool showBackButton,
+      IconData? backButtonIcon,
+      VoidCallback? onBackPressed,
+      bool pickOnCameraIdle,
+      Widget? centerMarkerWidget});
 }
 
 /// @nodoc
@@ -2227,6 +2367,11 @@ class __$MapLocationPickerConfigCopyWithImpl<$Res>
     Object? cardRadius = freezed,
     Object? cardBorder = freezed,
     Object? noAddressFoundText = null,
+    Object? showBackButton = null,
+    Object? backButtonIcon = freezed,
+    Object? onBackPressed = freezed,
+    Object? pickOnCameraIdle = null,
+    Object? centerMarkerWidget = freezed,
   }) {
     return _then(_MapLocationPickerConfig(
       apiKey: null == apiKey
@@ -2533,6 +2678,26 @@ class __$MapLocationPickerConfigCopyWithImpl<$Res>
           ? _self.noAddressFoundText
           : noAddressFoundText // ignore: cast_nullable_to_non_nullable
               as String,
+      showBackButton: null == showBackButton
+          ? _self.showBackButton
+          : showBackButton // ignore: cast_nullable_to_non_nullable
+              as bool,
+      backButtonIcon: freezed == backButtonIcon
+          ? _self.backButtonIcon
+          : backButtonIcon // ignore: cast_nullable_to_non_nullable
+              as IconData?,
+      onBackPressed: freezed == onBackPressed
+          ? _self.onBackPressed
+          : onBackPressed // ignore: cast_nullable_to_non_nullable
+              as VoidCallback?,
+      pickOnCameraIdle: null == pickOnCameraIdle
+          ? _self.pickOnCameraIdle
+          : pickOnCameraIdle // ignore: cast_nullable_to_non_nullable
+              as bool,
+      centerMarkerWidget: freezed == centerMarkerWidget
+          ? _self.centerMarkerWidget
+          : centerMarkerWidget // ignore: cast_nullable_to_non_nullable
+              as Widget?,
     ));
   }
 }
