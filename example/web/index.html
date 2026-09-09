@@ -15,8 +15,13 @@
     This is a placeholder for base href that will be replaced by the value of
     the `--base-href` argument provided to `flutter build`.
   -->
-  <script src="https://maps.googleapis.com/maps/api/js?key=YOUR_API_KEY"></script>
   <base href="$FLUTTER_BASE_HREF">
+
+  <!-- Required by google_maps_flutter_web to RENDER the map. Place search does
+       not need it: this package calls the Places REST API directly, which
+       supports CORS. Replace YOUR_API_KEY with your own key. -->
+  <script async
+    src="https://maps.googleapis.com/maps/api/js?key=YOUR_API_KEY&loading=async"></script>
 
   <meta charset="UTF-8">
   <meta content="IE=Edge" http-equiv="X-UA-Compatible">

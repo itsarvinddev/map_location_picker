@@ -17,9 +17,10 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # `min` pins the lowest Flutter release this package claims to support,
-        # so a dependency bump that silently raises the floor fails CI.
-        flutter: [stable]
+        # 3.38.0 is the floor declared in pubspec.yaml. Pinning it here is the
+        # point: the floor is only a claim until something compiles against it.
+        # A >=3.32 floor shipped once precisely because CI only ran `stable`.
+        flutter: ['3.38.0', 'stable']
     steps:
       - uses: actions/checkout@v4
 
@@ -31,13 +32,26 @@ jobs:
       - name: Install dependencies
         run: flutter pub get
 
+      - name: Resolve lower bounds
+        # Compiles against the *lowest* allowed version of every dependency, so
+        # a `>=` bound that no longer builds fails here instead of in an app.
+        if: matrix.flutter == '3.38.0'
+        run: |
+          flutter pub downgrade
+          flutter analyze --no-fatal-infos
+          flutter pub get
+
       - name: Verify formatting
+        if: matrix.flutter == 'stable'
         run: dart format --output=none --set-exit-if-changed .
 
       - name: Analyze
         run: flutter analyze --fatal-infos
 
       - name: Verify generated code is up to date
+        # freezed and build_runner are pinned exactly so this diff is
+        # reproducible across contributors.
+        if: matrix.flutter == 'stable'
         run: |
           dart run build_runner build
           git diff --exit-code -- '*.freezed.dart' '*.g.dart'
@@ -108,6 +122,11 @@ jobs:
         run: flutter pub publish --dry-run
 
       - name: pana score
+        # Threshold is "points we are allowed to lose". 10 covers the platform
+        # section only: google_maps_flutter has no macOS/Windows/Linux
+        # implementation, so 3 of 6 platforms is an upstream cap, not something
+        # this package can fix. Everything else must be perfect. Ratchet down,
+        # never up.
         run: |
           dart pub global activate pana
-          dart pub global run pana --no-warning --exit-code-threshold 0 .
+          dart pub global run pana --no-warning --exit-code-threshold 10 .

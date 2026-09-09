@@ -1,5 +1,4 @@
 import 'package:example/key.dart';
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:map_location_picker/map_location_picker.dart';
 
@@ -17,10 +16,16 @@ class MyApp extends StatelessWidget {
       builder: (context, themeMode, child) {
         return MaterialApp(
           title: 'Location Picker Demo',
-          theme: ThemeData.light(),
-          darkTheme: ThemeData.dark(),
+          theme: ThemeData(
+            colorSchemeSeed: Colors.indigo,
+            brightness: Brightness.light,
+          ),
+          darkTheme: ThemeData(
+            colorSchemeSeed: Colors.indigo,
+            brightness: Brightness.dark,
+          ),
           themeMode: themeMode,
-          home: const LocationPickerScreen(),
+          home: const HomeScreen(),
           debugShowCheckedModeBanner: false,
         );
       },
@@ -28,357 +33,360 @@ class MyApp extends StatelessWidget {
   }
 }
 
-class LocationPickerScreen extends StatefulWidget {
-  const LocationPickerScreen({super.key});
+class HomeScreen extends StatefulWidget {
+  const HomeScreen({super.key});
 
   @override
-  State<LocationPickerScreen> createState() => _LocationPickerScreenState();
+  State<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _LocationPickerScreenState extends State<LocationPickerScreen> {
-  LatLng? _pickedLocation;
-  String _formattedAddress = "No location selected";
+class _HomeScreenState extends State<HomeScreen> {
+  PickedPlace? _picked;
   BitmapDescriptor? _customMarkerIcon;
 
   @override
   void initState() {
     super.initState();
-    _createMarkerIcon();
+    _loadMarkerIcon();
   }
 
-  void _createMarkerIcon() async {
-    _customMarkerIcon = await BitmapDescriptor.asset(
+  Future<void> _loadMarkerIcon() async {
+    final icon = await BitmapDescriptor.asset(
       const ImageConfiguration(size: Size(48, 48)),
-      'assets/marker.webp', // Replace with your marker asset
+      'assets/marker.webp',
     );
+    if (mounted) setState(() => _customMarkerIcon = icon);
+  }
+
+  /// Every demo funnels through here.
+  ///
+  /// `showMapLocationPicker` returns the result directly — no `onNext` +
+  /// `Navigator.pop` wiring required.
+  Future<void> _open(MapLocationPickerConfig config) async {
+    final picked = await showMapLocationPicker(
+      context,
+      config: config.copyWith(
+        apiKey: YOUR_API_KEY,
+        // Start where the user last picked, if they picked anything.
+        initialPosition: _picked?.latLng ?? config.initialPosition,
+        showBackButton: true,
+        onError: (error) {
+          if (!mounted) return;
+          // Typed failures: an invalid key is now distinguishable from
+          // "nothing here".
+          if (!error.isUserFacing) return;
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('${error.kind.name}: ${error.message}')),
+          );
+        },
+      ),
+    );
+    if (picked != null && mounted) setState(() => _picked = picked);
   }
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     return Scaffold(
-      appBar: AppBar(title: const Text('Location Picker'), centerTitle: true),
-      body: SingleChildScrollView(
+      appBar: AppBar(
+        title: const Text('Location Picker'),
+        centerTitle: true,
+        actions: [
+          IconButton(
+            tooltip: 'Toggle theme',
+            icon: Icon(
+              _themeMode.value == ThemeMode.dark
+                  ? Icons.light_mode
+                  : Icons.dark_mode,
+            ),
+            onPressed: () =>
+                _themeMode.value = _themeMode.value == ThemeMode.dark
+                ? ThemeMode.light
+                : ThemeMode.dark,
+          ),
+        ],
+      ),
+      body: ListView(
         padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            // Map Preview Section
-            Container(
-              decoration: BoxDecoration(
-                border: Border.all(
-                  color: Theme.of(context).brightness == Brightness.dark
-                      ? Colors.grey.shade700
-                      : Colors.grey.shade300,
-                ),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              margin: const EdgeInsets.only(bottom: 16),
-              height: (MediaQuery.of(context).size.height / 5),
-              width: MediaQuery.of(context).size.width,
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(12),
-                child: (_pickedLocation == null
-                    ? const Center(child: Text('Select a location to preview'))
-                    : Image.network(
-                        googleStaticMapWithMarker(
-                          _pickedLocation!.latitude,
-                          _pickedLocation!.longitude,
-                          18,
-                          apiKey: YOUR_API_KEY,
-                        ),
-                        fit: BoxFit.cover,
-                        width: MediaQuery.of(context).size.width,
-                        height: (MediaQuery.of(context).size.height / 5),
-                      )),
+        children: [
+          _SelectionCard(picked: _picked),
+          const SizedBox(height: 24),
+
+          Text('PICKER MODES', style: theme.textTheme.labelLarge),
+          const SizedBox(height: 8),
+          _Option(
+            icon: Icons.touch_app,
+            title: 'Tap to place',
+            description: 'The classic marker you tap or drag into position.',
+            onTap: () => _open(const MapLocationPickerConfig()),
+          ),
+          _Option(
+            icon: Icons.center_focus_strong,
+            title: 'Centre pin',
+            description:
+                'The pin stays put and the map moves under it, the way most '
+                'delivery apps work. Resolves when the map settles.',
+            onTap: () => _open(
+              const MapLocationPickerConfig(
+                pinMode: PickerPinMode.centerPin,
+                bottomCardTitle: 'Where should we deliver?',
               ),
             ),
+          ),
+          _Option(
+            icon: Icons.my_location,
+            title: 'Start at my location',
+            description:
+                'Resolves the device position on open, falling back to the '
+                'initial position if permission is refused.',
+            onTap: () => _open(
+              const MapLocationPickerConfig(startWithCurrentLocation: true),
+            ),
+          ),
 
-            // Formatted Address Section
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: Theme.of(context).brightness == Brightness.dark
-                    ? Colors.grey.shade900
-                    : Colors.grey.shade100,
-                borderRadius: BorderRadius.circular(12),
+          const SizedBox(height: 24),
+          Text('CUSTOMISATION', style: theme.textTheme.labelLarge),
+          const SizedBox(height: 8),
+          _Option(
+            icon: Icons.travel_explore,
+            title: 'Restricted to two countries',
+            description:
+                'countries: [gb, ie] — search results never leave those two.',
+            onTap: () => _open(
+              const MapLocationPickerConfig(
+                countries: ['gb', 'ie'],
+                initialPosition: LatLng(51.5072, -0.1276),
               ),
-              margin: const EdgeInsets.only(bottom: 16),
-              child: Row(
-                children: [
-                  const Icon(Icons.location_on, color: Colors.blue),
-                  const SizedBox(width: 12),
-                  Expanded(
+            ),
+          ),
+          _Option(
+            icon: Icons.translate,
+            title: 'Translated UI',
+            description:
+                'Every visible string comes from MapLocationPickerStrings.',
+            onTap: () => _open(
+              const MapLocationPickerConfig(
+                language: 'fr',
+                countries: ['fr'],
+                initialPosition: LatLng(48.8566, 2.3522),
+                strings: MapLocationPickerStrings(
+                  confirmAddress: 'Confirmer l\'adresse',
+                  loadingAddress: 'Chargement de l\'adresse...',
+                  loadingAddressSubtitle: 'Récupération des détails.',
+                  noAddressFound: 'Aucune adresse trouvée',
+                  mapTypeTitle: 'Type de carte',
+                  mapTypeMessage: 'Choisissez le type de carte.',
+                  mapTypeNormal: 'Plan',
+                  mapTypeSatellite: 'Satellite',
+                  mapTypeTerrain: 'Relief',
+                  mapTypeHybrid: 'Hybride',
+                  cancel: 'Annuler',
+                  tapToSelect: 'appuyez pour sélectionner',
+                  searchHint: 'Rechercher une adresse...',
+                ),
+              ),
+            ),
+          ),
+          _Option(
+            icon: Icons.place,
+            title: 'Custom markers and controls',
+            description:
+                'A custom pin, extra markers, and the FABs on the left.',
+            onTap: () => _open(
+              MapLocationPickerConfig(
+                mainMarkerIcon: _customMarkerIcon,
+                floatingControlsPosition: FloatingControlsPosition.bottomStart,
+                initialPosition: const LatLng(37.4220, -122.0841),
+                additionalMarkers: const {
+                  'googleplex': LatLng(37.4220, -122.0841),
+                  'shoreline': LatLng(37.4260, -122.0830),
+                },
+                customInfoWindows: const {
+                  'googleplex': InfoWindow(title: 'Googleplex'),
+                },
+              ),
+            ),
+          ),
+          _Option(
+            icon: Icons.dark_mode,
+            title: 'Nearby places',
+            description:
+                'A row of places around the pin, from the Places API (New).',
+            onTap: () => _open(
+              const MapLocationPickerConfig(
+                showNearbyPlaces: true,
+                initialPosition: LatLng(40.7580, -73.9855),
+              ),
+            ),
+          ),
+
+          const SizedBox(height: 24),
+          Text('EMBEDDED', style: theme.textTheme.labelLarge),
+          const SizedBox(height: 8),
+          Text(
+            'MapLocationPickerView has no Scaffold of its own, so it can live '
+            'inside a screen you already have. It only needs bounded '
+            'constraints.',
+            style: theme.textTheme.bodySmall,
+          ),
+          const SizedBox(height: 12),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(16),
+            child: SizedBox(
+              height: 420,
+              child: MapLocationPickerView(
+                config: MapLocationPickerConfig(
+                  apiKey: YOUR_API_KEY,
+                  initialPosition: const LatLng(35.6595, 139.7005),
+                  hideMoreOptions: true,
+                  strings: const MapLocationPickerStrings(
+                    confirmAddress: 'Use this address',
+                  ),
+                  onNext: (result) {
+                    if (result == null) return;
+                    setState(() {
+                      _picked = PickedPlace.from(
+                        latLng:
+                            result.latLng ?? const LatLng(35.6595, 139.7005),
+                        result: result,
+                      );
+                    });
+                  },
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: 32),
+        ],
+      ),
+    );
+  }
+}
+
+/// Shows what came back from the picker.
+class _SelectionCard extends StatelessWidget {
+  const _SelectionCard({required this.picked});
+
+  final PickedPlace? picked;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final place = picked;
+
+    return Card(
+      clipBehavior: Clip.antiAlias,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          SizedBox(
+            height: 160,
+            child: place == null
+                ? Center(
                     child: Text(
-                      _formattedAddress,
-                      style: const TextStyle(fontSize: 16),
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
+                      'Nothing picked yet',
+                      style: theme.textTheme.bodyMedium,
+                    ),
+                  )
+                : Image.network(
+                    googleStaticMapWithMarker(
+                      place.latLng.latitude,
+                      place.latLng.longitude,
+                      16,
+                      apiKey: YOUR_API_KEY,
+                    ),
+                    fit: BoxFit.cover,
+                    errorBuilder: (context, _, _) => const Center(
+                      child: Text('Enable the Maps Static API for a preview'),
                     ),
                   ),
+          ),
+          if (place != null)
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(place.displayLabel, style: theme.textTheme.titleMedium),
+                  const SizedBox(height: 8),
+                  _Row(
+                    'Coordinates',
+                    '${place.latLng.latitude.toStringAsFixed(5)}, '
+                        '${place.latLng.longitude.toStringAsFixed(5)}',
+                  ),
+                  if (place.locality != null) _Row('City', place.locality!),
+                  if (place.postalCode != null)
+                    _Row('Postcode', place.postalCode!),
+                  if (place.countryCode != null)
+                    _Row('Country', place.countryCode!),
                 ],
               ),
             ),
-
-            // Options Section
-            Column(
-              children: [
-                const Text(
-                  "PICK LOCATION OPTIONS",
-                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-                ),
-                const SizedBox(height: 16),
-
-                // Standard Picker
-                _buildOptionCard(
-                  icon: Icons.map,
-                  title: "Standard Map Picker",
-                  description: "Open map with default settings",
-                  onTap: () => _openLocationPicker(
-                    const MapLocationPickerConfig(apiKey: YOUR_API_KEY),
-                  ),
-                ),
-
-                // Dark Theme Picker
-                _buildOptionCard(
-                  icon: Icons.dark_mode,
-                  title: "Dark Theme Picker",
-                  description: "Open map with dark theme",
-                  onTap: () async {
-                    _themeMode.value = ThemeMode.dark;
-                    await _openLocationPicker(
-                      MapLocationPickerConfig(
-                        apiKey: YOUR_API_KEY,
-                        mapStyle: _darkMapStyle,
-                      ),
-                    );
-                    _themeMode.value = ThemeMode.light;
-                  },
-                ),
-
-                // Satellite View Picker
-                _buildOptionCard(
-                  icon: Icons.satellite,
-                  title: "Satellite View",
-                  description: "Open with satellite imagery",
-                  onTap: () => _openLocationPicker(
-                    const MapLocationPickerConfig(
-                      apiKey: YOUR_API_KEY,
-                      initialMapType: MapType.satellite,
-                    ),
-                  ),
-                ),
-
-                // Custom Markers Picker
-                _buildOptionCard(
-                  icon: Icons.pin_drop,
-                  title: "Custom Markers",
-                  description: "Add custom markers to the map",
-                  onTap: () => _openLocationPicker(
-                    MapLocationPickerConfig(
-                      apiKey: YOUR_API_KEY,
-                      mainMarkerIcon: _customMarkerIcon,
-                      additionalMarkers: const {
-                        "landmark1": LatLng(37.422, -122.084),
-                        "landmark2": LatLng(37.426, -122.083),
-                      },
-                      customMarkerIcons: {
-                        "landmark1": BitmapDescriptor.defaultMarkerWithHue(
-                          BitmapDescriptor.hueYellow,
-                        ),
-                        "landmark2": BitmapDescriptor.defaultMarkerWithHue(
-                          BitmapDescriptor.hueBlue,
-                        ),
-                      },
-                    ),
-                  ),
-                ),
-
-                // Liquid Card Picker
-                _buildOptionCard(
-                  icon: Icons.square_rounded,
-                  title: "Liquid Card",
-                  description: "Card options: default, liquid",
-                  onTap: () => _openLocationPicker(
-                    MapLocationPickerConfig(
-                      apiKey: YOUR_API_KEY,
-                      mainMarkerIcon: _customMarkerIcon,
-                      cardType: CardType.liquidCard,
-                      cardColor: CupertinoColors.systemFill,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
+        ],
       ),
     );
   }
+}
 
-  Widget _buildOptionCard({
-    required IconData icon,
-    required String title,
-    required String description,
-    required VoidCallback onTap,
-  }) {
-    return Card(
-      margin: const EdgeInsets.only(bottom: 16),
-      elevation: 0.2,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(12),
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Row(
-            children: [
-              Icon(icon, size: 36, color: Colors.blue),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      title,
-                      style: const TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 16,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      description,
-                      style: TextStyle(color: Colors.grey.shade600),
-                    ),
-                  ],
-                ),
+class _Row extends StatelessWidget {
+  const _Row(this.label, this.value);
+
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 2),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: 96,
+            child: Text(
+              label,
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
               ),
-              const Icon(Icons.chevron_right, size: 30),
-            ],
+            ),
           ),
-        ),
+          Expanded(child: Text(value, style: theme.textTheme.bodyMedium)),
+        ],
       ),
     );
   }
+}
 
-  Future<void> _openLocationPicker(MapLocationPickerConfig config) async {
-    await Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => MapLocationPicker(
-          config: config.copyWith(
-            initialPosition:
-                _pickedLocation ?? const LatLng(28.8993468, 76.6250249),
-            onNext: (GeocodingResult? result) {
-              if (result != null) {
-                setState(() {
-                  _pickedLocation = LatLng(
-                    result.geometry?.location.lat ?? 0,
-                    result.geometry?.location.lng ?? 0,
-                  );
-                  _formattedAddress =
-                      result.formattedAddress ?? "Address not available";
-                });
-              }
-              if (context.mounted) {
-                Navigator.pop(context, result);
-              }
-            },
-          ),
+class _Option extends StatelessWidget {
+  const _Option({
+    required this.icon,
+    required this.title,
+    required this.description,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final String title;
+  final String description;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Card(
+      margin: const EdgeInsets.only(bottom: 8),
+      child: ListTile(
+        leading: CircleAvatar(
+          backgroundColor: theme.colorScheme.primaryContainer,
+          foregroundColor: theme.colorScheme.onPrimaryContainer,
+          child: Icon(icon),
         ),
+        title: Text(title),
+        subtitle: Text(description, style: theme.textTheme.bodySmall),
+        trailing: const Icon(Icons.chevron_right),
+        onTap: onTap,
       ),
     );
   }
-
-  // Dark map style JSON (truncated for brevity)
-  final String _darkMapStyle = '''
-[
-  {
-    "elementType": "geometry",
-    "stylers": [
-      { "color": "#212121" }
-    ]
-  },
-  {
-    "elementType": "labels.icon",
-    "stylers": [
-      { "visibility": "off" }
-    ]
-  },
-  {
-    "elementType": "labels.text.fill",
-    "stylers": [
-      { "color": "#757575" }
-    ]
-  },
-  {
-    "elementType": "labels.text.stroke",
-    "stylers": [
-      { "color": "#212121" }
-    ]
-  },
-  {
-    "featureType": "administrative",
-    "elementType": "geometry",
-    "stylers": [
-      { "color": "#757575" }
-    ]
-  },
-  {
-    "featureType": "poi",
-    "elementType": "geometry",
-    "stylers": [
-      { "color": "#313131" }
-    ]
-  },
-  {
-    "featureType": "poi.park",
-    "elementType": "geometry",
-    "stylers": [
-      { "color": "#263c3f" }
-    ]
-  },
-  {
-    "featureType": "road",
-    "elementType": "geometry.fill",
-    "stylers": [
-      { "color": "#2c2c2c" }
-    ]
-  },
-  {
-    "featureType": "road",
-    "elementType": "geometry.stroke",
-    "stylers": [
-      { "color": "#212121" }
-    ]
-  },
-  {
-    "featureType": "road",
-    "elementType": "labels.text.fill",
-    "stylers": [
-      { "color": "#8a8a8a" }
-    ]
-  },
-  {
-    "featureType": "transit",
-    "elementType": "geometry",
-    "stylers": [
-      { "color": "#2f3948" }
-    ]
-  },
-  {
-    "featureType": "water",
-    "elementType": "geometry",
-    "stylers": [
-      { "color": "#000000" }
-    ]
-  },
-  {
-    "featureType": "water",
-    "elementType": "labels.text.fill",
-    "stylers": [
-      { "color": "#3d3d3d" }
-    ]
-  }
-]
-  ''';
 }
