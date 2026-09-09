@@ -114,6 +114,17 @@ Widget defaultBottomCard(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
+            if (config.bottomCardTitle.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.only(top: 12),
+                child: Align(
+                  alignment: AlignmentDirectional.centerStart,
+                  child: Text(
+                    config.bottomCardTitle,
+                    style: theme.textTheme.labelLarge,
+                  ),
+                ),
+              ),
             ListTile(
               title: isLoading
                   ? Text(strings.loadingAddress, textAlign: TextAlign.start)
@@ -133,23 +144,37 @@ Widget defaultBottomCard(
                     ),
             ),
             config.confirmButton?.call(context, onNext) ??
-                Semantics(
-                  button: true,
-                  enabled: !isLoading && result != null,
-                  label: strings.confirmAddress,
-                  child: CupertinoButton.filled(
-                    minimumSize: const Size(double.infinity, 40),
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    pressedOpacity: 0.9,
-                    onPressed: (!isLoading && result != null) ? onNext : null,
-                    child: isLoading
-                        ? const CircularProgressIndicator.adaptive(
-                            backgroundColor: Colors.grey,
-                          )
-                        : Text(
-                            result != null ? strings.confirmAddress : address,
-                          ),
-                  ),
+                Builder(
+                  builder: (context) {
+                    // Never render a filled, enabled-looking button wired to a
+                    // no-op: that is what made "Confirm does nothing" the most
+                    // common report. Either it works, or it looks disabled.
+                    final canConfirm =
+                        !isLoading &&
+                        (result != null || !config.requireGeocodedAddress);
+                    return Semantics(
+                      button: true,
+                      enabled: canConfirm,
+                      label: strings.confirmAddress,
+                      child: CupertinoButton.filled(
+                        minimumSize: const Size(double.infinity, 40),
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        pressedOpacity: 0.9,
+                        onPressed: canConfirm ? onNext : null,
+                        child: isLoading
+                            // No backgroundColor: it paints a grey track on
+                            // Android/web/desktop and is dropped entirely on
+                            // iOS/macOS.
+                            ? const SizedBox.square(
+                                dimension: 22,
+                                child: CircularProgressIndicator.adaptive(
+                                  strokeWidth: 2.5,
+                                ),
+                              )
+                            : Text(strings.confirmAddress),
+                      ),
+                    );
+                  },
                 ),
             if (results.length > 1 && !config.hideMoreOptions) ...[
               const SizedBox(height: 12),

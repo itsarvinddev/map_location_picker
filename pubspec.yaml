@@ -21,19 +21,25 @@ topics:
     - places-autocomplete
 
 environment:
-    sdk: ">=3.8.0 <4.0.0"
-    flutter: ">=3.32.0"
+    # Floor set by google_maps_apis 5.x, which needs meta ^1.17.0. The Flutter
+    # SDK pins meta EXACTLY (1.16.0 on Flutter 3.32-3.37, 1.17.0 from 3.38), so
+    # anything below 3.38 cannot resolve this package at all.
+    sdk: ">=3.10.0 <4.0.0"
+    flutter: ">=3.38.0"
+
+# Declares supported platforms directly. The previous `flutter.plugin.platforms`
+# block with `default_package:` entries is the federated-plugin *endorsement*
+# mechanism; this package has no native code, no pluginClass and no `implements:`,
+# so declaring it made the Flutter tool register a plugin in every consumer app.
+# Desktop is absent because google_maps_flutter has no macOS/Windows/Linux
+# implementation -- see README "Platform support".
+platforms:
+    android:
+    ios:
+    web:
 
 flutter:
     uses-material-design: true
-    plugin:
-        platforms:
-            android:
-                default_package: google_maps_flutter_android
-            ios:
-                default_package: google_maps_flutter_ios
-            web:
-                default_package: google_maps_flutter_web
 
 dependencies:
     flutter:
@@ -47,11 +53,15 @@ dependencies:
     google_maps_apis: ">=5.1.0 <6.0.0"
     dio: ">=5.9.0 <6.0.0"
     http: ">=1.0.0 <2.0.0"
+    pointer_interceptor: ">=0.10.1 <0.11.0"
 
 dev_dependencies:
     flutter_test:
         sdk: flutter
-    freezed: ^3.2.3
-    build_runner: ">=2.5.4 <3.5.0"
-    lints: ^6.0.0
+    # Pinned exactly: CI gates on `build_runner build` producing a byte-identical
+    # diff, which is only meaningful if every contributor generates the same
+    # output. Staying off freezed 4 deliberately -- it needs Dart >=3.13.
+    freezed: 3.2.5
+    build_runner: 2.15.1
+    lints: ^6.1.0
 

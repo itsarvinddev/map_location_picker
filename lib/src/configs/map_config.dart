@@ -2,7 +2,6 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/gestures.dart';
 import 'package:freezed_annotation/freezed_annotation.dart';
-import 'package:google_maps_apis/places_new.dart' hide LatLng, Circle;
 import 'package:http/http.dart' as http;
 import 'package:map_location_picker/map_location_picker.dart';
 
@@ -54,8 +53,19 @@ abstract class MapLocationPickerConfig with _$MapLocationPickerConfig {
     @Default(null) IconData? locationIcon,
     @Default(null) BitmapDescriptor? mainMarkerIcon,
     @Default(true) bool hideBottomCardOnKeyboard,
-    @Default('Select your location') String bottomCardTitle,
-    @Default(CardType.defaultCard) CardType bottomCardType,
+
+    /// Title shown above the address in the default bottom card.
+    ///
+    /// Leave empty to hide it.
+    @Default('') String bottomCardTitle,
+
+    /// Superseded by [cardType], which is what the widgets actually read.
+    @Deprecated(
+      'bottomCardType was never read. Use cardType instead. '
+      'Will be removed in map_location_picker 5.0.0.',
+    )
+    @Default(CardType.defaultCard)
+    CardType bottomCardType,
     @Default(null) ConfirmButtonBuilder confirmButton,
     @Default(null) BottomCardBuilder bottomCardBuilder,
     @Default(null) SearchBarBuilder searchBarBuilder,
@@ -86,6 +96,14 @@ abstract class MapLocationPickerConfig with _$MapLocationPickerConfig {
     /// package used to collapse into a silent empty state.
     @Default(null) MapPickerErrorCallback? onError,
 
+    /// Whether the confirm button requires a successfully geocoded address.
+    ///
+    /// When false (the default), the user can confirm a raw coordinate even if
+    /// the Geocoding API returned nothing — a bad key, an exceeded quota or a
+    /// point over water no longer leaves them with a dead button and no way
+    /// out. [PickedPlace.latLng] is always populated.
+    @Default(false) bool requireGeocodedAddress,
+
     /// Whether the main marker can be dragged to fine-tune the selection.
     @Default(true) bool draggableMarker,
 
@@ -113,6 +131,65 @@ abstract class MapLocationPickerConfig with _$MapLocationPickerConfig {
     /// Whether the "my location" button is rendered.
     @Default(true) bool showMyLocationButton,
 
+    /// How the user picks a point.
+    ///
+    /// [PickerPinMode.marker] drops a marker where the map is tapped.
+    /// [PickerPinMode.centerPin] fixes a pin at the centre of the screen and
+    /// pans the map underneath it, resolving the address when the map comes to
+    /// rest — the interaction used by most ride-hailing and delivery apps.
+    @Default(PickerPinMode.marker) PickerPinMode pinMode,
+
+    /// The widget drawn at the screen centre in [PickerPinMode.centerPin].
+    ///
+    /// Receives the current [PinState] so it can react to dragging.
+    @Default(null) Widget Function(BuildContext, PinState)? centerPinBuilder,
+
+    /// Whether tapping the map moves the pin.
+    @Default(true) bool tapToSelect,
+
+    /// Resolves the device's location when the picker opens, instead of
+    /// starting at [initialPosition].
+    ///
+    /// Falls back to [initialPosition] if permission is refused or no fix is
+    /// available, so the picker is never left blank.
+    @Default(false) bool startWithCurrentLocation,
+
+    /// How long to wait for the initial location fix before falling back.
+    @Default(Duration(seconds: 10)) Duration locationTimeout,
+
+    /// Whether to show a back button over the map.
+    @Default(false) bool showBackButton,
+
+    /// Builds the back button. Defaults to a circular icon button that pops
+    /// the current route.
+    @Default(null) Widget Function(BuildContext)? backButtonBuilder,
+
+    /// Where the floating controls sit inside the picker.
+    @Default(FloatingControlsPosition.bottomEnd)
+    FloatingControlsPosition floatingControlsPosition,
+
+    /// Restricts autocomplete results to these ISO 3166-1 alpha-2 country
+    /// codes, e.g. `['us', 'ca']`. Up to 15.
+    ///
+    /// The README documented this for years without it existing.
+    @Default(null) List<String>? countries,
+
+    /// Restricts autocomplete results to these Places types, e.g.
+    /// `[PlaceType.restaurant]`. Up to 5.
+    @Default(null) List<PlaceType>? placeTypes,
+
+    /// Shows a list of places near the selected point under the address card.
+    @Default(false) bool showNearbyPlaces,
+
+    /// How many nearby places to request. Google caps this at 20.
+    @Default(6) int nearbyPlacesLimit,
+
+    /// Restricts nearby places to these Places types.
+    @Default(null) List<PlaceType>? nearbyPlaceTypes,
+
+    /// Radius in metres for the nearby-places search.
+    @Default(500.0) double nearbyPlacesRadius,
+
     /// Bottom inset applied to the map so the Google logo and the "terms"
     /// link stay visible above the bottom card.
     ///
@@ -125,7 +202,28 @@ abstract class MapLocationPickerConfig with _$MapLocationPickerConfig {
     @Default(CameraTargetBounds.unbounded)
     CameraTargetBounds cameraTargetBounds,
     @Default(<Circle>{}) Set<Circle> circles,
+
+    /// A cloud-based map style id.
+    ///
+    /// Forwarded to `GoogleMap.cloudMapId`. `GoogleMap.mapId` supersedes it
+    /// from google_maps_flutter 2.15, but this package's dependency range
+    /// reaches back to 2.13.1, where `mapId` does not exist.
     @Default(null) String? cloudMapId,
+
+    /// Hero tag for the map-type button. Set this when two pickers can be in
+    /// the same route (a TabBarView, an IndexedStack) -- Flutter throws when
+    /// two heroes share a tag.
+    @Default('map_location_picker_map_type') Object? mapTypeButtonHeroTag,
+
+    /// Hero tag for the "my location" button. See [mapTypeButtonHeroTag].
+    @Default('map_location_picker_my_location') Object? locationButtonHeroTag,
+
+    /// How long the map must sit still before the centre pin commits a
+    /// selection, in [PickerPinMode.centerPin].
+    ///
+    /// Android fires `onCameraIdle` more than once as a fling settles; without
+    /// this you pay for several geocodes per gesture.
+    @Default(Duration(milliseconds: 350)) Duration pinIdleDebounce,
     @Default(false) bool fortyFiveDegreeImageryEnabled,
     @Default(<Factory<OneSequenceGestureRecognizer>>{})
     Set<Factory<OneSequenceGestureRecognizer>> gestureRecognizers,

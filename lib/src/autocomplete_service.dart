@@ -1,22 +1,22 @@
-/// REST implementation of the autocomplete service, used everywhere except web.
-///
-/// This talks to the Places API (New) over HTTPS via the `google_maps_apis`
-/// package. It is selected by the conditional export in
-/// `autocomplete_service.dart` — do not import this file directly.
+/// Autocomplete and place-details lookups against the Places API (New).
 library;
 
 import 'package:dio/dio.dart' show CancelToken, DioException, DioExceptionType;
 import 'package:google_maps_apis/places_new.dart';
 
-import '../exceptions.dart';
-import '../logger.dart';
+import 'exceptions.dart';
+import 'logger.dart';
 
 /// Looks up place predictions and place details through the Google Places
 /// API (New).
 ///
-/// On every platform except web this issues plain HTTPS requests. On web the
-/// identically-named class in `autocomplete_service_web.dart` is used instead,
-/// because `places.googleapis.com` does not send CORS headers.
+/// One HTTPS transport on every platform, web included.
+/// `places.googleapis.com` answers CORS preflights with
+/// `Access-Control-Allow-Headers: content-type, x-goog-api-key,
+/// x-goog-fieldmask`, and `google_maps_apis` sends the key as the
+/// `x-goog-api-key` header, so browser requests are allowed. (Issue #14's CORS
+/// failure was against the *legacy* `/maps/api/place/...` endpoints, which this
+/// package no longer calls.)
 ///
 /// ```dart
 /// final service = AutoCompleteService(
@@ -42,10 +42,6 @@ class AutoCompleteService {
 
   /// Creates a service.
   AutoCompleteService({this.placesApi, this.onError});
-
-  /// Whether this implementation reaches Google over HTTPS (true here, false
-  /// on web where the Maps JavaScript API is used instead).
-  static const bool usesRestTransport = true;
 
   PlacesAPINew _client(String apiKey) =>
       placesApi ?? PlacesAPINew(apiKey: apiKey);

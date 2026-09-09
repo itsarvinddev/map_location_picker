@@ -52,7 +52,12 @@ abstract class SearchConfig with _$SearchConfig {
     @Default(null) AutocompleteSearchFilter? searchFilter,
     @Default(null) PlacesSuggestions? searchInstanceFields,
     @Default(null) SessionTokenHandler? sessionToken,
-    @Default('Search for place, address, landmark, etc.') String searchHintText,
+
+    /// Placeholder for the search field.
+    ///
+    /// When empty, [MapLocationPickerStrings.searchHint] is used, so the hint
+    /// follows the picker's localization by default.
+    @Default('') String searchHintText,
     @Default(null) TextStyle? searchHintStyle,
     @Default(3) int minCharsForSuggestions,
     @Default(Duration(milliseconds: 500)) Duration debounceDuration,

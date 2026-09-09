@@ -1,14 +1,12 @@
 import 'dart:async';
 
 import 'package:flutter/cupertino.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:flutter_typeahead/flutter_typeahead.dart';
-import 'package:google_maps_apis/places_new.dart';
+import 'package:pointer_interceptor/pointer_interceptor.dart';
 import 'package:map_location_picker/map_location_picker.dart';
-
-import 'card.dart';
-import 'logger.dart';
 
 /// The autocomplete view for the map location picker.
 /// [PlacesAutocomplete] is a widget that shows a list of suggestions as the user types.
@@ -131,13 +129,17 @@ class PlacesAutocomplete extends HookWidget {
       decorationBuilder:
           config.decorationBuilder ??
           (context, child) {
-            return CustomMapCard(
-              radius:
-                  cardRadius ?? BorderRadius.circular(CustomMapCard.kRadius),
-              padding: EdgeInsets.zero,
-              color: cardColor,
-              border: cardBorder,
-              child: child,
+            // The suggestions box floats over the GoogleMap platform view on
+            // web, where it would otherwise be unclickable.
+            return _intercept(
+              child: CustomMapCard(
+                radius:
+                    cardRadius ?? BorderRadius.circular(CustomMapCard.kRadius),
+                padding: EdgeInsets.zero,
+                color: cardColor,
+                border: cardBorder,
+                child: child,
+              ),
             );
           },
       emptyBuilder: config.emptyBuilder,
@@ -170,6 +172,10 @@ class PlacesAutocomplete extends HookWidget {
           },
     );
   }
+
+  /// Wraps [child] so it receives mouse events over the map on web.
+  static Widget _intercept({required Widget child}) =>
+      kIsWeb ? PointerInterceptor(child: child) : child;
 
   Widget Function(BuildContext, Suggestion) _defaultItemBuilder() {
     return (context, content) {

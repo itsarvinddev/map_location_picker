@@ -1,6 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:map_location_picker/map_location_picker.dart';
-import 'package:map_location_picker/src/card.dart';
 
 /// Regression tests for the bottom card and the nearby-places sheet.
 ///

@@ -6,6 +6,8 @@ import 'package:google_maps_apis/geocoding.dart';
 import 'package:google_maps_apis/places_new.dart' as places;
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 
+import 'configs/enums.dart';
+import 'debouncer.dart';
 import 'configs/map_config.dart';
 import 'exceptions.dart';
 import 'geocoding_service.dart';
@@ -82,6 +84,10 @@ class MapLocationPickerController extends ChangeNotifier {
   MapType _mapType;
   MapLocationPickerException? _lastError;
   PositionChangeReason _lastReason = PositionChangeReason.initial;
+  PinState _pinState = PinState.preparing;
+  List<places.Place> _nearbyPlaces = const [];
+  places.Place? _lastSelectedPlace;
+  bool _isLoadingNearby = false;
 
   /// The currently selected coordinates.
   LatLng get position => _position;
@@ -109,6 +115,24 @@ class MapLocationPickerController extends ChangeNotifier {
 
   /// Why [position] last changed.
   PositionChangeReason get lastPositionChangeReason => _lastReason;
+
+  /// The state of the centre pin in [PickerPinMode.centerPin].
+  PinState get pinState => _pinState;
+
+  /// The [places.Place] most recently chosen from the search results.
+  ///
+  /// Kept so the human-readable name survives into the final result —
+  /// reverse-geocoding a point of interest returns its street address, which
+  /// loses "Heathrow Terminal 5". Cleared as soon as the pin moves for any
+  /// other reason.
+  places.Place? get lastSelectedPlace => _lastSelectedPlace;
+
+  /// Places near [position], when
+  /// [MapLocationPickerConfig.showNearbyPlaces] is on.
+  List<places.Place> get nearbyPlaces => _nearbyPlaces;
+
+  /// Whether the nearby-places lookup is in flight.
+  bool get isLoadingNearbyPlaces => _isLoadingNearby;
 
   /// The configuration currently in effect.
   MapLocationPickerConfig get config => _config;
@@ -195,7 +219,9 @@ class MapLocationPickerController extends ChangeNotifier {
       _mapControllerCompleter = Completer<GoogleMapController>();
     }
     _mapControllerCompleter.complete(controller);
+    if (_pinState == PinState.preparing) _pinState = PinState.idle;
     _config.onMapCreated?.call(controller);
+    _safeNotify();
   }
 
   /// The map controller, once the map has initialised.
@@ -215,6 +241,47 @@ class MapLocationPickerController extends ChangeNotifier {
       );
     }
   }
+
+  /// Call when the camera starts moving.
+  ///
+  /// In [PickerPinMode.centerPin] this lifts the pin to signal dragging.
+  void onCameraMoveStarted() {
+    if (_disposed || _config.pinMode != PickerPinMode.centerPin) return;
+    if (_pinState == PinState.dragging) return;
+    _pinState = PinState.dragging;
+    _safeNotify();
+  }
+
+  /// Call on every camera frame. Only the latest target is retained.
+  void onCameraMove(CameraPosition camera) {
+    if (_disposed) return;
+    _pendingCameraTarget = camera.target;
+  }
+
+  /// Call when the camera comes to rest.
+  ///
+  /// In [PickerPinMode.centerPin] this is what commits the selection: the
+  /// point under the pin becomes the picked position and is geocoded.
+  Future<void> onCameraIdle() async {
+    if (_disposed) return;
+    if (_config.pinMode != PickerPinMode.centerPin) return;
+    _pinState = PinState.idle;
+    final target = _pendingCameraTarget;
+    if (target == null || target == _position) {
+      _safeNotify();
+      return;
+    }
+    _setPosition(target, PositionChangeReason.cameraIdle);
+    // Android reports idle more than once as a fling settles, and each one
+    // would otherwise be a billed geocode.
+    _idleDebouncer ??= DeBouncer(duration: _config.pinIdleDebounce);
+    _idleDebouncer!.run(() {
+      if (!_disposed) refreshAddress();
+    });
+  }
+
+  LatLng? _pendingCameraTarget;
+  DeBouncer? _idleDebouncer;
 
   /// Changes the displayed map type.
   void setMapType(MapType type) {
@@ -284,6 +351,7 @@ class MapLocationPickerController extends ChangeNotifier {
     if (_position == target && reason != PositionChangeReason.initial) {
       return;
     }
+    if (reason != PositionChangeReason.suggestion) _lastSelectedPlace = null;
     _position = target;
     _lastReason = reason;
     _config.onMainMarkerPositionChanged?.call(target);
@@ -338,6 +406,7 @@ class MapLocationPickerController extends ChangeNotifier {
       if (!_disposed && requestId == _requestId) {
         _isLoading = false;
         _safeNotify();
+        if (_config.showNearbyPlaces) unawaited(refreshNearbyPlaces());
       }
     }
   }
@@ -389,6 +458,7 @@ class MapLocationPickerController extends ChangeNotifier {
     }
 
     final target = LatLng(lat, lng);
+    _lastSelectedPlace = place;
     _setPosition(target, PositionChangeReason.suggestion);
 
     final formatted = place.formattedAddress;
@@ -486,6 +556,126 @@ class MapLocationPickerController extends ChangeNotifier {
     }
   }
 
+  /// Resolves the device location and centres on it.
+  ///
+  /// Used for [MapLocationPickerConfig.startWithCurrentLocation]. Unlike
+  /// [goToCurrentLocation] this never surfaces a permission failure as an
+  /// error: opening the picker should not nag, so it quietly falls back to
+  /// [MapLocationPickerConfig.initialPosition].
+  Future<void> initialise() async {
+    if (_disposed) return;
+    if (_config.startWithCurrentLocation) {
+      final located = await _tryCurrentPosition();
+      if (_disposed) return;
+      if (located != null) {
+        await moveTo(
+          located,
+          reason: PositionChangeReason.currentLocation,
+          zoom: _config.initialZoom,
+        );
+        return;
+      }
+    }
+    if (!_config.skipInitialGeocode) await refreshAddress();
+  }
+
+  Future<LatLng?> _tryCurrentPosition() async {
+    try {
+      if (!await Geolocator.isLocationServiceEnabled()) return null;
+      var permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+      }
+      if (permission != LocationPermission.whileInUse &&
+          permission != LocationPermission.always) {
+        return null;
+      }
+      final current = await Geolocator.getCurrentPosition(
+        locationSettings: _config.locationSettings,
+      ).timeout(_config.locationTimeout);
+      return LatLng(current.latitude, current.longitude);
+    } on TimeoutException {
+      // A cold GPS fix can take longer than anyone wants to stare at a
+      // spinner. Fall back to the last known position rather than blocking.
+      try {
+        final last = await Geolocator.getLastKnownPosition();
+        if (last != null) return LatLng(last.latitude, last.longitude);
+      } catch (_) {
+        // ignore
+      }
+      return null;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  /// Looks up places near [position].
+  ///
+  /// Uses the Places API (New) `searchNearby` endpoint. Called automatically
+  /// when [MapLocationPickerConfig.showNearbyPlaces] is on.
+  Future<void> refreshNearbyPlaces() async {
+    if (_disposed || !_config.showNearbyPlaces) return;
+    final requestId = _requestId;
+    _isLoadingNearby = true;
+    _safeNotify();
+    try {
+      final api =
+          _config.placesApi ?? places.PlacesAPINew(apiKey: _config.apiKey);
+      final response = await api.searchNearby(
+        fields: const [
+          'places.id',
+          'places.displayName',
+          'places.formattedAddress',
+          'places.location',
+          'places.types',
+        ],
+        filter: places.NearbySearchFilter(
+          maxResultCount: _config.nearbyPlacesLimit,
+          includedTypes: _config.nearbyPlaceTypes,
+          languageCode: _config.language,
+          locationRestriction: places.LocationRestrictionCircle(
+            circle: places.Circle(
+              center: places.ReferencePoint(
+                latitude: _position.latitude,
+                longitude: _position.longitude,
+              ),
+              radius: _config.nearbyPlacesRadius,
+            ),
+          ),
+        ),
+      );
+      if (_disposed || requestId != _requestId) return;
+      if (response.error != null && !response.isSuccessful) {
+        _report(
+          MapLocationPickerException(
+            mapPickerErrorKindFromStatus(response.statusCode),
+            response.error?.error?.message ?? 'Nearby search failed',
+            statusCode: response.statusCode,
+          ),
+        );
+        _nearbyPlaces = const [];
+        return;
+      }
+      _nearbyPlaces = response.body?.places ?? const [];
+    } catch (e, s) {
+      if (_disposed || requestId != _requestId) return;
+      _nearbyPlaces = const [];
+      _report(
+        MapLocationPickerException(
+          MapPickerErrorKind.unknown,
+          'Nearby search failed: $e',
+          cause: e,
+          stackTrace: s,
+        ),
+      );
+    } finally {
+      if (!_disposed) {
+        _isLoadingNearby = false;
+        _safeNotify();
+      }
+    }
+  }
+
   /// Confirms the current selection, invoking
   /// [MapLocationPickerConfig.onNext].
   void confirm() {
@@ -498,6 +688,7 @@ class MapLocationPickerController extends ChangeNotifier {
     _disposed = true;
     // Invalidate any in-flight response.
     _requestId++;
+    _idleDebouncer?.dispose();
     _cachedGeoCoding?.dispose();
     _cachedGeoCoding = null;
     super.dispose();

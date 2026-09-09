@@ -60,14 +60,14 @@ class MapLocationPickerStrings {
   /// Generic cancel label.
   final String cancel;
 
-  /// Label of the "tap to see other nearby matches" button, given the number
+  /// Label of the "show the other geocoder matches" button, given the number
   /// of matches.
   final String Function(int count) nearbyPlacesCount;
 
   /// Title of the nearby-places sheet, given the number of matches.
   final String Function(int count) nearbyPlacesTitle;
 
-  /// Shown on the nearby-places button while results are loading.
+  /// Shown on the matching-addresses button while results are loading.
   final String loadingNearbyPlaces;
 
   /// Explanatory line in the nearby-places sheet.
@@ -92,13 +92,16 @@ class MapLocationPickerStrings {
     this.cancel = 'Cancel',
     this.nearbyPlacesCount = _defaultNearbyPlacesCount,
     this.nearbyPlacesTitle = _defaultNearbyPlacesCount,
-    this.loadingNearbyPlaces = 'Loading nearby places...',
+    this.loadingNearbyPlaces = 'Loading addresses...',
     this.tapToSelect = 'tap to select',
     this.searchHint = 'Search for place, address, landmark, etc.',
   });
 
   static String _defaultNearbyPlacesCount(int count) =>
-      '$count places found nearby';
+      // These are the geocoder's alternative interpretations of one coordinate,
+      // not nearby points of interest -- the old "N places found nearby" label
+      // described something the list never contained.
+      count == 1 ? '1 matching address' : '$count matching addresses';
 
   /// The label for [type].
   String mapTypeName(MapType type) => switch (type) {

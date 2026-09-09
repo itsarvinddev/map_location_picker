@@ -1,9 +1,10 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter_hooks/flutter_hooks.dart';
+import 'package:pointer_interceptor/pointer_interceptor.dart';
 
 import '../map_location_picker.dart' hide Circle;
-import 'card.dart';
 
 /// The visual treatment of the search bar and bottom card.
 enum CardType {
@@ -129,13 +130,12 @@ class MapLocationPickerView extends HookWidget {
       return null;
     }, [config, geoCodingConfig, ctrl]);
 
-    // Resolve the initial address once. LatLng(0,0) is a legitimate coordinate
-    // in the Gulf of Guinea, so `skipInitialGeocode` is the opt-out rather
-    // than treating (0,0) as a magic "unset" value.
+    // Resolve the starting point once: the device location when
+    // `startWithCurrentLocation` is set, otherwise `initialPosition`.
+    // LatLng(0,0) is a legitimate coordinate in the Gulf of Guinea, so
+    // `skipInitialGeocode` is the opt-out rather than a magic sentinel.
     useEffect(() {
-      if (!config.skipInitialGeocode) {
-        ctrl.refreshAddress();
-      }
+      ctrl.initialise();
       return null;
     }, [ctrl]);
 
@@ -158,10 +158,27 @@ class MapLocationPickerView extends HookWidget {
     // calling the builder twice created two live search fields.
     final searchBar = _buildSearchBar(context, ctrl);
 
+    final isTop =
+        config.floatingControlsPosition == FloatingControlsPosition.topEnd ||
+        config.floatingControlsPosition == FloatingControlsPosition.topStart;
+    final isStart =
+        config.floatingControlsPosition ==
+            FloatingControlsPosition.bottomStart ||
+        config.floatingControlsPosition == FloatingControlsPosition.topStart;
+
     return Stack(
       fit: StackFit.expand,
       children: [
         _buildMap(context, ctrl),
+
+        if (config.pinMode == PickerPinMode.centerPin)
+          // IgnorePointer so the pin never swallows a map gesture.
+          Positioned.fill(
+            child: IgnorePointer(
+              child: Center(child: _buildCenterPin(context, ctrl)),
+            ),
+          ),
+
         if (config.showSearchBar)
           Positioned(
             top: 0,
@@ -170,26 +187,126 @@ class MapLocationPickerView extends HookWidget {
             child: SafeArea(
               bottom: false,
               child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 12),
-                child:
-                    config.searchBarBuilder?.call(context, searchBar) ??
-                    searchBar,
+                padding: EdgeInsets.only(
+                  left: config.showBackButton ? 60 : 12,
+                  right: 12,
+                ),
+                child: _interceptPointer(
+                  child:
+                      config.searchBarBuilder?.call(context, searchBar) ??
+                      searchBar,
+                ),
               ),
             ),
           ),
+
+        if (config.showBackButton)
+          Positioned(
+            top: 0,
+            left: 0,
+            child: SafeArea(
+              bottom: false,
+              child: Padding(
+                padding: const EdgeInsets.all(6),
+                child: _interceptPointer(
+                  child:
+                      config.backButtonBuilder?.call(context) ??
+                      _defaultBackButton(context),
+                ),
+              ),
+            ),
+          ),
+
+        if (isTop)
+          Positioned(
+            top: config.showSearchBar ? 72 : 8,
+            left: isStart ? 6 : null,
+            right: isStart ? null : 6,
+            child: SafeArea(
+              bottom: false,
+              child: _interceptPointer(
+                child: _buildFabs(context, ctrl, theme, isStart),
+              ),
+            ),
+          ),
+
         Positioned(
           bottom: 0,
           left: 0,
           right: 0,
-          child: _buildControls(
-            context,
-            ctrl,
-            theme,
-            showBottomCard,
-            searchBar,
+          child: _interceptPointer(
+            child: _buildControls(
+              context,
+              ctrl,
+              theme,
+              showBottomCard,
+              searchBar,
+              showFabs: !isTop,
+              isStart: isStart,
+            ),
           ),
         ),
       ],
+    );
+  }
+
+  /// Wraps [child] so it receives mouse events on web.
+  ///
+  /// `google_maps_flutter_web` renders the map into an HTML platform view that
+  /// sits above Flutter's canvas for hit-testing, so anything stacked over it
+  /// is unclickable without an interceptor. flutter_typeahead 6 dropped the
+  /// transitive `pointer_interceptor` that 5.x pulled in, which is why this is
+  /// explicit now. No-op off web.
+  Widget _interceptPointer({required Widget child}) =>
+      kIsWeb ? PointerInterceptor(child: child) : child;
+
+  Widget _buildCenterPin(
+    BuildContext context,
+    MapLocationPickerController ctrl,
+  ) {
+    final builder = config.centerPinBuilder;
+    if (builder != null) return builder(context, ctrl.pinState);
+    if (ctrl.pinState == PinState.preparing) return const SizedBox.shrink();
+
+    // Lift the pin while the map moves, and offset it upward so the tip -- not
+    // the middle of the glyph -- marks the selected point.
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 150),
+      curve: Curves.easeOut,
+      transform: Matrix4.translationValues(
+        0,
+        ctrl.pinState == PinState.dragging ? -34 : -22,
+        0,
+      ),
+      child: Icon(
+        Icons.location_on,
+        size: 44,
+        color:
+            config.floatingControlsColor ??
+            Theme.of(context).colorScheme.primary,
+        shadows: const [
+          Shadow(blurRadius: 6, color: Colors.black26, offset: Offset(0, 2)),
+        ],
+      ),
+    );
+  }
+
+  Widget _defaultBackButton(BuildContext context) {
+    final tooltip = MaterialLocalizations.of(context).backButtonTooltip;
+    return Semantics(
+      button: true,
+      label: tooltip,
+      child: CustomMapCard(
+        radius: BorderRadius.circular(24),
+        padding: EdgeInsets.zero,
+        color: config.cardColor,
+        border: config.cardBorder,
+        child: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          tooltip: tooltip,
+          onPressed: () => Navigator.maybePop(context),
+        ),
+      ),
     );
   }
 
@@ -199,14 +316,17 @@ class MapLocationPickerView extends HookWidget {
   ) {
     // Inheriting apiKey/placesApi means supplying a searchConfig no longer
     // silently blanks the key and leaves autocomplete permanently empty.
-    final effectiveSearchConfig = searchConfig == null
-        ? SearchConfig(apiKey: config.apiKey, placesApi: config.placesApi)
-        : searchConfig!.copyWith(
-            apiKey: searchConfig!.apiKey.isEmpty
-                ? config.apiKey
-                : searchConfig!.apiKey,
-            placesApi: searchConfig!.placesApi ?? config.placesApi,
-          );
+    final base = searchConfig ?? const SearchConfig();
+    final effectiveSearchConfig = base.copyWith(
+      apiKey: base.apiKey.isEmpty ? config.apiKey : base.apiKey,
+      placesApi: base.placesApi ?? config.placesApi,
+      searchHintText: base.searchHintText.isEmpty
+          ? config.strings.searchHint
+          : base.searchHintText,
+      // `countries`, `placeTypes` and `language` are convenience shorthands for
+      // the corresponding filter fields. An explicit `searchFilter` wins.
+      searchFilter: _composeSearchFilter(base.searchFilter),
+    );
 
     return PlacesAutocomplete(
       cardType: config.cardType,
@@ -220,18 +340,43 @@ class MapLocationPickerView extends HookWidget {
     );
   }
 
+  /// Folds [MapLocationPickerConfig.countries], [MapLocationPickerConfig.placeTypes]
+  /// and [MapLocationPickerConfig.language] onto [filter].
+  ///
+  /// Anything already set on [filter] is left alone -- the raw filter is the
+  /// escape hatch and must win.
+  AutocompleteSearchFilter? _composeSearchFilter(
+    AutocompleteSearchFilter? filter,
+  ) {
+    final countries = config.countries;
+    final types = config.placeTypes;
+    final language = config.language;
+    if (countries == null && types == null && language == null) return filter;
+    return (filter ?? AutocompleteSearchFilter()).copyWith(
+      includedRegionCodes: filter?.includedRegionCodes ?? countries,
+      includedPrimaryTypes: filter?.includedPrimaryTypes ?? types,
+      languageCode: filter?.languageCode ?? language,
+    );
+  }
+
   Widget _buildMap(BuildContext context, MapLocationPickerController ctrl) {
     return GoogleMap(
       initialCameraPosition: CameraPosition(
         target: config.initialPosition,
         zoom: config.initialZoom,
       ),
-      onTap: (latLng) =>
-          ctrl.moveTo(latLng, reason: PositionChangeReason.mapTap),
+      onTap: (config.tapToSelect && config.pinMode == PickerPinMode.marker)
+          ? (latLng) => ctrl.moveTo(latLng, reason: PositionChangeReason.mapTap)
+          : null,
       onMapCreated: ctrl.attachMap,
       minMaxZoomPreference: config.minMaxZoomPreference,
-      onCameraMove: config.onCameraMove,
-      markers: _createMarkers(ctrl),
+      onCameraMove: (camera) {
+        ctrl.onCameraMove(camera);
+        config.onCameraMove?.call(camera);
+      },
+      markers: config.pinMode == PickerPinMode.centerPin
+          ? _additionalMarkers()
+          : _createMarkers(ctrl),
       myLocationButtonEnabled: config.myLocationButtonEnabled,
       myLocationEnabled: config.myLocationEnabled,
       zoomControlsEnabled: config.zoomControlsEnabled,
@@ -257,8 +402,14 @@ class MapLocationPickerView extends HookWidget {
       indoorViewEnabled: config.indoorViewEnabled,
       layoutDirection: config.layoutDirection,
       mapToolbarEnabled: config.mapToolbarEnabled,
-      onCameraIdle: config.onCameraIdle,
-      onCameraMoveStarted: config.onCameraMoveStarted,
+      onCameraIdle: () {
+        ctrl.onCameraIdle();
+        config.onCameraIdle?.call();
+      },
+      onCameraMoveStarted: () {
+        ctrl.onCameraMoveStarted();
+        config.onCameraMoveStarted?.call();
+      },
       onLongPress: config.onLongPress,
       polygons: config.polygons,
       polylines: config.polylines,
@@ -280,65 +431,27 @@ class MapLocationPickerView extends HookWidget {
     MapLocationPickerController ctrl,
     ThemeData theme,
     bool showBottomCard,
-    Widget searchBar,
-  ) {
-    final strings = config.strings;
+    Widget searchBar, {
+    required bool showFabs,
+    required bool isStart,
+  }) {
     return Column(
       mainAxisSize: MainAxisSize.min,
       mainAxisAlignment: MainAxisAlignment.end,
-      crossAxisAlignment: CrossAxisAlignment.end,
+      crossAxisAlignment: isStart
+          ? CrossAxisAlignment.start
+          : CrossAxisAlignment.end,
       children: [
-        Padding(
-          padding: const EdgeInsets.only(right: 6),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              if (config.showMapTypeButton)
-                config.mapTypeButton ??
-                    Semantics(
-                      button: true,
-                      label: strings.mapTypeTooltip,
-                      child: FloatingActionButton(
-                        heroTag: 'map_location_picker_map_type',
-                        mini: true,
-                        elevation: 0,
-                        tooltip: strings.mapTypeTooltip,
-                        backgroundColor:
-                            config.floatingControlsColor ??
-                            theme.colorScheme.primary,
-                        foregroundColor:
-                            config.floatingControlsIconColor ??
-                            theme.colorScheme.onPrimary,
-                        onPressed: () => _showMapTypeSelector(context, ctrl),
-                        child: Icon(config.mapTypeIcon ?? Icons.layers),
-                      ),
-                    ),
-              if (config.showMapTypeButton && config.showMyLocationButton)
-                const SizedBox(height: 8),
-              if (config.showMyLocationButton)
-                config.locationButton ??
-                    Semantics(
-                      button: true,
-                      label: config.fabTooltip,
-                      child: FloatingActionButton(
-                        heroTag: 'map_location_picker_my_location',
-                        mini: true,
-                        elevation: 0,
-                        tooltip: config.fabTooltip,
-                        backgroundColor:
-                            config.floatingControlsColor ??
-                            theme.colorScheme.primary,
-                        foregroundColor:
-                            config.floatingControlsIconColor ??
-                            theme.colorScheme.onPrimary,
-                        onPressed: ctrl.goToCurrentLocation,
-                        child: Icon(config.locationIcon ?? Icons.my_location),
-                      ),
-                    ),
-            ],
+        if (showFabs)
+          Padding(
+            padding: EdgeInsets.only(
+              right: isStart ? 0 : 6,
+              left: isStart ? 6 : 0,
+            ),
+            child: _buildFabs(context, ctrl, theme, isStart),
           ),
-        ),
+        if (config.showNearbyPlaces && ctrl.nearbyPlaces.isNotEmpty)
+          _buildNearbyPlaces(context, ctrl),
         if (showBottomCard)
           config.bottomCardBuilder?.call(
                 context,
@@ -361,6 +474,122 @@ class MapLocationPickerView extends HookWidget {
               ),
       ],
     );
+  }
+
+  Widget _buildNearbyPlaces(
+    BuildContext context,
+    MapLocationPickerController ctrl,
+  ) {
+    final theme = Theme.of(context);
+    return SizedBox(
+      height: 44,
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.symmetric(horizontal: 12),
+        itemCount: ctrl.nearbyPlaces.length,
+        separatorBuilder: (_, _) => const SizedBox(width: 8),
+        itemBuilder: (context, index) {
+          final place = ctrl.nearbyPlaces[index];
+          final name = place.displayName?.text ?? place.formattedAddress ?? '';
+          return CustomMapCard(
+            radius: BorderRadius.circular(22),
+            padding: EdgeInsets.zero,
+            color: config.cardColor,
+            border: config.cardBorder,
+            child: CupertinoButton(
+              padding: const EdgeInsets.symmetric(horizontal: 14),
+              minimumSize: const Size(0, 44),
+              onPressed: () => ctrl.selectPlace(place),
+              child: Text(
+                name,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: theme.textTheme.bodyMedium,
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildFabs(
+    BuildContext context,
+    MapLocationPickerController ctrl,
+    ThemeData theme,
+    bool isStart,
+  ) {
+    final strings = config.strings;
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: isStart
+          ? CrossAxisAlignment.start
+          : CrossAxisAlignment.end,
+      children: [
+        if (config.showMapTypeButton)
+          config.mapTypeButton ??
+              Semantics(
+                button: true,
+                label: strings.mapTypeTooltip,
+                child: FloatingActionButton(
+                  heroTag: config.mapTypeButtonHeroTag,
+                  mini: true,
+                  elevation: 0,
+                  tooltip: strings.mapTypeTooltip,
+                  backgroundColor:
+                      config.floatingControlsColor ?? theme.colorScheme.primary,
+                  foregroundColor:
+                      config.floatingControlsIconColor ??
+                      theme.colorScheme.onPrimary,
+                  onPressed: () => _showMapTypeSelector(context, ctrl),
+                  child: Icon(config.mapTypeIcon ?? Icons.layers),
+                ),
+              ),
+        if (config.showMapTypeButton && config.showMyLocationButton)
+          const SizedBox(height: 8),
+        if (config.showMyLocationButton)
+          config.locationButton ??
+              Semantics(
+                button: true,
+                label: config.fabTooltip,
+                child: FloatingActionButton(
+                  heroTag: config.locationButtonHeroTag,
+                  mini: true,
+                  elevation: 0,
+                  tooltip: config.fabTooltip,
+                  backgroundColor:
+                      config.floatingControlsColor ?? theme.colorScheme.primary,
+                  foregroundColor:
+                      config.floatingControlsIconColor ??
+                      theme.colorScheme.onPrimary,
+                  onPressed: ctrl.goToCurrentLocation,
+                  child: Icon(config.locationIcon ?? Icons.my_location),
+                ),
+              ),
+      ],
+    );
+  }
+
+  /// The caller's extra markers only — the centre-pin mode draws its own pin
+  /// rather than placing a main marker.
+  Set<Marker> _additionalMarkers() {
+    final markers = <Marker>{};
+    for (final entry
+        in (config.additionalMarkers ?? const <String, LatLng>{}).entries) {
+      if (entry.key == 'main') continue;
+      markers.add(
+        Marker(
+          markerId: MarkerId(entry.key),
+          position: entry.value,
+          icon:
+              config.customMarkerIcons?[entry.key] ??
+              BitmapDescriptor.defaultMarker,
+          infoWindow: config.customInfoWindows?[entry.key] ?? InfoWindow.noText,
+          onTap: config.onMarkerTapped?[entry.key],
+        ),
+      );
+    }
+    return markers;
   }
 
   Set<Marker> _createMarkers(MapLocationPickerController ctrl) {
