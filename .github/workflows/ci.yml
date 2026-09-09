@@ -122,11 +122,8 @@ jobs:
         run: flutter pub publish --dry-run
 
       - name: pana score
-        # Threshold is "points we are allowed to lose". 10 covers the platform
-        # section only: google_maps_flutter has no macOS/Windows/Linux
-        # implementation, so 3 of 6 platforms is an upstream cap, not something
-        # this package can fix. Everything else must be perfect. Ratchet down,
-        # never up.
+        # Threshold is "points we are allowed to lose". The package currently
+        # scores 160/160, so zero. Ratchet down, never up.
         run: |
           dart pub global activate pana
-          dart pub global run pana --no-warning --exit-code-threshold 10 .
+          dart pub global run pana --no-warning --exit-code-threshold 0 .

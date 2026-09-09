@@ -1,3 +1,150 @@
+## 4.0.0
+
+A full audit release: every open issue closed, every open pull request merged or
+superseded with credit, the dependency stack brought current, and the parts of
+the package that were quietly broken made to actually work.
+
+**Requires Flutter 3.38 / Dart 3.10.** See
+[MIGRATION_GUIDE.md](https://github.com/itsarvinddev/map_location_picker/blob/master/MIGRATION_GUIDE.md)
+for the upgrade from 3.x.
+
+### Fixed
+
+- **The "my location" button did nothing the first time permission was granted.**
+  The guard read `permission != whileInUse || permission != always`, which no
+  enum value can fail, so the method always returned right after the OS dialog.
+  Every failure path — services disabled, denied, denied forever, timeout — now
+  reports a distinct error instead of returning silently.
+- **`searchFilter` broke autocomplete completely**
+  ([#70](https://github.com/itsarvinddev/map_location_picker/issues/70)). A
+  caller-supplied filter replaced the whole request, so the typed text never
+  reached Google. Filters are now merged, and a `sessionToken` you set yourself
+  is preserved. Thanks [@CaptainRiley](https://github.com/CaptainRiley) for the
+  root-cause analysis and [@vkourtis](https://github.com/vkourtis) for
+  [#67](https://github.com/itsarvinddev/map_location_picker/pull/67), which is
+  superseded by this fix — the file that PR patched had been orphaned by an
+  earlier refactor, so the change would never have executed.
+- **Build failure on google_maps_apis 4.0.0**
+  ([#68](https://github.com/itsarvinddev/map_location_picker/issues/68)):
+  `CustomParseErrorLogger.logError` took three positional arguments where
+  retrofit ≥ 4.9.0 requires four. Fixed by moving to google_maps_apis 5.1 and
+  dropping the `retrofit` pin that caused it. Thanks
+  [@jansvanda](https://github.com/jansvanda) for the report and
+  [@CarmeloBeeapp](https://github.com/CarmeloBeeapp) for
+  [#71](https://github.com/itsarvinddev/map_location_picker/pull/71).
+- **The picker could not be embedded in an existing screen**
+  ([#65](https://github.com/itsarvinddev/map_location_picker/issues/65)). It
+  always returned its own `Scaffold`, so nesting it gave the inner scaffold
+  unbounded constraints and rendered it squashed into a corner. Use the new
+  `MapLocationPickerView`, which has no `Scaffold`. Thanks
+  [@Brandon2255p](https://github.com/Brandon2255p).
+- **Flutter web**
+  ([#14](https://github.com/itsarvinddev/map_location_picker/issues/14)). The
+  Places REST endpoints now support CORS, so search works from a browser
+  directly — no proxy. Place *details* previously never worked on web at all.
+  Overlays are wrapped in `PointerInterceptor`, without which the search field
+  and Confirm button were unclickable over the map. Thanks
+  [@Bylinkk](https://github.com/Bylinkk).
+- **Every autocomplete keystroke was billed as its own Places session.** A fresh
+  session token was minted per request and never passed to the details call. One
+  token now covers a whole search and is retired when details are fetched.
+- **The bottom card and the "nearby places" sheet crashed** on
+  `.substring(0, 1)` of an empty string and `.first` of an empty list — both
+  reachable from ordinary geocoding responses.
+- **Overlapping lookups returned the wrong address.** Two quick taps on a slow
+  connection could leave the older response overwriting the newer one, so
+  Confirm returned a location the user never picked. Requests are now sequenced.
+- **The Confirm button was a dead filled button** whenever geocoding failed —
+  a bad key, an exceeded quota or a point over water left no way to confirm.
+  It now returns the raw coordinate; set `requireGeocodedAddress: true` for the
+  old behaviour.
+- Tapping an entry in the nearby sheet fired `onNext` and popped twice instead
+  of updating the selection.
+- Supplying a `searchConfig` silently discarded `config.apiKey`, so autocomplete
+  ran with an empty key and returned nothing, forever.
+- Async continuations wrote disposed state when leaving the screen mid-request.
+- Awaiting the map controller had no timeout, so a missing API key pinned the
+  spinner permanently.
+- `additionalMarkers['main']` collided with the built-in marker id.
+- A new `http.Client` was created for every reverse geocode and never closed.
+- `LatLng(0, 0)` was treated as an "unset" sentinel; use `skipInitialGeocode`.
+- Selecting a suggestion paid for a second reverse-geocode that could overwrite
+  the address it had just fetched.
+- Horizontal safe-area insets were stripped, pushing controls under the notch.
+- The Google logo was covered by the bottom card, contrary to the Maps Platform
+  terms.
+- The example could not compile from a clean clone — `example/lib/key.dart` was
+  gitignored — and its `pubspec.yaml` declared an unsatisfiable SDK range.
+
+### Added
+
+- **`PickerPinMode.centerPin`** — a fixed pin with the map panning underneath,
+  resolving when the map settles. Customise it with `centerPinBuilder`.
+- **`MapLocationPickerController`** — drive the picker from outside the widget
+  tree and read its state: `moveTo`, `goToCurrentLocation`, `refreshAddress`,
+  `selectPlace`, `setMapType`, `confirm`.
+- **`showMapLocationPicker(context, config: ...)`** returning **`PickedPlace`**,
+  replacing the Navigator + `onNext` + `pop` boilerplate. `PickedPlace.latLng`
+  is always populated, and `name` survives from Place Details so a point of
+  interest keeps its name instead of the street address.
+- **`MapLocationPickerStrings`** — all 17 user-visible strings, for translation.
+- **`MapLocationPickerException` / `MapPickerErrorKind` / `onError`** — typed
+  failures. An invalid API key, an exceeded quota and "no results here" were
+  previously all the same silent empty state.
+- **Nearby places** via the Places API (New) — `showNearbyPlaces`,
+  `nearbyPlaceTypes`, `nearbyPlacesRadius`, `nearbyPlacesLimit`.
+- **`countries` and `placeTypes`** as first-class search restrictions. The
+  README documented a `components` parameter for years; it never existed.
+- **`startWithCurrentLocation`**, with a timeout and last-known-position
+  fallback.
+- **`showBackButton` / `backButtonBuilder`** — the picker had no exit control.
+- A draggable main marker with **`onMainMarkerPositionChanged`**, reporting
+  every move. Thanks [@demon36](https://github.com/demon36) for
+  [#72](https://github.com/itsarvinddev/map_location_picker/pull/72).
+- **`GeocodingResultParts`** — `city`, `postalCode`, `countryCode`, `street`
+  and friends, instead of hand-searching `addressComponents`.
+- `FloatingControlsPosition`, configurable FAB hero tags (two pickers in one
+  route used to throw), `tapToSelect`, `showSearchBar`, `showMapTypeButton`,
+  `showMyLocationButton`, `mapBottomInset`, `pinIdleDebounce`.
+- `MapPickerLogLevel` and `mapLogger.onLog` to quieten or redirect the package's
+  logging.
+- `SearchConfig.constrainWidth`, from flutter_typeahead 6.
+- Semantics on the floating buttons and the confirm button.
+- A GitHub Actions workflow: analyze, format, generated-code drift, tests,
+  Android/iOS/web/wasm builds, publish dry-run and a pana gate.
+
+### Changed
+
+- **Requires Flutter 3.38 / Dart 3.10.** google_maps_apis 5.x needs
+  `meta ^1.17.0`, and the Flutter SDK pins `meta` exactly — 1.16.0 up to Flutter
+  3.37, 1.17.0 from 3.38. Anything lower cannot resolve.
+- **The barrel exports far less.** It used to re-export all of `geolocator`,
+  `google_maps_flutter` and both the legacy and new `google_maps_apis`
+  libraries — hundreds of symbols and nine name collisions. It now exports
+  exactly the types in this package's signatures, including ones you previously
+  had to add `dio`, `http` and `flutter_typeahead` to your own pubspec to name.
+- `google_maps_apis` → `>=5.1.0 <6.0.0`, `flutter_typeahead` → `>=6.0.0 <7.0.0`,
+  `google_maps_flutter` → `>=2.13.1 <3.0.0`.
+- `retrofit` and `web` removed — neither was ever imported.
+- `pointer_interceptor` added, for clickable web overlays.
+- The `flutter.plugin.platforms` block is replaced by a top-level `platforms:`
+  key. The old one was federated-plugin endorsement for a package with no native
+  code, and made the Flutter tool register a plugin in every consumer app.
+- "N places found nearby" now reads "N matching addresses", which is what that
+  list has always actually contained.
+- The README's restricted-API-key section is corrected: `X-Android-Cert` takes
+  the Base16 SHA-1 with the colons stripped, and the surrounding snippet used a
+  parameter (`geoCodingApiHeaders`) that does not exist. Thanks
+  [@Elbarae1921](https://github.com/Elbarae1921) for
+  [#66](https://github.com/itsarvinddev/map_location_picker/pull/66) and
+  [@dend456](https://github.com/dend456) for the original finding.
+
+### Deprecated
+
+- `SearchConfig.hideWithKeyboard` — removed upstream in flutter_typeahead 6.0.0
+  because closing the keyboard also drops focus. Use `hideOnUnfocus`.
+- `MapLocationPickerConfig.bottomCardType` — was never read. Use `cardType`.
+
 ## 3.1.0
 
 - cancelToken, headers & interceptors added to the new apis only.

@@ -104,6 +104,9 @@ class PickedPlace {
     );
   }
 
+  /// The city or town. An alias for [locality], which is Google's term.
+  String? get city => locality;
+
   /// The best single label for this place.
   String get displayLabel =>
       name ?? formattedAddress ?? '${latLng.latitude}, ${latLng.longitude}';

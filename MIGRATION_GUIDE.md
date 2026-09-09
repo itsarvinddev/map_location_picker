@@ -1,339 +1,205 @@
-# Migration Guide: Map Location Picker 2.0
+# Migration Guide
 
-This guide helps you migrate to the new Cupertino-based architecture with enhanced customization capabilities. The refactor focused on:
+## 3.x → 4.0.0
 
-1. 🍎 Native Cupertino UI components
-2. 🌗 Built-in theme support (light/dark)
-3. 🧩 Decoupled service architecture
-4. 🚀 Performance optimizations
-5. 🗺️ Advanced map customization
+Most apps need two changes: raise the Flutter version, and add imports for
+symbols the barrel no longer re-exports. Everything else is additive.
 
-## Key Structural Changes
+---
 
-### 1. File Structure Changes
-
-```
-lib/
-├── src/
-│   ├── autocomplete_service.dart      // Autocomplete business logic
-│   ├── autocomplete_view.dart         // Cupertino-style search UI
-│   ├── geocoding_service.dart         // Reverse geocoding logic
-│   ├── map_location_picker.dart       // Main picker widget
-│   ├── debouncer.dart                 // Debounce utility
-│   └── logger.dart                    // Logging utility
-└── map_location_picker.dart           // Main export
-```
-
-### 2. UI Framework Shift (Breaking Change)
-
-**Changed from Material to Cupertino:**
-
-```diff
-// Old (Material)
-PlacesAutocomplete(
-  decoration: InputDecoration(...),
-)
-
-// New (Cupertino)
-PlacesAutocomplete(
-  // Uses CupertinoTypeAheadField internally
-)
-```
-
-**Migration Strategy:**
-
-1. Replace Material widgets with Cupertino equivalents
-2. Use new Cupertino-style configuration options
-3. Remove manual theme handling - it's now automatic
-
-### 3. Configuration Objects
-
-**New Configuration Approach:**
-
-```dart
-MapLocationPicker(
-  config: MapPickerConfig(
-    apiKey: '...',
-    initialPosition: LatLng(...),
-    // Map-specific parameters
-    bottomCardBuilder: (ctx, result, address, isLoading, onNext) {
-      return CupertinoActionSheet(...);
-    }
-  ),
-  searchConfig: PlacesAutocompleteConfig(
-    apiKey: '...',
-    searchHintText: 'Search locations...',
-    // Autocomplete parameters
-  ),
-)
-```
-
-### 4. Service Architecture
-
-**Decoupled Services:**
-
-```dart
-// Geocoding Service
-final geoCodingService = GeoCodingService(apiKey: "...");
-final (result, allResults) = await geoCodingService.reverseGeocode(position);
-
-// Autocomplete Service
-final autoCompleteService = AutoCompleteService();
-final predictions = await autoCompleteService.search(query: "Paris");
-```
-
-### 5. Parameter Mapping Guide
-
-| Old Parameter        | New Location                                   | Notes             |
-| -------------------- | ---------------------------------------------- | ----------------- |
-| `apiKey`             | `MapPickerConfig.apiKey`                       |                   |
-| `currentLatLng`      | `MapPickerConfig.initialPosition`              |                   |
-| `searchHintText`     | `PlacesAutocompleteConfig.searchHintText`      |                   |
-| `language`           | `PlacesAutocompleteConfig.suggestionsLanguage` |                   |
-| `onMapCreated`       | `MapPickerConfig.onMapCreated`                 |                   |
-| `onMapTypeChanged`   | `MapPickerConfig.onMapTypeChanged`             |                   |
-| `additionalMarkers`  | `MapPickerConfig.additionalMarkers`            |                   |
-| `customMarkerIcons`  | `MapPickerConfig.customMarkerIcons`            |                   |
-| `bottomCardBuilder`  | `MapPickerConfig.bottomCardBuilder`            | Signature changed |
-| `defaultAddressText` | `PlacesAutocompleteConfig.defaultAddressText`  |                   |
-| `mapStyle`           | `MapPickerConfig.mapStyle`                     |                   |
-
-### 6. Signature Changes
-
-#### Bottom Card Builder
-
-**Old:**
-
-```dart
-bottomCardBuilder: (ctx, result, address, isLoading) {...}
-```
-
-**New:**
-
-```dart
-bottomCardBuilder: (ctx, result, address, isLoading, onNext) {
-  return CupertinoActionSheet(
-    actions: [
-      CupertinoActionSheetAction(
-        onPressed: onNext, // New callback
-        child: Text(address),
-      ),
-    ],
-  );
-}
-```
-
-#### Map Controls
-
-**New Approach:**
-
-```dart
-MapPickerConfig(
-  mapTypeButton: CupertinoButton(...), // Fully customizable
-  locationButton: CustomLocationButton(),
-)
-```
-
-### 7. New Features
-
-#### 1. Static Map Previews
-
-```dart
-Image.network(
-  googleStaticMapWithMarker(
-    lat, lng, zoom,
-    apiKey: "YOUR_KEY"
-  ),
-)
-```
-
-#### 2. Theme Support
-
-Automatic light/dark theme adaptation:
-
-```dart
-final _themeMode = ValueNotifier<ThemeMode>(ThemeMode.dark);
-
-MapLocationPicker(
-  config: MapPickerConfig(), // Automatically adapts to theme
-)
-```
-
-#### 3. Custom Marker Icons
-
-```dart
-void _createMarkerIcon() async {
-  _customMarkerIcon = await BitmapDescriptor.asset(
-    const ImageConfiguration(size: Size(48, 48)),
-    'assets/marker.webp',
-  );
-}
-
-MapPickerConfig(
-  mainMarkerIcon: _customMarkerIcon,
-)
-```
-
-#### 4. Advanced Bottom Sheets
-
-```dart
-MapPickerConfig(
-  bottomCardBuilder: (ctx, result, address, isLoading, onNext) {
-    return CupertinoActionSheet(
-      title: Text("Confirm Location"),
-      actions: [
-        CupertinoActionSheetAction(
-          onPressed: onNext,
-          isDefaultAction: true,
-          child: Text(address),
-        ),
-      ],
-    );
-  },
-)
-```
-
-## Migration Steps
-
-### 1. Update Dependencies
+### 1. Flutter 3.38 / Dart 3.10 is required
 
 ```yaml
-dependencies:
-  map_location_picker: ^2.0.0
+environment:
+  sdk: ">=3.10.0 <4.0.0"
+  flutter: ">=3.38.0"
 ```
 
-### 2. Replace Widget Structures
+This is not a preference. `google_maps_apis` 5.x — the version that fixes the
+build failure in [#68](https://github.com/itsarvinddev/map_location_picker/issues/68)
+— requires `meta ^1.17.0`, and the Flutter SDK pins `meta` **exactly**:
 
-**Old:**
+| Flutter | pinned `meta` |
+|---|---|
+| 3.32 – 3.37 | 1.16.0 |
+| 3.38+ | 1.17.0 |
+
+So there is no version of this package that both fixes #68 and runs on Flutter
+3.37 or below. If you cannot upgrade Flutter yet, stay on `3.1.0` and pin
+`retrofit: ">=4.7.3 <4.9.1"` in your own `pubspec.yaml` to avoid #68.
+
+> **Note:** 3.1.0 claimed `flutter: ">=3.27.0"`, but that was never
+> satisfiable — `google_maps_apis` 4.x already required Dart 3.8 (Flutter 3.32).
+
+---
+
+### 2. The barrel exports less
+
+3.x re-exported all of `geolocator`, `google_maps_flutter`, and **both** the
+legacy and new `google_maps_apis` libraries. That dumped several hundred symbols
+into every file that imported the package, along with nine name collisions —
+including two different `LatLng` and two different `AddressComponent`. It is why
+the package's own source had to write `hide LatLng` and `hide Circle`.
+
+4.0.0 exports only the types that appear in this package's public signatures.
+**Most apps are unaffected**, because the common ones are still there:
+`LatLng`, `MapType`, `Marker`, `GoogleMapController`, `GeocodingResult`,
+`AddressComponent`, `Place`, `Suggestion`, `PlacesAPINew`,
+`AutocompleteSearchFilter`, `SessionTokenHandler`, `CancelToken`,
+`SuggestionsController`, `LocationSettings`, `LocationPermission`, `Position`.
+
+Newly exported (you can delete these from your own `pubspec.yaml` if you added
+them only for this): `CancelToken` from `dio`, `SuggestionsController` from
+`flutter_typeahead`, `Client` from `http`.
+
+If you relied on something that is now gone, import it directly:
 
 ```dart
-MapLocationPicker(
-  apiKey: "...",
-  currentLatLng: LatLng(...),
-  // 100+ parameters
-)
+// Legacy Places API types — no longer re-exported (nothing in this package
+// uses them, and they collided with the new Places types).
+import 'package:google_maps_apis/places.dart';
+
+// The Places (New) AddressComponent, which collides with the geocoding one.
+import 'package:google_maps_apis/places_new.dart' as places_new;
 ```
 
-**New:**
+There is a compile-time guard for this surface at
+[`example/lib/api_surface_check.dart`](example/lib/api_surface_check.dart); if
+something you need is missing, that is a bug worth filing.
 
-```dart
-MapLocationPicker(
-  config: MapPickerConfig(
-    apiKey: "...",
-    initialPosition: LatLng(...),
-    // Map config
-  ),
-  searchConfig: PlacesAutocompleteConfig(
-    apiKey: "...",
-    // Search config
-  ),
-)
-```
+---
 
-### 3. Update Custom Builders
+### 3. Embedding the picker: use `MapLocationPickerView`
 
-**Bottom Card:**
-
-```dart
-// Old
-bottomCardBuilder: (ctx, result, address, isLoading) {...}
-
-// New
-config: MapPickerConfig(
-  bottomCardBuilder: (ctx, result, address, isLoading, onNext) {
-    return CupertinoActionSheet(
-      actions: [
-        CupertinoActionSheetAction(
-          onPressed: onNext,
-          child: Text(address),
-        ),
-      ],
-    );
-  }
-)
-```
-
-### 4. Handle Service Instances (Optional)
-
-For advanced use cases:
-
-```dart
-MapLocationPicker(
-  geoCodingService: MyCustomGeoCodingService(),
-  // Other services...
-)
-```
-
-### 5. Theme Integration
-
-Remove manual theme handling:
+`MapLocationPicker` still returns a `Scaffold`, so pushing it as a route is
+unchanged. But if you were putting it inside a `Column`, a `SingleChildScrollView`
+or a sized `Container`, that never worked — it is
+[#65](https://github.com/itsarvinddev/map_location_picker/issues/65), and it
+rendered squashed into a corner.
 
 ```diff
-- Theme(
--   data: ThemeData.dark(),
--   child: MapLocationPicker(...)
-- )
-
-// The picker now automatically adapts to app theme
+  SizedBox(
+    height: 420,
+-   child: MapLocationPicker(config: config),
++   child: MapLocationPickerView(config: config),
+  )
 ```
 
-## Troubleshooting
+`MapLocationPickerView` is the same widget without the `Scaffold`. It needs
+bounded constraints.
 
-**Problem:** UI elements look different
-**Solution:** The UI has been updated to Cupertino design. Use new customization options:
+---
+
+### 4. Behaviour changes worth knowing
+
+| What changed | Why | What to do |
+|---|---|---|
+| Tapping an entry in the "matching addresses" sheet no longer fires `onNext` | It used to confirm and pop the whole picker just because you looked at an alternative | Use `onAddressSelected` to observe; `onNext` is now only the Confirm button |
+| Confirm works even when geocoding fails | Previously a bad key or a point over water left a dead button and no way out | Set `requireGeocodedAddress: true` for the old behaviour |
+| `LatLng(0, 0)` is no longer an "unset" sentinel | It is a real coordinate in the Gulf of Guinea; passing it gave a marker-less, address-less picker | Use `skipInitialGeocode: true` if you meant "don't look anything up yet" |
+| The main marker is draggable | | `draggableMarker: false` to restore |
+| The map gets a bottom inset | The bottom card covered the Google logo, which the Maps Platform terms require to stay visible | Set `padding` yourself, or tune `mapBottomInset` |
+| The search hint defaults to `strings.searchHint` | So the hint follows localization | Set `SearchConfig.searchHintText` to override |
+
+---
+
+### 5. Deprecated
 
 ```dart
-PlacesAutocompleteConfig(
-  decorationBuilder: (context, child) {
-    return CupertinoBoxDecoration(child: child);
-  }
-)
+// flutter_typeahead 6 removed this: closing the keyboard also drops focus,
+// which hideOnUnfocus already handles.
+SearchConfig(hideWithKeyboard: false)  // ignored
+SearchConfig(hideOnUnfocus: false)     // use this
+
+// Was never read by anything.
+MapLocationPickerConfig(bottomCardType: ...)  // ignored
+MapLocationPickerConfig(cardType: ...)        // use this
 ```
 
-**Problem:** Bottom card not working
-**Solution:** Signature changed - now includes `onNext` callback:
+Both still compile in 4.x and will be removed in 5.0.0.
+
+---
+
+### 6. Worth adopting
+
+None of these are required, but they are why the release exists.
+
+**Get the result directly** instead of wiring `onNext` to a `Navigator.pop`:
 
 ```dart
-bottomCardBuilder: (ctx, result, address, isLoading, onNext) {
-  return Button(onPressed: onNext, child: Text("Select"));
+final picked = await showMapLocationPicker(
+  context,
+  config: const MapLocationPickerConfig(apiKey: 'YOUR_API_KEY'),
+);
+if (picked != null) {
+  print(picked.latLng);         // always present
+  print(picked.formattedAddress);
+  print(picked.city);
+  print(picked.countryCode);
 }
 ```
 
-**Problem:** Markers not showing
-**Solution:** Use new marker configuration:
+**See failures** instead of a silent empty state:
 
 ```dart
-MapPickerConfig(
-  mainMarkerIcon: BitmapDescriptor.defaultMarker,
-  additionalMarkers: {
-    "custom": LatLng(37.422, -122.084),
-  },
-  customMarkerIcons: {
-    "custom": BitmapDescriptor.defaultMarkerWithHue(120),
+MapLocationPickerConfig(
+  apiKey: key,
+  onError: (e) {
+    if (e.kind == MapPickerErrorKind.requestDenied) {
+      // Wrong key, key restrictions, or the API isn't enabled.
+    }
   },
 )
 ```
 
-**Problem:** Search not working
-**Solution:** Ensure you're using the new config:
+**Centre-pin mode**, the interaction most delivery and ride-hailing apps use:
 
 ```dart
-PlacesAutocomplete(
-  config: PlacesAutocompleteConfig(
-    apiKey: "YOUR_KEY",
-    minCharsForSuggestions: 2,
-  ),
-  // Not in MapPickerConfig
-)
+MapLocationPickerConfig(apiKey: key, pinMode: PickerPinMode.centerPin)
 ```
 
-## Benefits of Migration
+**Restrict the search** — the README used to document a `components` parameter
+that did not exist:
 
-1. **Native Experience**: Cupertino design for iOS and Material for Android
-2. **Theme Support**: Automatic light/dark mode adaptation
-3. **Better Performance**: Optimized rebuilds and memoization
-4. **Enhanced Customization**: More control over UI components
-5. **Simplified Maintenance**: Decoupled architecture
-6. **New Features**: Static map previews, better markers, etc.
+```dart
+MapLocationPickerConfig(apiKey: key, countries: ['gb', 'ie'])
+```
 
-For additional help, refer to the updated example app or file an issue on GitHub.
+---
+
+## 1.x → 2.0.0
+
+Version 2.0 replaced the Material UI with Cupertino components and moved every
+parameter into configuration objects.
+
+### Configuration objects
+
+Parameters that used to sit on the widget now live on `MapLocationPickerConfig`
+and `SearchConfig`:
+
+```diff
+- MapLocationPicker(
+-   apiKey: 'YOUR_API_KEY',
+-   initialPosition: LatLng(37.7749, -122.4194),
+- )
++ MapLocationPicker(
++   config: MapLocationPickerConfig(
++     apiKey: 'YOUR_API_KEY',
++     initialPosition: LatLng(37.7749, -122.4194),
++   ),
++ )
+```
+
+> Note: 2.0.1 renamed `MapPickerConfig` to `MapLocationPickerConfig` and
+> `PlacesAutocompleteConfig` to `SearchConfig`.
+
+### UI framework
+
+The search field and bottom card are Cupertino-based and adapt to the ambient
+theme automatically. Custom `InputDecoration` no longer applies; use
+`SearchConfig.builder` to supply your own field.
+
+### Services
+
+`GeoCodingConfig` performs reverse geocoding, and `AutoCompleteService` performs
+place search. Both can be supplied directly if you need custom HTTP behaviour.
