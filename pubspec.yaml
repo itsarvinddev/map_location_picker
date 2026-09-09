@@ -25,6 +25,7 @@ environment:
     flutter: ">=3.32.0"
 
 flutter:
+    uses-material-design: true
     plugin:
         platforms:
             android:

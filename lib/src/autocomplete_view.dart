@@ -36,6 +36,12 @@ class PlacesAutocomplete extends HookWidget {
   /// The callback for when a place is selected.
   final void Function(Suggestion)? onSelected;
 
+  /// Called for every failure raised while searching or fetching details.
+  ///
+  /// Without this a failed lookup looks identical to "no matches" — see
+  /// [MapLocationPickerException] for the failure kinds.
+  final MapPickerErrorCallback? onError;
+
   final CardType cardType;
 
   final Color? cardColor;
@@ -51,6 +57,7 @@ class PlacesAutocomplete extends HookWidget {
     this.initialValue,
     this.onGetDetails,
     this.onSelected,
+    this.onError,
     this.cardType = CardType.defaultCard,
     this.cardColor,
     this.cardRadius,
@@ -66,18 +73,29 @@ class PlacesAutocomplete extends HookWidget {
           config.defaultAddressText,
     );
 
-    /// Auto complete service.
+    /// One session token for the whole search, so Google bills the keystrokes
+    /// and the final details call as a single Autocomplete session instead of
+    /// charging per request.
+    final sessionToken = useMemoized(
+      () => config.sessionToken ?? SessionTokenHandler(),
+      [config.sessionToken],
+    );
+
+    /// Auto complete service. Rebuilt when the credentials change so a
+    /// `copyWith(apiKey: ...)` is not silently ignored.
     final service = useMemoized(
-      () => AutoCompleteService(placesApi: config.placesApi),
+      () => AutoCompleteService(placesApi: config.placesApi, onError: onError),
+      [config.placesApi, config.apiKey, onError],
     );
 
     /// Cupertino type ahead field. It is a text field that shows a list of suggestions as the user types.
     return CupertinoTypeAheadField<Suggestion>(
       controller: textController,
       itemBuilder: config.itemBuilder ?? _defaultItemBuilder(),
-      suggestionsCallback: (query) => _getSuggestions(query, service),
+      suggestionsCallback: (query) =>
+          _getSuggestions(query, service, sessionToken),
       onSelected: (value) {
-        _handleSelection(value, context, textController, service);
+        _handleSelection(value, context, textController, service, sessionToken);
         config.onSelected?.call(value);
         FocusManager.instance.primaryFocus?.unfocus();
       },
@@ -194,8 +212,9 @@ class PlacesAutocomplete extends HookWidget {
   Future<List<Suggestion>> _getSuggestions(
     String query,
     AutoCompleteService service,
+    SessionTokenHandler sessionToken,
   ) async {
-    if (query.length < config.minCharsForSuggestions) return [];
+    if (query.length < config.minCharsForSuggestions) return const [];
     return service.search(
       query: query,
       apiKey: config.apiKey,
@@ -203,7 +222,7 @@ class PlacesAutocomplete extends HookWidget {
       fields: config.searchFields,
       filter: config.searchFilter,
       instanceFields: config.searchInstanceFields,
-      sessionToken: config.sessionToken,
+      sessionToken: sessionToken,
       cancelToken: config.cancelToken,
     );
   }
@@ -214,64 +233,62 @@ class PlacesAutocomplete extends HookWidget {
     BuildContext context,
     TextEditingController controller,
     AutoCompleteService service,
+    SessionTokenHandler sessionToken,
   ) async {
     try {
-      controller.selection = TextSelection.collapsed(
-        offset: controller.text.length,
+      // Show what the user picked. Previously only the caret was moved, so the
+      // field kept whatever partial text had been typed.
+      final prediction = value.placePrediction;
+      final selectedText =
+          prediction?.text?.text ??
+          prediction?.structuredFormat?.mainText?.text ??
+          controller.text;
+      controller.value = TextEditingValue(
+        text: selectedText,
+        selection: TextSelection.collapsed(offset: selectedText.length),
       );
-      final placeId = value.placePrediction?.placeId ?? "";
+
+      final placeId = prediction?.placeId ?? "";
       if (placeId.isEmpty) {
         mapLogger.i("Place ID is empty, skipping place details.");
         return;
       }
-      await _getPlaceDetails(placeId, context, service);
+      await _getPlaceDetails(placeId, context, service, sessionToken);
       onSelected?.call(value);
-    } catch (e) {
-      mapLogger.e(e);
+    } catch (e, stack) {
+      mapLogger.e(e, stackTrace: stack);
+      onError?.call(
+        MapLocationPickerException(
+          MapPickerErrorKind.unknown,
+          'Failed to handle the selected suggestion: $e',
+          cause: e,
+          stackTrace: stack,
+        ),
+      );
     }
   }
 
   /// Get the details of a place.
+  ///
+  /// Routed through [AutoCompleteService] rather than calling [PlacesAPINew]
+  /// directly, so that the web implementation (Maps JavaScript API) is used on
+  /// web where the REST endpoint is blocked by CORS.
   Future<void> _getPlaceDetails(
     String placeId,
     BuildContext context,
     AutoCompleteService service,
+    SessionTokenHandler sessionToken,
   ) async {
-    try {
-      final places = service.placesApi ?? PlacesAPINew(apiKey: config.apiKey);
-      final response = await places.getDetails(
-        id: placeId,
-        fields: config.placeFields,
-        allFields: config.placesAllFields,
-        filter: config.placeDetailsFilter,
-        instanceFields: config.placeInstanceFields,
-      );
-
-      if (_isErrorResponse(response)) {
-        _showErrorSnackbar(response.error?.error?.message, context);
-        return;
-      }
-      onGetDetails?.call(response.body);
-    } catch (e) {
-      mapLogger.e(e);
-    }
-  }
-
-  /// Check if the response is an error response.
-  bool _isErrorResponse(GoogleHTTPResponse<Place?> response) {
-    final isError = response.error != null && !response.isSuccessful;
-    if (isError) {
-      mapLogger.e(response.error?.error?.toJsonString());
-    }
-    return isError;
-  }
-
-  /// Show an error snackbar.
-  void _showErrorSnackbar(String? message, BuildContext context) {
-    if (context.mounted) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(message ?? "Address not found")));
-    }
+    final place = await service.getDetails(
+      placeId: placeId,
+      apiKey: config.apiKey,
+      fields: config.placeFields,
+      allFields: config.placesAllFields,
+      filter: config.placeDetailsFilter,
+      instanceFields: config.placeInstanceFields,
+      sessionToken: sessionToken,
+    );
+    if (place == null) return;
+    onGetDetails?.call(place);
   }
 }

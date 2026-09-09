@@ -9,5 +9,6 @@ export 'src/autocomplete/autocomplete_service.dart';
 export 'src/autocomplete_view.dart';
 export 'src/configs/map_config.dart';
 export 'src/configs/search_config.dart';
+export 'src/exceptions.dart';
 export 'src/geocoding_service.dart';
 export 'src/map_location_picker.dart';
