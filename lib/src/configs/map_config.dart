@@ -8,23 +8,20 @@ import 'package:map_location_picker/map_location_picker.dart';
 
 part 'map_config.freezed.dart';
 
-typedef SearchBarBuilder = Widget Function(
-  BuildContext context,
-  Widget searchBar,
-)?;
-typedef ConfirmButtonBuilder = Widget Function(
-  BuildContext context,
-  VoidCallback onNext,
-)?;
-typedef BottomCardBuilder = Widget Function(
-  BuildContext context,
-  GeocodingResult? place,
-  List<GeocodingResult> places,
-  String formattedAddress,
-  bool isLoading,
-  VoidCallback onPlaceSelected,
-  Widget searchBar,
-)?;
+typedef SearchBarBuilder =
+    Widget Function(BuildContext context, Widget searchBar)?;
+typedef ConfirmButtonBuilder =
+    Widget Function(BuildContext context, VoidCallback onNext)?;
+typedef BottomCardBuilder =
+    Widget Function(
+      BuildContext context,
+      GeocodingResult? place,
+      List<GeocodingResult> places,
+      String formattedAddress,
+      bool isLoading,
+      VoidCallback onPlaceSelected,
+      Widget searchBar,
+    )?;
 
 @freezed
 abstract class MapLocationPickerConfig with _$MapLocationPickerConfig {

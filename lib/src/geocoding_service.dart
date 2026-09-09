@@ -47,7 +47,7 @@ class GeoCodingConfig {
       response.results?.isNotEmpty ?? false
           ? response.results?.firstOrNull
           : null,
-      response.results ?? <GeocodingResult>[]
+      response.results ?? <GeocodingResult>[],
     );
   }
 

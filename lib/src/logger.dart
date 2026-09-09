@@ -100,7 +100,7 @@ class MapLocationPickerLogger {
   /// Creates a logger.
   /// Defaults to [BlockPrettyFormatter] for clear, separated logging.
   MapLocationPickerLogger(this.tag, {LogFormatter? formatter})
-      : _formatter = formatter ?? BlockPrettyFormatter();
+    : _formatter = formatter ?? BlockPrettyFormatter();
 
   /// Pass error/stackTrace to the formatter to ensure they are included inside the separator blocks.
   void _log(

@@ -152,8 +152,7 @@ class AutoCompleteService {
 
           final suggestions = <Suggestion>[];
           for (int i = 0; i < predictions.length; i++) {
-            final prediction =
-                predictions[i] as _JsAutocompletePrediction;
+            final prediction = predictions[i] as _JsAutocompletePrediction;
             suggestions.add(_convertPrediction(prediction));
           }
           completer.complete(suggestions);

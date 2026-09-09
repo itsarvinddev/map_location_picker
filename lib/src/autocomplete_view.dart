@@ -61,7 +61,8 @@ class PlacesAutocomplete extends HookWidget {
   Widget build(BuildContext context) {
     /// Text controller for the search field.
     final textController = useTextEditingController(
-      text: initialValue?.placePrediction?.text?.text ??
+      text:
+          initialValue?.placePrediction?.text?.text ??
           config.defaultAddressText,
     );
 
@@ -95,20 +96,22 @@ class PlacesAutocomplete extends HookWidget {
       hideOnSelect: config.hideOnSelect,
       hideOnUnfocus: config.hideOnUnfocus,
       constrainWidth: config.constrainWidth,
-      itemSeparatorBuilder: config.itemSeparatorBuilder ??
+      itemSeparatorBuilder:
+          config.itemSeparatorBuilder ??
           (context, index) => const Divider(
-                color: CupertinoColors.opaqueSeparator,
-                thickness: 0.5,
-                indent: 12,
-                endIndent: 12,
-                height: 0,
-              ),
+            color: CupertinoColors.opaqueSeparator,
+            thickness: 0.5,
+            indent: 12,
+            endIndent: 12,
+            height: 0,
+          ),
       listBuilder: config.listBuilder,
       offset: config.offset ?? Offset(0, 12),
       retainOnLoading: config.retainOnLoading,
       showOnFocus: config.showOnFocus,
       suggestionsController: config.suggestionsController,
-      decorationBuilder: config.decorationBuilder ??
+      decorationBuilder:
+          config.decorationBuilder ??
           (context, child) {
             return CustomMapCard(
               radius:
@@ -123,7 +126,8 @@ class PlacesAutocomplete extends HookWidget {
       scrollController: config.scrollController,
       focusNode: config.focusNode,
       hideKeyboardOnDrag: config.hideKeyboardOnDrag,
-      builder: config.builder ??
+      builder:
+          config.builder ??
           (context, controller, focusNode) {
             final child = CupertinoSearchTextField(
               controller: controller,
@@ -134,10 +138,7 @@ class PlacesAutocomplete extends HookWidget {
                 color: cardType == CardType.liquidCard ? null : cardColor,
                 borderRadius: BorderRadius.circular(CustomMapCard.kRadius),
               ),
-              padding: const EdgeInsets.symmetric(
-                horizontal: 12,
-                vertical: 10,
-              ),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
               keyboardType: TextInputType.streetAddress,
             );
             return CustomMapCard(
@@ -159,9 +160,9 @@ class PlacesAutocomplete extends HookWidget {
       final secondaryText =
           content.placePrediction?.structuredFormat?.secondaryText?.text ?? "";
 
-      final style = Theme.of(context).textTheme.titleMedium?.copyWith(
-            color: Colors.grey[600],
-          );
+      final style = Theme.of(
+        context,
+      ).textTheme.titleMedium?.copyWith(color: Colors.grey[600]);
 
       return ListTile(
         contentPadding: const EdgeInsets.symmetric(horizontal: 16),
@@ -175,14 +176,9 @@ class PlacesAutocomplete extends HookWidget {
                     color: Theme.of(context).textTheme.bodyLarge?.color,
                   ),
                 ),
-              TextSpan(
-                text: " ",
-              ),
+              TextSpan(text: " "),
               if (secondaryText.isNotEmpty)
-                TextSpan(
-                  text: secondaryText,
-                  style: style,
-                ),
+                TextSpan(text: secondaryText, style: style),
             ],
           ),
         ),
@@ -220,8 +216,9 @@ class PlacesAutocomplete extends HookWidget {
     AutoCompleteService service,
   ) async {
     try {
-      controller.selection =
-          TextSelection.collapsed(offset: controller.text.length);
+      controller.selection = TextSelection.collapsed(
+        offset: controller.text.length,
+      );
       final placeId = value.placePrediction?.placeId ?? "";
       if (placeId.isEmpty) {
         mapLogger.i("Place ID is empty, skipping place details.");
@@ -272,9 +269,9 @@ class PlacesAutocomplete extends HookWidget {
   /// Show an error snackbar.
   void _showErrorSnackbar(String? message, BuildContext context) {
     if (context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(message ?? "Address not found")),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(message ?? "Address not found")));
     }
   }
 }

@@ -9,10 +9,7 @@ import '../map_location_picker.dart' hide Circle;
 import 'card.dart';
 import 'logger.dart';
 
-enum CardType {
-  defaultCard,
-  liquidCard,
-}
+enum CardType { defaultCard, liquidCard }
 
 /// The main widget for the map location picker.
 class MapLocationPicker extends HookWidget {
@@ -38,8 +35,9 @@ class MapLocationPicker extends HookWidget {
     final position = useState(config.initialPosition);
     final address = useState("");
     final isLoading = useState(false);
-    final mapControllerCompleter =
-        useMemoized(() => Completer<GoogleMapController>());
+    final mapControllerCompleter = useMemoized(
+      () => Completer<GoogleMapController>(),
+    );
     final markers = useState<Set<Marker>>({});
     final geoCodingResult = useState<GeocodingResult?>(null);
     final geoCodingResults = useState<List<GeocodingResult>>([]);
@@ -90,11 +88,9 @@ class MapLocationPicker extends HookWidget {
         cardRadius: config.cardRadius,
         cardBorder: config.cardBorder,
         initialValue: searchConfig?.initialValue,
-        config: searchConfig ??
-            SearchConfig(
-              apiKey: config.apiKey,
-              placesApi: config.placesApi,
-            ),
+        config:
+            searchConfig ??
+            SearchConfig(apiKey: config.apiKey, placesApi: config.placesApi),
         onGetDetails: (details) => _handlePlaceDetails(
           details,
           context,
@@ -159,16 +155,16 @@ class MapLocationPicker extends HookWidget {
                               context: context,
                               backgroundColor: Colors.transparent,
                               barrierColor: Colors.black38,
-                              builder: (context) => _buildMapTypeSelector(
-                                context,
-                                mapType,
-                              ),
+                              builder: (context) =>
+                                  _buildMapTypeSelector(context, mapType),
                             );
                           },
                           tooltip: 'Map Type',
-                          backgroundColor: config.floatingControlsColor ??
+                          backgroundColor:
+                              config.floatingControlsColor ??
                               theme.colorScheme.primary,
-                          foregroundColor: config.floatingControlsIconColor ??
+                          foregroundColor:
+                              config.floatingControlsIconColor ??
                               theme.colorScheme.onPrimary,
                           child: Icon(config.mapTypeIcon ?? Icons.layers),
                         ),
@@ -181,9 +177,11 @@ class MapLocationPicker extends HookWidget {
                           mini: true,
                           elevation: 0,
                           tooltip: config.fabTooltip,
-                          backgroundColor: config.floatingControlsColor ??
+                          backgroundColor:
+                              config.floatingControlsColor ??
                               theme.colorScheme.primary,
-                          foregroundColor: config.floatingControlsIconColor ??
+                          foregroundColor:
+                              config.floatingControlsIconColor ??
                               theme.colorScheme.onPrimary,
                           onPressed: () => _getCurrentLocation(
                             position,
@@ -237,81 +235,82 @@ class MapLocationPicker extends HookWidget {
         child: Stack(
           fit: StackFit.expand,
           children: [
-          /// Google Map View
-          Positioned.fill(
-            child: GoogleMap(
-            initialCameraPosition: CameraPosition(
-              target: position.value,
-              zoom: config.initialZoom,
+            /// Google Map View
+            Positioned.fill(
+              child: GoogleMap(
+                initialCameraPosition: CameraPosition(
+                  target: position.value,
+                  zoom: config.initialZoom,
+                ),
+                onTap: (latLng) => _handleMapTap(
+                  latLng,
+                  mapControllerCompleter,
+                  position,
+                  effectiveGeoCodingService,
+                  address,
+                  isLoading,
+                  geoCodingResult,
+                  geoCodingResults,
+                  markers,
+                  context,
+                ),
+                onMapCreated: (controller) {
+                  mapControllerCompleter.complete(controller);
+                  config.onMapCreated?.call(controller);
+                  if (hasFocus) {
+                    FocusManager.instance.primaryFocus?.unfocus();
+                  }
+                },
+                minMaxZoomPreference: config.minMaxZoomPreference,
+                onCameraMove: (position) {
+                  config.onCameraMove?.call(position);
+                  if (hasFocus) {
+                    FocusManager.instance.primaryFocus?.unfocus();
+                  }
+                },
+                markers: markers.value,
+                myLocationButtonEnabled: config.myLocationButtonEnabled,
+                myLocationEnabled: config.myLocationEnabled,
+                zoomControlsEnabled: config.zoomControlsEnabled,
+                padding: config.padding,
+                compassEnabled: config.compassEnabled,
+                liteModeEnabled: config.liteModeEnabled,
+                mapType: mapType.value,
+                style: config.mapStyle,
+                buildingsEnabled: config.buildingsEnabled,
+                cameraTargetBounds: config.cameraTargetBounds,
+                circles: config.circles,
+                cloudMapId: config.cloudMapId,
+                fortyFiveDegreeImageryEnabled:
+                    config.fortyFiveDegreeImageryEnabled,
+                gestureRecognizers: config.gestureRecognizers,
+                indoorViewEnabled: config.indoorViewEnabled,
+                layoutDirection: config.layoutDirection,
+                mapToolbarEnabled: config.mapToolbarEnabled,
+                onCameraIdle: config.onCameraIdle,
+                onCameraMoveStarted: config.onCameraMoveStarted,
+                onLongPress: config.onLongPress,
+                polygons: config.polygons,
+                polylines: config.polylines,
+                rotateGesturesEnabled: config.rotateGesturesEnabled,
+                scrollGesturesEnabled: config.scrollGesturesEnabled,
+                tileOverlays: config.tileOverlays,
+                tiltGesturesEnabled: config.tiltGesturesEnabled,
+                trafficEnabled: config.trafficEnabled,
+                webGestureHandling: config.webGestureHandling,
+                zoomGesturesEnabled: config.zoomGesturesEnabled,
+                clusterManagers: config.clusterManagers,
+                groundOverlays: config.groundOverlays,
+                heatmaps: config.heatmaps,
+              ),
             ),
-            onTap: (latLng) => _handleMapTap(
-              latLng,
-              mapControllerCompleter,
-              position,
-              effectiveGeoCodingService,
-              address,
-              isLoading,
-              geoCodingResult,
-              geoCodingResults,
-              markers,
-              context,
-            ),
-            onMapCreated: (controller) {
-              mapControllerCompleter.complete(controller);
-              config.onMapCreated?.call(controller);
-              if (hasFocus) {
-                FocusManager.instance.primaryFocus?.unfocus();
-              }
-            },
-            minMaxZoomPreference: config.minMaxZoomPreference,
-            onCameraMove: (position) {
-              config.onCameraMove?.call(position);
-              if (hasFocus) {
-                FocusManager.instance.primaryFocus?.unfocus();
-              }
-            },
-            markers: markers.value,
-            myLocationButtonEnabled: config.myLocationButtonEnabled,
-            myLocationEnabled: config.myLocationEnabled,
-            zoomControlsEnabled: config.zoomControlsEnabled,
-            padding: config.padding,
-            compassEnabled: config.compassEnabled,
-            liteModeEnabled: config.liteModeEnabled,
-            mapType: mapType.value,
-            style: config.mapStyle,
-            buildingsEnabled: config.buildingsEnabled,
-            cameraTargetBounds: config.cameraTargetBounds,
-            circles: config.circles,
-            cloudMapId: config.cloudMapId,
-            fortyFiveDegreeImageryEnabled: config.fortyFiveDegreeImageryEnabled,
-            gestureRecognizers: config.gestureRecognizers,
-            indoorViewEnabled: config.indoorViewEnabled,
-            layoutDirection: config.layoutDirection,
-            mapToolbarEnabled: config.mapToolbarEnabled,
-            onCameraIdle: config.onCameraIdle,
-            onCameraMoveStarted: config.onCameraMoveStarted,
-            onLongPress: config.onLongPress,
-            polygons: config.polygons,
-            polylines: config.polylines,
-            rotateGesturesEnabled: config.rotateGesturesEnabled,
-            scrollGesturesEnabled: config.scrollGesturesEnabled,
-            tileOverlays: config.tileOverlays,
-            tiltGesturesEnabled: config.tiltGesturesEnabled,
-            trafficEnabled: config.trafficEnabled,
-            webGestureHandling: config.webGestureHandling,
-            zoomGesturesEnabled: config.zoomGesturesEnabled,
-            clusterManagers: config.clusterManagers,
-            groundOverlays: config.groundOverlays,
-            heatmaps: config.heatmaps,
-          ),
-          ),
 
-          /// Search view
-          buildSearchView(),
+            /// Search view
+            buildSearchView(),
 
-          /// Floating controls
-          buildFloatingControls(),
-        ],
+            /// Floating controls
+            buildFloatingControls(),
+          ],
         ),
       ),
     );
@@ -333,7 +332,8 @@ class MapLocationPicker extends HookWidget {
           Marker(
             markerId: MarkerId(entry.key),
             position: entry.value,
-            icon: config.customMarkerIcons?[entry.key] ??
+            icon:
+                config.customMarkerIcons?[entry.key] ??
                 BitmapDescriptor.defaultMarker,
             infoWindow:
                 config.customInfoWindows?[entry.key] ?? InfoWindow.noText,
@@ -371,8 +371,9 @@ class MapLocationPicker extends HookWidget {
                 textAlign: TextAlign.start,
                 // style: theme.textTheme.titleMedium,
               ),
-              trailing:
-                  mapType.value == type ? Icon(Icons.check, size: 20) : null,
+              trailing: mapType.value == type
+                  ? Icon(Icons.check, size: 20)
+                  : null,
             ),
             onPressed: () {
               mapType.value = type;
@@ -453,8 +454,10 @@ class MapLocationPicker extends HookWidget {
         locationSettings: config.locationSettings,
       );
 
-      final newPosition =
-          LatLng(currentPosition.latitude, currentPosition.longitude);
+      final newPosition = LatLng(
+        currentPosition.latitude,
+        currentPosition.longitude,
+      );
 
       position.value = newPosition;
       markers.value = _createMarkers(newPosition);
@@ -462,10 +465,7 @@ class MapLocationPicker extends HookWidget {
       final controller = await mapControllerCompleter.future;
       controller.animateCamera(
         CameraUpdate.newCameraPosition(
-          CameraPosition(
-            target: newPosition,
-            zoom: config.initialZoom,
-          ),
+          CameraPosition(target: newPosition, zoom: config.initialZoom),
         ),
       );
       await _getAddressForPosition(
@@ -533,22 +533,22 @@ class MapLocationPicker extends HookWidget {
   ) async {
     isLoading.value = true;
     try {
-      final response = await geoCodingService.reverseGeocode(
-        position,
-      );
+      final response = await geoCodingService.reverseGeocode(position);
       if (!context.mounted) return;
       final result = response.$1;
       final results = response.$2;
 
       if (result != null) {
-        address.value = result.formattedAddress ??
+        address.value =
+            result.formattedAddress ??
             result.formattedAddress ??
             config.noAddressFoundText;
         geoCodingResult.value = result;
         geoCodingResults.value = results;
         config.onAddressDecoded?.call(result);
       } else if (results.isNotEmpty) {
-        address.value = results.first.formattedAddress ??
+        address.value =
+            results.first.formattedAddress ??
             results.first.formattedAddress ??
             config.noAddressFoundText;
         geoCodingResult.value = results.first;
@@ -593,8 +593,10 @@ class MapLocationPicker extends HookWidget {
       final location = details.location;
       if (location != null) {
         if (location.latitude == null || location.longitude == null) return;
-        final newPosition =
-            LatLng(location.latitude ?? 0, location.longitude ?? 0);
+        final newPosition = LatLng(
+          location.latitude ?? 0,
+          location.longitude ?? 0,
+        );
         position.value = newPosition;
         address.value = details.formattedAddress ?? "";
 
@@ -602,10 +604,7 @@ class MapLocationPicker extends HookWidget {
         mapControllerCompleter.future.then((controller) {
           controller.animateCamera(
             CameraUpdate.newCameraPosition(
-              CameraPosition(
-                target: newPosition,
-                zoom: config.initialZoom,
-              ),
+              CameraPosition(target: newPosition, zoom: config.initialZoom),
             ),
           );
           markers.value = _createMarkers(newPosition);

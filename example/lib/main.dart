@@ -56,10 +56,7 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Location Picker'),
-        centerTitle: true,
-      ),
+      appBar: AppBar(title: const Text('Location Picker'), centerTitle: true),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -79,22 +76,21 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
               height: (MediaQuery.of(context).size.height / 5),
               width: MediaQuery.of(context).size.width,
               child: ClipRRect(
-                  borderRadius: BorderRadius.circular(12),
-                  child: (_pickedLocation == null
-                      ? const Center(
-                          child: Text('Select a location to preview'),
-                        )
-                      : Image.network(
-                          googleStaticMapWithMarker(
-                            _pickedLocation!.latitude,
-                            _pickedLocation!.longitude,
-                            18,
-                            apiKey: YOUR_API_KEY,
-                          ),
-                          fit: BoxFit.cover,
-                          width: MediaQuery.of(context).size.width,
-                          height: (MediaQuery.of(context).size.height / 5),
-                        ))),
+                borderRadius: BorderRadius.circular(12),
+                child: (_pickedLocation == null
+                    ? const Center(child: Text('Select a location to preview'))
+                    : Image.network(
+                        googleStaticMapWithMarker(
+                          _pickedLocation!.latitude,
+                          _pickedLocation!.longitude,
+                          18,
+                          apiKey: YOUR_API_KEY,
+                        ),
+                        fit: BoxFit.cover,
+                        width: MediaQuery.of(context).size.width,
+                        height: (MediaQuery.of(context).size.height / 5),
+                      )),
+              ),
             ),
 
             // Formatted Address Section
@@ -138,9 +134,7 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
                   title: "Standard Map Picker",
                   description: "Open map with default settings",
                   onTap: () => _openLocationPicker(
-                    const MapLocationPickerConfig(
-                      apiKey: YOUR_API_KEY,
-                    ),
+                    const MapLocationPickerConfig(apiKey: YOUR_API_KEY),
                   ),
                 ),
 

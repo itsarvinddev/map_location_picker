@@ -57,7 +57,8 @@ class AutoCompleteService {
       sessionToken ??= SessionTokenHandler();
       cancelToken ??= CancelToken();
       final response = await places.searchAutocomplete(
-        filter: filter ??
+        filter:
+            filter ??
             AutocompleteSearchFilter(
               input: query,
               sessionToken: sessionToken.token,

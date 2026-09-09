@@ -36,10 +36,12 @@ class CustomMapCard extends StatelessWidget {
           decoration: BoxDecoration(
             color: color ?? Theme.of(context).colorScheme.surface,
             borderRadius: radius ?? BorderRadius.circular(kRadius + 0.5),
-            border: border ??
+            border:
+                border ??
                 Border.all(
-                    color: Theme.of(context).colorScheme.outlineVariant,
-                    width: 0.5),
+                  color: Theme.of(context).colorScheme.outlineVariant,
+                  width: 0.5,
+                ),
           ),
           child: child,
         ),
@@ -71,20 +73,17 @@ Widget defaultBottomCard(
           children: [
             ListTile(
               title: isLoading
-                  ? const Text(
-                      "Loading address...",
-                      textAlign: TextAlign.start,
-                    )
+                  ? const Text("Loading address...", textAlign: TextAlign.start)
                   : result?.addressComponents?.first.longName != null
-                      ? Text(
+                  ? Text(
+                      (result?.addressComponents?.first.longName ?? "")
+                              .substring(0, 1)
+                              .toUpperCase() +
                           (result?.addressComponents?.first.longName ?? "")
-                                  .substring(0, 1)
-                                  .toUpperCase() +
-                              (result?.addressComponents?.first.longName ?? "")
-                                  .substring(1),
-                          style: theme.textTheme.titleMedium,
-                        )
-                      : null,
+                              .substring(1),
+                      style: theme.textTheme.titleMedium,
+                    )
+                  : null,
               subtitle: isLoading
                   ? const Text(
                       "Fetching location details.",
@@ -143,11 +142,7 @@ Widget defaultBottomCard(
   );
 }
 
-BoxDecoration buildBoxDecoration(
-  BuildContext context,
-  int index,
-  bool isLast,
-) {
+BoxDecoration buildBoxDecoration(BuildContext context, int index, bool isLast) {
   return BoxDecoration(
     color: CupertinoColors.systemFill,
     borderRadius: BorderRadius.only(
@@ -159,10 +154,7 @@ BoxDecoration buildBoxDecoration(
     border: Border(
       bottom: isLast
           ? BorderSide.none
-          : BorderSide(
-              color: CupertinoColors.opaqueSeparator,
-              width: 0.5,
-            ),
+          : BorderSide(color: CupertinoColors.opaqueSeparator, width: 0.5),
     ),
   );
 }

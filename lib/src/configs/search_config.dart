@@ -6,14 +6,14 @@ import 'package:google_maps_apis/places_new.dart';
 
 part 'search_config.freezed.dart';
 
-typedef TextFieldBuilder = Widget Function(
-    BuildContext, TextEditingController, FocusNode)?;
+typedef TextFieldBuilder =
+    Widget Function(BuildContext, TextEditingController, FocusNode)?;
 typedef ItemBuilder = Widget Function(BuildContext, Suggestion)?;
 typedef OnSelected = void Function(Suggestion)?;
 typedef ErrorBuilder = Widget Function(BuildContext, Object)?;
 typedef LoadingBuilder = Widget Function(BuildContext)?;
-typedef TransitionBuilder = Widget Function(
-    BuildContext, Animation<double>, Widget)?;
+typedef TransitionBuilder =
+    Widget Function(BuildContext, Animation<double>, Widget)?;
 typedef ItemSeparatorBuilder = Widget Function(BuildContext, int)?;
 typedef ListBuilder = Widget Function(BuildContext, List<Widget>)?;
 typedef DecorationBuilder = Widget Function(BuildContext, Widget)?;
@@ -79,7 +79,8 @@ abstract class SearchConfig with _$SearchConfig {
       'This field is ignored. Use hideOnUnfocus instead. '
       'Will be removed in map_location_picker 5.0.0.',
     )
-    @Default(true) bool hideWithKeyboard,
+    @Default(true)
+    bool hideWithKeyboard,
 
     /// Whether the suggestions box is constrained to the width of the search
     /// field. Set to `false` to let the suggestions box size itself.
