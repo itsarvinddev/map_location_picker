@@ -1,0 +1,113 @@
+name: CI
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  analyze:
+    name: Analyze & test (Flutter ${{ matrix.flutter }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        # `min` pins the lowest Flutter release this package claims to support,
+        # so a dependency bump that silently raises the floor fails CI.
+        flutter: [stable]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: ${{ matrix.flutter }}
+          cache: true
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Verify formatting
+        run: dart format --output=none --set-exit-if-changed .
+
+      - name: Analyze
+        run: flutter analyze --fatal-infos
+
+      - name: Verify generated code is up to date
+        run: |
+          dart run build_runner build
+          git diff --exit-code -- '*.freezed.dart' '*.g.dart'
+
+      - name: Run tests
+        run: flutter test --coverage
+
+      - name: Upload coverage
+        if: matrix.flutter == 'stable'
+        uses: codecov/codecov-action@v4
+        with:
+          files: coverage/lcov.info
+        continue-on-error: true
+
+  build-example:
+    name: Build example (${{ matrix.target }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            target: apk
+            build: flutter build apk --debug
+          - os: ubuntu-latest
+            target: web
+            build: flutter build web
+          - os: ubuntu-latest
+            target: web-wasm
+            build: flutter build web --wasm
+          - os: macos-latest
+            target: ios
+            build: flutter build ios --debug --no-codesign
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        if: matrix.target == 'apk'
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Build
+        working-directory: example
+        run: |
+          flutter pub get
+          ${{ matrix.build }}
+
+  publish-check:
+    name: pub.dev score & dry-run
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - run: flutter pub get
+
+      - name: Publish dry-run
+        run: flutter pub publish --dry-run
+
+      - name: pana score
+        run: |
+          dart pub global activate pana
+          dart pub global run pana --no-warning --exit-code-threshold 0 .
