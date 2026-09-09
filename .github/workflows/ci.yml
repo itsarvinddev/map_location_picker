@@ -12,21 +12,31 @@ concurrency:
 
 jobs:
   analyze:
-    name: Analyze & test (Flutter ${{ matrix.flutter }})
+    name: Analyze & test (${{ matrix.id }})
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
-        # 3.38.0 is the floor declared in pubspec.yaml. Pinning it here is the
-        # point: the floor is only a claim until something compiles against it.
-        # A >=3.32 floor shipped once precisely because CI only ran `stable`.
-        flutter: ['3.38.0', 'stable']
+        include:
+          # `min` is the floor declared in pubspec.yaml. Pinning it here is the
+          # point: a floor is only a claim until something compiles against it.
+          # An unsatisfiable >=3.32 floor shipped once precisely because CI ran
+          # nothing but the latest stable.
+          - id: min
+            flutterVersion: '3.38.0'
+          # Empty version means "latest release on the channel".
+          - id: stable
+            flutterVersion: ''
     steps:
       - uses: actions/checkout@v4
 
       - uses: subosito/flutter-action@v2
         with:
-          channel: ${{ matrix.flutter }}
+          # `channel` only accepts stable/beta/master; an exact release goes in
+          # `flutter-version`. Passing a version as `channel` fails with
+          # "Unable to determine Flutter version for channel: 3.38.0".
+          channel: stable
+          flutter-version: ${{ matrix.flutterVersion }}
           cache: true
 
       - name: Install dependencies
@@ -35,14 +45,14 @@ jobs:
       - name: Resolve lower bounds
         # Compiles against the *lowest* allowed version of every dependency, so
         # a `>=` bound that no longer builds fails here instead of in an app.
-        if: matrix.flutter == '3.38.0'
+        if: matrix.id == 'min'
         run: |
           flutter pub downgrade
           flutter analyze --no-fatal-infos
           flutter pub get
 
       - name: Verify formatting
-        if: matrix.flutter == 'stable'
+        if: matrix.id == 'stable'
         run: dart format --output=none --set-exit-if-changed .
 
       - name: Analyze
@@ -51,7 +61,7 @@ jobs:
       - name: Verify generated code is up to date
         # freezed and build_runner are pinned exactly so this diff is
         # reproducible across contributors.
-        if: matrix.flutter == 'stable'
+        if: matrix.id == 'stable'
         run: |
           dart run build_runner build
           git diff --exit-code -- '*.freezed.dart' '*.g.dart'
@@ -60,7 +70,7 @@ jobs:
         run: flutter test --coverage
 
       - name: Upload coverage
-        if: matrix.flutter == 'stable'
+        if: matrix.id == 'stable'
         uses: codecov/codecov-action@v4
         with:
           files: coverage/lcov.info
@@ -120,6 +130,12 @@ jobs:
 
       - name: Publish dry-run
         run: flutter pub publish --dry-run
+
+      - name: Install pana's screenshot tooling
+        # pana validates `screenshots:` by generating webp thumbnails with
+        # ImageMagick and cwebp. Without them it reports "No such file or
+        # directory" for every screenshot and drops 10 points.
+        run: sudo apt-get update && sudo apt-get install -y imagemagick webp
 
       - name: pana score
         # Threshold is "points we are allowed to lose". The package currently
