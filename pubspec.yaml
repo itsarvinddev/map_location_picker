@@ -64,4 +64,7 @@ dev_dependencies:
     freezed: 3.2.5
     build_runner: 2.15.1
     lints: ^6.1.0
+    # For faking GeolocatorPlatform in tests.
+    geolocator_platform_interface: ^4.2.3
+    plugin_platform_interface: ^2.1.8
 
