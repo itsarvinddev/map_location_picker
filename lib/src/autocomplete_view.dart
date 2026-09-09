@@ -94,7 +94,7 @@ class PlacesAutocomplete extends HookWidget {
       constraints: config.constraints ?? BoxConstraints(maxHeight: 500),
       hideOnSelect: config.hideOnSelect,
       hideOnUnfocus: config.hideOnUnfocus,
-      hideWithKeyboard: config.hideWithKeyboard,
+      constrainWidth: config.constrainWidth,
       itemSeparatorBuilder: config.itemSeparatorBuilder ??
           (context, index) => const Divider(
                 color: CupertinoColors.opaqueSeparator,

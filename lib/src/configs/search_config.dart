@@ -73,7 +73,19 @@ abstract class SearchConfig with _$SearchConfig {
     @Default(null) BoxConstraints? constraints,
     @Default(true) bool hideOnSelect,
     @Default(true) bool hideOnUnfocus,
+    @Deprecated(
+      'flutter_typeahead 6.0.0 removed hideWithKeyboard because closing the '
+      'keyboard also drops focus, which hideOnUnfocus already handles. '
+      'This field is ignored. Use hideOnUnfocus instead. '
+      'Will be removed in map_location_picker 5.0.0.',
+    )
     @Default(true) bool hideWithKeyboard,
+
+    /// Whether the suggestions box is constrained to the width of the search
+    /// field. Set to `false` to let the suggestions box size itself.
+    ///
+    /// Added in flutter_typeahead 6.0.0.
+    @Default(true) bool constrainWidth,
     @Default(null) ItemSeparatorBuilder itemSeparatorBuilder,
     @Default(null) ListBuilder listBuilder,
     @Default(null) Offset? offset,
