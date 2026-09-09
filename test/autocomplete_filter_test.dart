@@ -87,21 +87,27 @@ void main() {
       expect(first, second, reason: 'keystrokes must share one session token');
     });
 
-    test('caching place details concludes the session and rotates the token', () {
-      final handler = SessionTokenHandler();
-      final duringSearch = handler.token;
+    test(
+      'caching place details concludes the session and rotates the token',
+      () {
+        final handler = SessionTokenHandler();
+        final duringSearch = handler.token;
 
-      handler.cachePlaceDetails(
-        id: 'place-1',
-        data: Place(id: 'place-1', formattedAddress: '1 Test St'),
-      );
+        handler.cachePlaceDetails(
+          id: 'place-1',
+          data: Place(id: 'place-1', formattedAddress: '1 Test St'),
+        );
 
-      expect(
-        handler.token,
-        isNot(duringSearch),
-        reason: 'a concluded session must not reuse its token',
-      );
-      expect(handler.placeFromCache('place-1')?.formattedAddress, '1 Test St');
-    });
+        expect(
+          handler.token,
+          isNot(duringSearch),
+          reason: 'a concluded session must not reuse its token',
+        );
+        expect(
+          handler.placeFromCache('place-1')?.formattedAddress,
+          '1 Test St',
+        );
+      },
+    );
   });
 }

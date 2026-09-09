@@ -1,633 +1,457 @@
-import 'dart:async';
-
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
-import 'package:google_maps_apis/places_new.dart' hide LatLng;
 
 import '../map_location_picker.dart' hide Circle;
 import 'card.dart';
-import 'logger.dart';
 
-enum CardType { defaultCard, liquidCard }
+/// The visual treatment of the search bar and bottom card.
+enum CardType {
+  /// An opaque surface-coloured card.
+  defaultCard,
 
-/// The main widget for the map location picker.
-class MapLocationPicker extends HookWidget {
-  /// The configuration for the map location picker.
+  /// A translucent, blurred card that lets the map show through.
+  liquidCard,
+}
+
+/// A full-screen Google Maps location picker.
+///
+/// Wraps [MapLocationPickerView] in a [Scaffold]. Push it as a route and read
+/// the result from [MapLocationPickerConfig.onNext]:
+///
+/// ```dart
+/// Navigator.push(context, MaterialPageRoute(
+///   builder: (_) => MapLocationPicker(
+///     config: MapLocationPickerConfig(
+///       apiKey: 'YOUR_API_KEY',
+///       onNext: (result) => Navigator.pop(context, result),
+///     ),
+///   ),
+/// ));
+/// ```
+///
+/// To embed the picker inside a screen you already have — a sheet, a tab, a
+/// sized box — use [MapLocationPickerView] instead, which omits the [Scaffold].
+/// Nesting this widget inside a `Column` or `SingleChildScrollView` gives the
+/// inner [Scaffold] unbounded constraints and renders it squashed into a
+/// corner.
+class MapLocationPicker extends StatelessWidget {
+  /// Map, UI and callback configuration.
   final MapLocationPickerConfig config;
 
-  /// The configuration for the search autocomplete.
+  /// Configuration for the search field. When null, one is derived from
+  /// [config] so the API key is never lost.
   final SearchConfig? searchConfig;
 
-  /// The geocoding service to use for the map location picker.
+  /// A geocoding client to use instead of the one derived from [config].
   final GeoCodingConfig? geoCodingConfig;
 
+  /// Drives the picker. When null, one is created and disposed internally.
+  final MapLocationPickerController? controller;
+
+  /// Creates a full-screen picker.
   const MapLocationPicker({
     super.key,
     required this.config,
     this.searchConfig,
     this.geoCodingConfig,
+    this.controller,
   });
 
   @override
   Widget build(BuildContext context) {
-    /// State management
-    final position = useState(config.initialPosition);
-    final address = useState("");
-    final isLoading = useState(false);
-    final mapControllerCompleter = useMemoized(
-      () => Completer<GoogleMapController>(),
+    return Scaffold(
+      extendBodyBehindAppBar: true,
+      extendBody: true,
+      backgroundColor: config.cardColor,
+      body: MapLocationPickerView(
+        config: config,
+        searchConfig: searchConfig,
+        geoCodingConfig: geoCodingConfig,
+        controller: controller,
+      ),
     );
-    final markers = useState<Set<Marker>>({});
-    final geoCodingResult = useState<GeocodingResult?>(null);
-    final geoCodingResults = useState<List<GeocodingResult>>([]);
-    final mapType = useState(config.initialMapType);
+  }
+}
 
-    final effectiveGeoCodingService = useMemoized(
-      () =>
-          geoCodingConfig ??
-          GeoCodingConfig(
-            apiKey: config.apiKey,
-            language: config.language,
-            httpClient: config.geocodingHttpClient,
-            apiHeaders: config.geocodingApiHeaders,
-            baseUrl: config.geocodingBaseUrl,
-            locationType: config.geocodingLocationType ?? const [],
-            resultType: config.geocodingResultType ?? const [],
-          ),
-    );
+/// The picker without a [Scaffold], for embedding in an existing screen.
+///
+/// Must be given bounded constraints — put it in a [SizedBox], an [Expanded],
+/// or a [Scaffold] body:
+///
+/// ```dart
+/// SizedBox(
+///   height: 420,
+///   child: MapLocationPickerView(config: myConfig),
+/// )
+/// ```
+class MapLocationPickerView extends HookWidget {
+  /// Map, UI and callback configuration.
+  final MapLocationPickerConfig config;
 
-    /// Initialize map
-    useEffect(() {
-      if (!context.mounted) return;
-      if (config.initialPosition == const LatLng(0, 0)) return;
-      Future.microtask(() {
-        markers.value = _createMarkers(position.value);
-        _getAddressForPosition(
-          position.value,
-          effectiveGeoCodingService,
-          address,
-          isLoading,
-          geoCodingResult,
-          geoCodingResults,
-          context,
-        );
-      });
-      return;
-    }, const []);
+  /// Configuration for the search field. When null, one is derived from
+  /// [config].
+  final SearchConfig? searchConfig;
 
-    final theme = Theme.of(context);
-    final isKeyboardVisible = MediaQuery.of(context).viewInsets.bottom > 0;
-    final shouldShowBottomCard =
-        (!isKeyboardVisible || !config.hideBottomCardOnKeyboard);
+  /// A geocoding client to use instead of the one derived from [config].
+  final GeoCodingConfig? geoCodingConfig;
 
-    Widget buildSearchView() {
-      Widget searchBar = PlacesAutocomplete(
-        cardType: config.cardType,
-        cardColor: config.cardColor,
-        cardRadius: config.cardRadius,
-        cardBorder: config.cardBorder,
-        initialValue: searchConfig?.initialValue,
-        config:
-            searchConfig ??
-            SearchConfig(apiKey: config.apiKey, placesApi: config.placesApi),
-        onGetDetails: (details) => _handlePlaceDetails(
-          details,
-          context,
-          position,
-          mapControllerCompleter,
-          address,
-          effectiveGeoCodingService,
-          isLoading,
-          geoCodingResult,
-          geoCodingResults,
-          markers,
-        ),
+  /// Drives the picker. When null, one is created and disposed internally.
+  final MapLocationPickerController? controller;
+
+  /// Creates an embeddable picker.
+  const MapLocationPickerView({
+    super.key,
+    required this.config,
+    this.searchConfig,
+    this.geoCodingConfig,
+    this.controller,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    // An internally-owned controller is created once and disposed with the
+    // widget. A caller-supplied one is left alone.
+    final ownedController = useMemoized(() {
+      if (controller != null) return null;
+      return MapLocationPickerController(
+        config: config,
+        geoCodingConfig: geoCodingConfig,
       );
+    }, [controller]);
+    useEffect(() => ownedController?.dispose, [ownedController]);
 
-      /// Search Bar
-      return config.searchBarBuilder?.call(context, searchBar) ??
+    final ctrl = controller ?? ownedController!;
+
+    // Keep the controller's view of the config current without moving the pin.
+    useEffect(() {
+      ctrl.updateConfig(config, geoCodingConfig: geoCodingConfig);
+      return null;
+    }, [config, geoCodingConfig, ctrl]);
+
+    // Resolve the initial address once. LatLng(0,0) is a legitimate coordinate
+    // in the Gulf of Guinea, so `skipInitialGeocode` is the opt-out rather
+    // than treating (0,0) as a magic "unset" value.
+    useEffect(() {
+      if (!config.skipInitialGeocode) {
+        ctrl.refreshAddress();
+      }
+      return null;
+    }, [ctrl]);
+
+    return ListenableBuilder(
+      listenable: ctrl,
+      builder: (context, _) => _buildContent(context, ctrl),
+    );
+  }
+
+  Widget _buildContent(BuildContext context, MapLocationPickerController ctrl) {
+    final theme = Theme.of(context);
+    // sizeOf/viewInsetsOf subscribe to just that slice of MediaQuery, so an
+    // unrelated change (text scale, orientation) does not rebuild the map.
+    final isKeyboardVisible = MediaQuery.viewInsetsOf(context).bottom > 0;
+    final showBottomCard =
+        !isKeyboardVisible || !config.hideBottomCardOnKeyboard;
+
+    // Built once per frame. Handing a Positioned to bottomCardBuilder used to
+    // trip "Positioned widgets must be placed inside Stack widgets", and
+    // calling the builder twice created two live search fields.
+    final searchBar = _buildSearchBar(context, ctrl);
+
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        _buildMap(context, ctrl),
+        if (config.showSearchBar)
           Positioned(
             top: 0,
             left: 0,
             right: 0,
             child: SafeArea(
+              bottom: false,
               child: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 12),
-                child: searchBar,
+                child:
+                    config.searchBarBuilder?.call(context, searchBar) ??
+                    searchBar,
               ),
             ),
-          );
-    }
+          ),
+        Positioned(
+          bottom: 0,
+          left: 0,
+          right: 0,
+          child: _buildControls(
+            context,
+            ctrl,
+            theme,
+            showBottomCard,
+            searchBar,
+          ),
+        ),
+      ],
+    );
+  }
 
-    Widget buildFloatingControls() {
-      /// Floating Controls
-      return Positioned(
-        bottom: 0,
-        left: 0,
-        right: 0,
-        child: MediaQuery.removePadding(
-          context: context,
-          removeBottom: false,
-          removeTop: true,
-          removeLeft: true,
-          removeRight: true,
+  Widget _buildSearchBar(
+    BuildContext context,
+    MapLocationPickerController ctrl,
+  ) {
+    // Inheriting apiKey/placesApi means supplying a searchConfig no longer
+    // silently blanks the key and leaves autocomplete permanently empty.
+    final effectiveSearchConfig = searchConfig == null
+        ? SearchConfig(apiKey: config.apiKey, placesApi: config.placesApi)
+        : searchConfig!.copyWith(
+            apiKey: searchConfig!.apiKey.isEmpty
+                ? config.apiKey
+                : searchConfig!.apiKey,
+            placesApi: searchConfig!.placesApi ?? config.placesApi,
+          );
+
+    return PlacesAutocomplete(
+      cardType: config.cardType,
+      cardColor: config.cardColor,
+      cardRadius: config.cardRadius,
+      cardBorder: config.cardBorder,
+      initialValue: effectiveSearchConfig.initialValue,
+      config: effectiveSearchConfig,
+      onError: config.onError,
+      onGetDetails: ctrl.selectPlace,
+    );
+  }
+
+  Widget _buildMap(BuildContext context, MapLocationPickerController ctrl) {
+    return GoogleMap(
+      initialCameraPosition: CameraPosition(
+        target: config.initialPosition,
+        zoom: config.initialZoom,
+      ),
+      onTap: (latLng) =>
+          ctrl.moveTo(latLng, reason: PositionChangeReason.mapTap),
+      onMapCreated: ctrl.attachMap,
+      minMaxZoomPreference: config.minMaxZoomPreference,
+      onCameraMove: config.onCameraMove,
+      markers: _createMarkers(ctrl),
+      myLocationButtonEnabled: config.myLocationButtonEnabled,
+      myLocationEnabled: config.myLocationEnabled,
+      zoomControlsEnabled: config.zoomControlsEnabled,
+      // Keeps the Google logo and the "terms" link clear of the bottom card,
+      // which is a Maps Platform terms-of-service requirement.
+      padding: config.padding == EdgeInsets.zero
+          ? EdgeInsets.only(bottom: config.mapBottomInset)
+          : config.padding,
+      compassEnabled: config.compassEnabled,
+      liteModeEnabled: config.liteModeEnabled,
+      mapType: ctrl.mapType,
+      style: config.mapStyle,
+      buildingsEnabled: config.buildingsEnabled,
+      cameraTargetBounds: config.cameraTargetBounds,
+      circles: config.circles,
+      // `mapId` only exists from google_maps_flutter 2.15, and the dependency
+      // range deliberately reaches back to 2.13.1 so apps on older Flutter can
+      // still resolve this package. Revisit when that floor is raised.
+      // ignore: deprecated_member_use
+      cloudMapId: config.cloudMapId,
+      fortyFiveDegreeImageryEnabled: config.fortyFiveDegreeImageryEnabled,
+      gestureRecognizers: config.gestureRecognizers,
+      indoorViewEnabled: config.indoorViewEnabled,
+      layoutDirection: config.layoutDirection,
+      mapToolbarEnabled: config.mapToolbarEnabled,
+      onCameraIdle: config.onCameraIdle,
+      onCameraMoveStarted: config.onCameraMoveStarted,
+      onLongPress: config.onLongPress,
+      polygons: config.polygons,
+      polylines: config.polylines,
+      rotateGesturesEnabled: config.rotateGesturesEnabled,
+      scrollGesturesEnabled: config.scrollGesturesEnabled,
+      tileOverlays: config.tileOverlays,
+      tiltGesturesEnabled: config.tiltGesturesEnabled,
+      trafficEnabled: config.trafficEnabled,
+      webGestureHandling: config.webGestureHandling,
+      zoomGesturesEnabled: config.zoomGesturesEnabled,
+      clusterManagers: config.clusterManagers,
+      groundOverlays: config.groundOverlays,
+      heatmaps: config.heatmaps,
+    );
+  }
+
+  Widget _buildControls(
+    BuildContext context,
+    MapLocationPickerController ctrl,
+    ThemeData theme,
+    bool showBottomCard,
+    Widget searchBar,
+  ) {
+    final strings = config.strings;
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      mainAxisAlignment: MainAxisAlignment.end,
+      crossAxisAlignment: CrossAxisAlignment.end,
+      children: [
+        Padding(
+          padding: const EdgeInsets.only(right: 6),
           child: Column(
             mainAxisSize: MainAxisSize.min,
-            mainAxisAlignment: MainAxisAlignment.end,
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
-              Padding(
-                padding: const EdgeInsets.only(right: 6),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  mainAxisAlignment: MainAxisAlignment.end,
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
-                    /// Map Type Button
-                    config.mapTypeButton ??
-                        FloatingActionButton(
-                          heroTag: "map_type_button",
-                          mini: true,
-                          elevation: 0,
-                          onPressed: () {
-                            showModalBottomSheet(
-                              context: context,
-                              backgroundColor: Colors.transparent,
-                              barrierColor: Colors.black38,
-                              builder: (context) =>
-                                  _buildMapTypeSelector(context, mapType),
-                            );
-                          },
-                          tooltip: 'Map Type',
-                          backgroundColor:
-                              config.floatingControlsColor ??
-                              theme.colorScheme.primary,
-                          foregroundColor:
-                              config.floatingControlsIconColor ??
-                              theme.colorScheme.onPrimary,
-                          child: Icon(config.mapTypeIcon ?? Icons.layers),
-                        ),
-                    const SizedBox(height: 8),
-
-                    /// Location Button
-                    config.locationButton ??
-                        FloatingActionButton(
-                          heroTag: "location_button",
-                          mini: true,
-                          elevation: 0,
-                          tooltip: config.fabTooltip,
-                          backgroundColor:
-                              config.floatingControlsColor ??
-                              theme.colorScheme.primary,
-                          foregroundColor:
-                              config.floatingControlsIconColor ??
-                              theme.colorScheme.onPrimary,
-                          onPressed: () => _getCurrentLocation(
-                            position,
-                            mapControllerCompleter,
-                            effectiveGeoCodingService,
-                            address,
-                            isLoading,
-                            geoCodingResult,
-                            geoCodingResults,
-                            markers,
-                            context,
-                          ),
-                          child: Icon(config.locationIcon ?? Icons.my_location),
-                        ),
-                  ],
-                ),
-              ),
-
-              /// Bottom Card
-              if (shouldShowBottomCard)
-                config.bottomCardBuilder?.call(
-                      context,
-                      geoCodingResult.value,
-                      geoCodingResults.value,
-                      address.value,
-                      isLoading.value,
-                      () => _handleNext(context, geoCodingResult.value),
-                      buildSearchView(),
-                    ) ??
-                    defaultBottomCard(
-                      context,
-                      geoCodingResult.value,
-                      address.value,
-                      isLoading.value,
-                      geoCodingResults.value,
-                      config,
-                      () => _handleNext(context, geoCodingResult.value),
+              if (config.showMapTypeButton)
+                config.mapTypeButton ??
+                    Semantics(
+                      button: true,
+                      label: strings.mapTypeTooltip,
+                      child: FloatingActionButton(
+                        heroTag: 'map_location_picker_map_type',
+                        mini: true,
+                        elevation: 0,
+                        tooltip: strings.mapTypeTooltip,
+                        backgroundColor:
+                            config.floatingControlsColor ??
+                            theme.colorScheme.primary,
+                        foregroundColor:
+                            config.floatingControlsIconColor ??
+                            theme.colorScheme.onPrimary,
+                        onPressed: () => _showMapTypeSelector(context, ctrl),
+                        child: Icon(config.mapTypeIcon ?? Icons.layers),
+                      ),
+                    ),
+              if (config.showMapTypeButton && config.showMyLocationButton)
+                const SizedBox(height: 8),
+              if (config.showMyLocationButton)
+                config.locationButton ??
+                    Semantics(
+                      button: true,
+                      label: config.fabTooltip,
+                      child: FloatingActionButton(
+                        heroTag: 'map_location_picker_my_location',
+                        mini: true,
+                        elevation: 0,
+                        tooltip: config.fabTooltip,
+                        backgroundColor:
+                            config.floatingControlsColor ??
+                            theme.colorScheme.primary,
+                        foregroundColor:
+                            config.floatingControlsIconColor ??
+                            theme.colorScheme.onPrimary,
+                        onPressed: ctrl.goToCurrentLocation,
+                        child: Icon(config.locationIcon ?? Icons.my_location),
+                      ),
                     ),
             ],
           ),
         ),
-      );
-    }
-
-    final hasFocus = FocusManager.instance.primaryFocus?.hasFocus ?? false;
-    return Scaffold(
-      extendBodyBehindAppBar: true,
-      extendBody: true,
-      backgroundColor: config.cardColor,
-      body: SizedBox.expand(
-        child: Stack(
-          fit: StackFit.expand,
-          children: [
-            /// Google Map View
-            Positioned.fill(
-              child: GoogleMap(
-                initialCameraPosition: CameraPosition(
-                  target: position.value,
-                  zoom: config.initialZoom,
-                ),
-                onTap: (latLng) => _handleMapTap(
-                  latLng,
-                  mapControllerCompleter,
-                  position,
-                  effectiveGeoCodingService,
-                  address,
-                  isLoading,
-                  geoCodingResult,
-                  geoCodingResults,
-                  markers,
-                  context,
-                ),
-                onMapCreated: (controller) {
-                  mapControllerCompleter.complete(controller);
-                  config.onMapCreated?.call(controller);
-                  if (hasFocus) {
-                    FocusManager.instance.primaryFocus?.unfocus();
-                  }
-                },
-                minMaxZoomPreference: config.minMaxZoomPreference,
-                onCameraMove: (position) {
-                  config.onCameraMove?.call(position);
-                  if (hasFocus) {
-                    FocusManager.instance.primaryFocus?.unfocus();
-                  }
-                },
-                markers: markers.value,
-                myLocationButtonEnabled: config.myLocationButtonEnabled,
-                myLocationEnabled: config.myLocationEnabled,
-                zoomControlsEnabled: config.zoomControlsEnabled,
-                padding: config.padding,
-                compassEnabled: config.compassEnabled,
-                liteModeEnabled: config.liteModeEnabled,
-                mapType: mapType.value,
-                style: config.mapStyle,
-                buildingsEnabled: config.buildingsEnabled,
-                cameraTargetBounds: config.cameraTargetBounds,
-                circles: config.circles,
-                cloudMapId: config.cloudMapId,
-                fortyFiveDegreeImageryEnabled:
-                    config.fortyFiveDegreeImageryEnabled,
-                gestureRecognizers: config.gestureRecognizers,
-                indoorViewEnabled: config.indoorViewEnabled,
-                layoutDirection: config.layoutDirection,
-                mapToolbarEnabled: config.mapToolbarEnabled,
-                onCameraIdle: config.onCameraIdle,
-                onCameraMoveStarted: config.onCameraMoveStarted,
-                onLongPress: config.onLongPress,
-                polygons: config.polygons,
-                polylines: config.polylines,
-                rotateGesturesEnabled: config.rotateGesturesEnabled,
-                scrollGesturesEnabled: config.scrollGesturesEnabled,
-                tileOverlays: config.tileOverlays,
-                tiltGesturesEnabled: config.tiltGesturesEnabled,
-                trafficEnabled: config.trafficEnabled,
-                webGestureHandling: config.webGestureHandling,
-                zoomGesturesEnabled: config.zoomGesturesEnabled,
-                clusterManagers: config.clusterManagers,
-                groundOverlays: config.groundOverlays,
-                heatmaps: config.heatmaps,
+        if (showBottomCard)
+          config.bottomCardBuilder?.call(
+                context,
+                ctrl.result,
+                ctrl.results,
+                ctrl.address,
+                ctrl.isLoading,
+                ctrl.confirm,
+                searchBar,
+              ) ??
+              defaultBottomCard(
+                context,
+                ctrl.result,
+                ctrl.address,
+                ctrl.isLoading,
+                ctrl.results,
+                config,
+                ctrl.confirm,
+                onResultSelected: ctrl.selectResult,
               ),
-            ),
-
-            /// Search view
-            buildSearchView(),
-
-            /// Floating controls
-            buildFloatingControls(),
-          ],
-        ),
-      ),
+      ],
     );
   }
 
-  Set<Marker> _createMarkers(LatLng position) {
+  Set<Marker> _createMarkers(MapLocationPickerController ctrl) {
+    const mainId = MarkerId('main');
     final markers = <Marker>{
       Marker(
-        markerId: const MarkerId("main"),
-        position: position,
+        markerId: mainId,
+        position: ctrl.position,
         icon: config.mainMarkerIcon ?? BitmapDescriptor.defaultMarker,
+        draggable: config.draggableMarker,
+        onDragEnd: config.draggableMarker
+            ? (latLng) =>
+                  ctrl.moveTo(latLng, reason: PositionChangeReason.markerDrag)
+            : null,
       ),
     };
 
-    // Add additional markers
-    if (config.additionalMarkers != null) {
-      for (final entry in config.additionalMarkers!.entries) {
-        markers.add(
-          Marker(
-            markerId: MarkerId(entry.key),
-            position: entry.value,
-            icon:
-                config.customMarkerIcons?[entry.key] ??
-                BitmapDescriptor.defaultMarker,
-            infoWindow:
-                config.customInfoWindows?[entry.key] ?? InfoWindow.noText,
-            onTap: config.onMarkerTapped?[entry.key],
-          ),
-        );
-      }
+    for (final entry
+        in (config.additionalMarkers ?? const <String, LatLng>{}).entries) {
+      // google_maps_flutter asserts on duplicate ids, so a caller using "main"
+      // would otherwise crash the map.
+      if (entry.key == 'main') continue;
+      markers.add(
+        Marker(
+          markerId: MarkerId(entry.key),
+          position: entry.value,
+          icon:
+              config.customMarkerIcons?[entry.key] ??
+              BitmapDescriptor.defaultMarker,
+          infoWindow: config.customInfoWindows?[entry.key] ?? InfoWindow.noText,
+          onTap: config.onMarkerTapped?[entry.key],
+        ),
+      );
     }
 
     return markers;
   }
 
-  Widget _buildMapTypeSelector(
+  void _showMapTypeSelector(
     BuildContext context,
-    ValueNotifier<MapType> mapType,
+    MapLocationPickerController ctrl,
   ) {
-    final mapTypeValues = MapType.values.where((type) => type != MapType.none);
-    return Material(
-      type: MaterialType.transparency,
-      elevation: 0,
-      borderRadius:
-          config.cardRadius ?? BorderRadius.circular(CustomMapCard.kRadius),
-      child: CupertinoActionSheet(
-        title: Text("Map type"),
-        message: Text("Select the map type you want to see."),
-        actions: mapTypeValues.map((type) {
-          return CupertinoActionSheetAction(
-            child: CupertinoListTile(
-              padding: EdgeInsets.zero,
-              leading: Icon(_mapTypeIcon(type), size: 20),
-              title: Text(
-                _mapTypeName(type),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                textAlign: TextAlign.start,
-                // style: theme.textTheme.titleMedium,
-              ),
-              trailing: mapType.value == type
-                  ? Icon(Icons.check, size: 20)
-                  : null,
-            ),
-            onPressed: () {
-              mapType.value = type;
-              config.onMapTypeChanged?.call(type);
-              Navigator.pop(context);
-            },
-          );
-        }).toList(),
-        cancelButton: CupertinoButton(
-          child: Text("Cancel"),
-          minimumSize: const Size(double.infinity, 40),
-          padding: const EdgeInsets.symmetric(horizontal: 16),
-          onPressed: () => Navigator.pop(context),
+    final strings = config.strings;
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      barrierColor: Colors.black38,
+      builder: (sheetContext) => Material(
+        type: MaterialType.transparency,
+        child: CupertinoActionSheet(
+          title: Text(strings.mapTypeTitle),
+          message: Text(strings.mapTypeMessage),
+          actions: MapType.values
+              .where((type) => type != MapType.none)
+              .map(
+                (type) => CupertinoActionSheetAction(
+                  onPressed: () {
+                    ctrl.setMapType(type);
+                    Navigator.pop(sheetContext);
+                  },
+                  child: CupertinoListTile(
+                    padding: EdgeInsets.zero,
+                    leading: Icon(_mapTypeIcon(type), size: 20),
+                    title: Text(
+                      strings.mapTypeName(type),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    trailing: ctrl.mapType == type
+                        ? const Icon(Icons.check, size: 20)
+                        : null,
+                  ),
+                ),
+              )
+              .toList(),
+          cancelButton: CupertinoButton(
+            minimumSize: const Size(double.infinity, 40),
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            onPressed: () => Navigator.pop(sheetContext),
+            child: Text(strings.cancel),
+          ),
         ),
       ),
     );
   }
 
-  IconData _mapTypeIcon(MapType type) {
-    switch (type) {
-      case MapType.normal:
-        return Icons.map_outlined;
-      case MapType.satellite:
-        return Icons.satellite_outlined;
-      case MapType.terrain:
-        return Icons.terrain_outlined;
-      case MapType.hybrid:
-        return CupertinoIcons.layers;
-      default:
-        return Icons.map_outlined;
-    }
-  }
-
-  String _mapTypeName(MapType type) {
-    switch (type) {
-      case MapType.normal:
-        return 'Standard Map';
-      case MapType.satellite:
-        return 'Satellite Map';
-      case MapType.terrain:
-        return 'Terrain Map';
-      case MapType.hybrid:
-        return 'Hybrid Map';
-      default:
-        return 'Standard Map';
-    }
-  }
-
-  Future<void> _getCurrentLocation(
-    ValueNotifier<LatLng> position,
-    Completer<GoogleMapController> mapControllerCompleter,
-    GeoCodingConfig geoCodingService,
-    ValueNotifier<String> address,
-    ValueNotifier<bool> isLoading,
-    ValueNotifier<GeocodingResult?> geoCodingResult,
-    ValueNotifier<List<GeocodingResult>> geoCodingResults,
-    ValueNotifier<Set<Marker>> markers,
-    BuildContext context,
-  ) async {
-    try {
-      isLoading.value = true;
-      final serviceEnabled = await Geolocator.isLocationServiceEnabled();
-      if (!serviceEnabled) {
-        mapLogger.i("Location service is not enabled");
-        return;
-      }
-      final permission = await Geolocator.checkPermission();
-      if (permission == LocationPermission.denied) {
-        final newPermission = await Geolocator.requestPermission();
-        if (newPermission != LocationPermission.whileInUse ||
-            newPermission != LocationPermission.always) {
-          mapLogger.i("Location permission is not while in use or always");
-          return;
-        }
-      }
-
-      final currentPosition = await Geolocator.getCurrentPosition(
-        locationSettings: config.locationSettings,
-      );
-
-      final newPosition = LatLng(
-        currentPosition.latitude,
-        currentPosition.longitude,
-      );
-
-      position.value = newPosition;
-      markers.value = _createMarkers(newPosition);
-
-      final controller = await mapControllerCompleter.future;
-      controller.animateCamera(
-        CameraUpdate.newCameraPosition(
-          CameraPosition(target: newPosition, zoom: config.initialZoom),
-        ),
-      );
-      await _getAddressForPosition(
-        newPosition,
-        geoCodingService,
-        address,
-        isLoading,
-        geoCodingResult,
-        geoCodingResults,
-        context,
-      );
-    } catch (e) {
-      mapLogger.e("Error getting current location: $e");
-      if (config.onLocationError != null) {
-        config.onLocationError!(e);
-      }
-    } finally {
-      isLoading.value = false;
-    }
-  }
-
-  Future<void> _handleMapTap(
-    LatLng latLng,
-    Completer<GoogleMapController> mapControllerCompleter,
-    ValueNotifier<LatLng> position,
-    GeoCodingConfig geoCodingService,
-    ValueNotifier<String> address,
-    ValueNotifier<bool> isLoading,
-    ValueNotifier<GeocodingResult?> geoCodingResult,
-    ValueNotifier<List<GeocodingResult>> geoCodingResults,
-    ValueNotifier<Set<Marker>> markers,
-    BuildContext context,
-  ) async {
-    try {
-      position.value = latLng;
-      markers.value = _createMarkers(latLng);
-
-      final controller = await mapControllerCompleter.future;
-      controller.animateCamera(CameraUpdate.newLatLng(latLng));
-
-      await _getAddressForPosition(
-        latLng,
-        geoCodingService,
-        address,
-        isLoading,
-        geoCodingResult,
-        geoCodingResults,
-        context,
-      );
-    } catch (e) {
-      mapLogger.e("Error handling map tap: $e");
-    } finally {
-      isLoading.value = false;
-    }
-  }
-
-  Future<void> _getAddressForPosition(
-    LatLng position,
-    GeoCodingConfig geoCodingService,
-    ValueNotifier<String> address,
-    ValueNotifier<bool> isLoading,
-    ValueNotifier<GeocodingResult?> geoCodingResult,
-    ValueNotifier<List<GeocodingResult>> geoCodingResults,
-    BuildContext context,
-  ) async {
-    isLoading.value = true;
-    try {
-      final response = await geoCodingService.reverseGeocode(position);
-      if (!context.mounted) return;
-      final result = response.$1;
-      final results = response.$2;
-
-      if (result != null) {
-        address.value =
-            result.formattedAddress ??
-            result.formattedAddress ??
-            config.noAddressFoundText;
-        geoCodingResult.value = result;
-        geoCodingResults.value = results;
-        config.onAddressDecoded?.call(result);
-      } else if (results.isNotEmpty) {
-        address.value =
-            results.first.formattedAddress ??
-            results.first.formattedAddress ??
-            config.noAddressFoundText;
-        geoCodingResult.value = results.first;
-        geoCodingResults.value = results;
-        config.onAddressDecoded?.call(results.first);
-      } else {
-        address.value = config.noAddressFoundText;
-        geoCodingResult.value = null;
-        geoCodingResults.value = [];
-        mapLogger.i(
-          "No address found, position: $position, You can try with larger radius.",
-        );
-      }
-    } catch (e) {
-      mapLogger.e("Geocoding error: $e");
-      if (!context.mounted) return;
-      address.value = config.noAddressFoundText;
-      geoCodingResult.value = null;
-      geoCodingResults.value = [];
-    } finally {
-      if (context.mounted) {
-        isLoading.value = false;
-      }
-    }
-  }
-
-  void _handlePlaceDetails(
-    Place? details,
-    BuildContext context,
-    ValueNotifier<LatLng> position,
-    Completer<GoogleMapController> mapControllerCompleter,
-    ValueNotifier<String> address,
-    GeoCodingConfig geoCodingService,
-    ValueNotifier<bool> isLoading,
-    ValueNotifier<GeocodingResult?> geoCodingResult,
-    ValueNotifier<List<GeocodingResult>> geoCodingResults,
-    ValueNotifier<Set<Marker>> markers,
-  ) async {
-    try {
-      isLoading.value = true;
-      if (details == null) return;
-      final location = details.location;
-      if (location != null) {
-        if (location.latitude == null || location.longitude == null) return;
-        final newPosition = LatLng(
-          location.latitude ?? 0,
-          location.longitude ?? 0,
-        );
-        position.value = newPosition;
-        address.value = details.formattedAddress ?? "";
-
-        // Update the map position
-        mapControllerCompleter.future.then((controller) {
-          controller.animateCamera(
-            CameraUpdate.newCameraPosition(
-              CameraPosition(target: newPosition, zoom: config.initialZoom),
-            ),
-          );
-          markers.value = _createMarkers(newPosition);
-        });
-        config.onSuggestionSelected?.call(details);
-        await _getAddressForPosition(
-          newPosition,
-          geoCodingService,
-          address,
-          isLoading,
-          geoCodingResult,
-          geoCodingResults,
-          context,
-        );
-      }
-    } catch (e) {
-      mapLogger.e("Error handling place details: $e");
-    } finally {
-      isLoading.value = false;
-    }
-  }
-
-  void _handleNext(BuildContext context, GeocodingResult? result) {
-    config.onNext?.call(result);
-  }
+  IconData _mapTypeIcon(MapType type) => switch (type) {
+    MapType.normal => Icons.map_outlined,
+    MapType.satellite => Icons.satellite_outlined,
+    MapType.terrain => Icons.terrain_outlined,
+    MapType.hybrid => CupertinoIcons.layers,
+    _ => Icons.map_outlined,
+  };
 }

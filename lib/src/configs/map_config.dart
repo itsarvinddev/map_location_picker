@@ -73,6 +73,52 @@ abstract class MapLocationPickerConfig with _$MapLocationPickerConfig {
     @Default(null) Function(MapType)? onMapTypeChanged,
     @Default(null) Function(Place?)? onSuggestionSelected,
     @Default(null) Function(GeocodingResult?)? onNext,
+
+    /// Called whenever the main marker moves, for any reason: a map tap, a
+    /// marker drag, the "my location" button, a chosen suggestion, or
+    /// [MapLocationPickerController.moveTo].
+    @Default(null) ValueChanged<LatLng>? onMainMarkerPositionChanged,
+
+    /// Called for every failure the picker produces.
+    ///
+    /// Switch on [MapLocationPickerException.kind] to tell an invalid API key
+    /// from an exceeded quota from "no results here" — distinctions the
+    /// package used to collapse into a silent empty state.
+    @Default(null) MapPickerErrorCallback? onError,
+
+    /// Whether the main marker can be dragged to fine-tune the selection.
+    @Default(true) bool draggableMarker,
+
+    /// Every user-visible string, so the picker can be translated.
+    @Default(MapLocationPickerStrings()) MapLocationPickerStrings strings,
+
+    /// Skips the reverse-geocode that normally runs on first build.
+    ///
+    /// Set this when [initialPosition] is a placeholder and you intend to move
+    /// the pin yourself. Previously `LatLng(0, 0)` was treated as a magic
+    /// "unset" sentinel, which left anyone genuinely picking a point in the
+    /// Gulf of Guinea with a marker-less, address-less picker.
+    @Default(false) bool skipInitialGeocode,
+
+    /// Whether the search bar is rendered.
+    ///
+    /// Set false when you render the search bar yourself from the `searchBar`
+    /// argument of [bottomCardBuilder]; otherwise two live search fields end
+    /// up sharing one [SearchConfig.suggestionsController].
+    @Default(true) bool showSearchBar,
+
+    /// Whether the map-type button is rendered.
+    @Default(true) bool showMapTypeButton,
+
+    /// Whether the "my location" button is rendered.
+    @Default(true) bool showMyLocationButton,
+
+    /// Bottom inset applied to the map so the Google logo and the "terms"
+    /// link stay visible above the bottom card.
+    ///
+    /// Keeping the logo unobscured is a Google Maps Platform terms requirement.
+    /// Ignored when [padding] is set to something other than [EdgeInsets.zero].
+    @Default(96.0) double mapBottomInset,
     @Default(null) Function(GeocodingResult?)? onAddressDecoded,
     @Default(null) Function(GeocodingResult)? onAddressSelected,
     @Default(true) bool buildingsEnabled,

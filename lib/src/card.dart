@@ -5,13 +5,24 @@ import 'package:flutter/material.dart';
 
 import '../map_location_picker.dart';
 
-/// The default bottom card for the map location picker.
+/// A rounded, blurred surface used for the search bar and the bottom card.
 class CustomMapCard extends StatelessWidget {
+  /// The card's contents.
   final Widget child;
+
+  /// Corner radius. Defaults to [kRadius] on every corner.
   final BorderRadiusGeometry? radius;
+
+  /// Padding around [child].
   final EdgeInsets? padding;
+
+  /// Background colour. Defaults to the theme's surface colour.
   final Color? color;
+
+  /// Border. Defaults to a hairline outline.
   final BoxBorder? border;
+
+  /// Creates a card.
   const CustomMapCard({
     super.key,
     required this.child,
@@ -21,7 +32,7 @@ class CustomMapCard extends StatelessWidget {
     this.border,
   });
 
-  /// Default radius for the map location picker.
+  /// The default corner radius used across the picker.
   static const kRadius = 12.0;
 
   @override
@@ -50,6 +61,32 @@ class CustomMapCard extends StatelessWidget {
   }
 }
 
+/// A short, human-readable title for [result].
+///
+/// Falls back through the first address component, then the first segment of
+/// the formatted address, then an empty string.
+///
+/// Written defensively on purpose: the previous implementation did
+/// `(result.addressComponents?.first.longName ?? "").substring(0, 1)`, which
+/// threw `RangeError` whenever the components list was null (the `?? ""`
+/// guaranteed it) and `Bad state: No element` whenever it was empty — which the
+/// Geocoding API does return for plus-code-only results and for results
+/// filtered by `resultType`/`locationType`.
+String addressTitle(GeocodingResult? result) {
+  final name = result?.addressComponents?.firstOrNull?.longName?.trim();
+  if (name != null && name.isNotEmpty) {
+    return name[0].toUpperCase() + name.substring(1);
+  }
+  final formatted = result?.formattedAddress?.split(',').first.trim();
+  if (formatted != null && formatted.isNotEmpty) {
+    return formatted[0].toUpperCase() + formatted.substring(1);
+  }
+  return '';
+}
+
+/// The bottom card shown below the map.
+///
+/// Override it wholesale with [MapLocationPickerConfig.bottomCardBuilder].
 Widget defaultBottomCard(
   BuildContext context,
   GeocodingResult? result,
@@ -57,9 +94,15 @@ Widget defaultBottomCard(
   bool isLoading,
   List<GeocodingResult> results,
   MapLocationPickerConfig config,
-  VoidCallback onNext,
-) {
+  VoidCallback onNext, {
+
+  /// Called when the user picks one of the other nearby matches.
+  ValueChanged<GeocodingResult>? onResultSelected,
+}) {
   final theme = Theme.of(context);
+  final strings = config.strings;
+  final title = addressTitle(result);
+
   return Padding(
     padding: const EdgeInsets.only(top: 12),
     child: CustomMapCard(
@@ -73,20 +116,13 @@ Widget defaultBottomCard(
           children: [
             ListTile(
               title: isLoading
-                  ? const Text("Loading address...", textAlign: TextAlign.start)
-                  : result?.addressComponents?.first.longName != null
-                  ? Text(
-                      (result?.addressComponents?.first.longName ?? "")
-                              .substring(0, 1)
-                              .toUpperCase() +
-                          (result?.addressComponents?.first.longName ?? "")
-                              .substring(1),
-                      style: theme.textTheme.titleMedium,
-                    )
-                  : null,
+                  ? Text(strings.loadingAddress, textAlign: TextAlign.start)
+                  : (title.isEmpty
+                        ? null
+                        : Text(title, style: theme.textTheme.titleMedium)),
               subtitle: isLoading
-                  ? const Text(
-                      "Fetching location details.",
+                  ? Text(
+                      strings.loadingAddressSubtitle,
                       textAlign: TextAlign.start,
                     )
                   : Text(
@@ -97,24 +133,24 @@ Widget defaultBottomCard(
                     ),
             ),
             config.confirmButton?.call(context, onNext) ??
-                ((!isLoading && result != null)
-                    ? CupertinoButton.filled(
-                        minimumSize: const Size(double.infinity, 40),
-                        padding: const EdgeInsets.symmetric(horizontal: 16),
-                        child: const Text("Confirm Address"),
-                        onPressed: onNext,
-                        pressedOpacity: 0.9,
-                      )
-                    : CupertinoButton.filled(
-                        minimumSize: const Size(double.infinity, 40),
-                        padding: const EdgeInsets.symmetric(horizontal: 16),
-                        child: isLoading
-                            ? const CircularProgressIndicator.adaptive(
-                                backgroundColor: Colors.grey,
-                              )
-                            : Text(address),
-                        onPressed: () {},
-                      )),
+                Semantics(
+                  button: true,
+                  enabled: !isLoading && result != null,
+                  label: strings.confirmAddress,
+                  child: CupertinoButton.filled(
+                    minimumSize: const Size(double.infinity, 40),
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    pressedOpacity: 0.9,
+                    onPressed: (!isLoading && result != null) ? onNext : null,
+                    child: isLoading
+                        ? const CircularProgressIndicator.adaptive(
+                            backgroundColor: Colors.grey,
+                          )
+                        : Text(
+                            result != null ? strings.confirmAddress : address,
+                          ),
+                  ),
+                ),
             if (results.length > 1 && !config.hideMoreOptions) ...[
               const SizedBox(height: 12),
               CupertinoButton.tinted(
@@ -123,16 +159,21 @@ Widget defaultBottomCard(
                   vertical: 2,
                 ),
                 minimumSize: const Size(100, 10),
-                child: Text(
-                  isLoading
-                      ? "Loading nearby places..."
-                      : "${results.length} places found nearby",
-                  style: theme.textTheme.bodyMedium,
-                ),
                 pressedOpacity: 0.9,
                 onPressed: isLoading
-                    ? () {}
-                    : () => _showAddressOptions(context, results, config),
+                    ? null
+                    : () => showAddressOptions(
+                        context,
+                        results,
+                        config,
+                        onResultSelected: onResultSelected,
+                      ),
+                child: Text(
+                  isLoading
+                      ? strings.loadingNearbyPlaces
+                      : strings.nearbyPlacesCount(results.length),
+                  style: theme.textTheme.bodyMedium,
+                ),
               ),
             ],
           ],
@@ -142,6 +183,7 @@ Widget defaultBottomCard(
   );
 }
 
+/// Builds the decoration for a row in the nearby-places list.
 BoxDecoration buildBoxDecoration(BuildContext context, int index, bool isLast) {
   return BoxDecoration(
     color: CupertinoColors.systemFill,
@@ -154,55 +196,67 @@ BoxDecoration buildBoxDecoration(BuildContext context, int index, bool isLast) {
     border: Border(
       bottom: isLast
           ? BorderSide.none
-          : BorderSide(color: CupertinoColors.opaqueSeparator, width: 0.5),
+          : const BorderSide(
+              color: CupertinoColors.opaqueSeparator,
+              width: 0.5,
+            ),
     ),
   );
 }
 
-void _showAddressOptions(
+/// Shows the other geocoding matches for the current pin.
+///
+/// Picking one updates the picker's selection. It deliberately does *not*
+/// invoke `onNext`: the previous implementation fired `onNext` here as well as
+/// `onAddressSelected`, so an app that popped the route in `onNext` popped
+/// twice, and the picker's own state was never updated.
+void showAddressOptions(
   BuildContext context,
   List<GeocodingResult> results,
-  MapLocationPickerConfig config,
-) {
+  MapLocationPickerConfig config, {
+  ValueChanged<GeocodingResult>? onResultSelected,
+}) {
+  final strings = config.strings;
   showModalBottomSheet(
     context: context,
     backgroundColor: Colors.transparent,
     barrierColor: Colors.black38,
-    builder: (context) => CupertinoActionSheet(
-      title: Text("${results.length} places found nearby"),
-      message: Text("tap to select"),
-      actions: results.map((result) {
-        return CupertinoActionSheetAction(
-          child: CupertinoListTile(
-            padding: EdgeInsets.zero,
-            title: Text(
-              (result.addressComponents?.first.longName ?? "")
-                      .substring(0, 1)
-                      .toUpperCase() +
-                  (result.addressComponents?.first.longName ?? "").substring(1),
-              style: Theme.of(context).textTheme.titleMedium,
+    builder: (sheetContext) => Material(
+      type: MaterialType.transparency,
+      child: CupertinoActionSheet(
+        title: Text(strings.nearbyPlacesTitle(results.length)),
+        message: Text(strings.tapToSelect),
+        actions: results.map((result) {
+          final title = addressTitle(result);
+          return CupertinoActionSheetAction(
+            onPressed: () {
+              onResultSelected?.call(result);
+              config.onAddressSelected?.call(result);
+              Navigator.pop(sheetContext);
+            },
+            child: CupertinoListTile(
+              padding: EdgeInsets.zero,
+              title: Text(
+                title.isEmpty ? (result.formattedAddress ?? '') : title,
+                style: Theme.of(context).textTheme.titleMedium,
+              ),
+              subtitle: Text(
+                result.formattedAddress ?? '',
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                textAlign: TextAlign.start,
+                style: Theme.of(context).textTheme.bodyMedium,
+              ),
+              leading: const Icon(Icons.pin_drop, size: 20),
             ),
-            subtitle: Text(
-              result.formattedAddress ?? "",
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-              textAlign: TextAlign.start,
-              style: Theme.of(context).textTheme.bodyMedium,
-            ),
-            leading: Icon(Icons.pin_drop, size: 20),
-          ),
-          onPressed: () {
-            config.onAddressSelected?.call(result);
-            config.onNext?.call(result);
-            Navigator.pop(context);
-          },
-        );
-      }).toList(),
-      cancelButton: CupertinoButton(
-        child: Text("Cancel"),
-        minimumSize: const Size(double.infinity, 40),
-        padding: const EdgeInsets.symmetric(horizontal: 16),
-        onPressed: () => Navigator.pop(context),
+          );
+        }).toList(),
+        cancelButton: CupertinoButton(
+          minimumSize: const Size(double.infinity, 40),
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          onPressed: () => Navigator.pop(sheetContext),
+          child: Text(strings.cancel),
+        ),
       ),
     ),
   );
