@@ -10,8 +10,28 @@ cd map_location_picker
 flutter pub get
 ```
 
-You need **Flutter 3.38 or newer** — that is the floor the package declares, and
-CI compiles against it explicitly.
+You need **Flutter 3.38.1 or newer** — that is the floor the package declares,
+and CI compiles against it explicitly, not just against the latest stable.
+
+That second job is not ceremony: it has caught an unsatisfiable SDK floor, a
+dependency bound that resolved but did not build, and analyzer diagnostics that
+only the older SDK reports. None of them were visible on a recent Flutter. If
+you touch `pubspec.yaml` or add a deprecation, install the floor SDK and run
+against it before pushing:
+
+```bash
+# Once
+cd ~/development
+curl -LO https://storage.googleapis.com/flutter_infra_release/releases/stable/macos/flutter_macos_arm64_3.38.1-stable.zip
+unzip -q flutter_macos_arm64_3.38.1-stable.zip -d f3381 && mv f3381/flutter flutter-3.38.1
+
+# Per change — this is exactly what the `min` CI job runs
+export PATH="$HOME/development/flutter-3.38.1/bin:$PATH"
+flutter pub get
+flutter pub downgrade && flutter analyze --no-fatal-infos && flutter pub get
+flutter analyze --fatal-infos
+flutter test
+```
 
 To run the example you need a Google Maps API key. Put it in
 `example/lib/key.dart`:

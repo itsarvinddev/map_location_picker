@@ -95,7 +95,7 @@ class MapLocationPickerController extends ChangeNotifier {
   LatLng get position => _position;
 
   /// The formatted address for [position], or
-  /// [MapLocationPickerConfig.noAddressFoundText] when none was found.
+  /// [MapLocationPickerStrings.noAddressFound] when none was found.
   String get address => _address;
 
   /// Whether a lookup is in flight.
@@ -221,7 +221,7 @@ class MapLocationPickerController extends ChangeNotifier {
 
   /// The "nothing found here" label.
   ///
-  /// [MapLocationPickerConfig.noAddressFoundText] is the deprecated override;
+  /// `MapLocationPickerConfig.noAddressFoundText` is the deprecated override;
   /// when it is null the localized [MapLocationPickerStrings.noAddressFound]
   /// applies.
   String get _noAddressText =>

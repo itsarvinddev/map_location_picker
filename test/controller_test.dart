@@ -227,11 +227,12 @@ void main() {
       expect(confirmed?.formattedAddress, 'picked');
     });
 
-    test('an empty lookup falls back to noAddressFoundText', () async {
+    test('an empty lookup falls back to the not-found label', () async {
       final geo = _FakeGeoCoding();
       final controller = MapLocationPickerController(
         config: const MapLocationPickerConfig(
           apiKey: 'k',
+          // ignore: deprecated_member_use_from_same_package
           noAddressFoundText: 'nothing here',
         ),
         geoCodingConfig: geo,

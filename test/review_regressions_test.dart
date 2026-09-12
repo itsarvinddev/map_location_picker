@@ -292,10 +292,10 @@ void main() {
 
     test('an explicit noAddressFoundText still wins', () async {
       final controller = MapLocationPickerController(
-        // ignore: deprecated_member_use
+        // ignore: deprecated_member_use_from_same_package
         config: const MapLocationPickerConfig(
           apiKey: 'k',
-          // ignore: deprecated_member_use
+          // ignore: deprecated_member_use_from_same_package
           noAddressFoundText: 'legacy wins',
           strings: MapLocationPickerStrings(noAddressFound: 'localized'),
         ),
@@ -313,7 +313,7 @@ void main() {
       final controller = MapLocationPickerController(
         config: MapLocationPickerConfig(
           apiKey: 'k',
-          // ignore: deprecated_member_use
+          // ignore: deprecated_member_use_from_same_package
           onLocationError: legacy.add,
         ),
         geoCodingConfig: _InstantGeoCoding(),
