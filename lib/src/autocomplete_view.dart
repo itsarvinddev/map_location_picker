@@ -306,8 +306,12 @@ class PlacesAutocomplete extends HookWidget {
   /// Get the details of a place.
   ///
   /// Routed through [AutoCompleteService] rather than calling [PlacesAPINew]
-  /// directly, so that the web implementation (Maps JavaScript API) is used on
-  /// web where the REST endpoint is blocked by CORS.
+  /// directly, so the lookup carries the same [SessionTokenHandler] as the
+  /// searches that preceded it — which is what bills the whole search as one
+  /// Places session instead of one charge per keystroke — reuses the per-key
+  /// client, reads the session's place-details cache, and reports failures
+  /// through [onError]. There is one REST transport on every platform, web
+  /// included.
   Future<void> _getPlaceDetails(
     String placeId,
     BuildContext context,

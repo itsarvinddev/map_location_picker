@@ -117,8 +117,12 @@ enum MapPickerLogLevel {
 
 /// The package's logger.
 ///
-/// The single instance is [mapLogger]. It writes through `dart:developer` and
-/// is a no-op in release builds unless [emitInRelease] is set.
+/// The single instance is [mapLogger]. It has two independent sinks: every
+/// record that passes [level] is handed to [onLog] in all build modes, so it
+/// can be used as a crash-reporting sink in production, while the
+/// human-readable copy written through `dart:developer` is additionally
+/// suppressed outside debug builds unless [emitInRelease] is set.
+/// Set [level] to [MapPickerLogLevel.off] to silence the package entirely.
 ///
 /// ```dart
 /// // Quieten the package.
@@ -134,17 +138,24 @@ class MapLocationPickerLogger {
 
   final LogFormatter _formatter;
 
-  /// The minimum level that is emitted. Defaults to
-  /// [MapPickerLogLevel.trace] in debug builds.
+  /// The minimum level that is emitted, in every build mode. Records below it
+  /// reach neither [onLog] nor the console. Defaults to
+  /// [MapPickerLogLevel.trace].
   MapPickerLogLevel level = MapPickerLogLevel.trace;
 
-  /// Whether to log in release builds. Off by default.
+  /// Whether to write the console copy (`dart:developer`) outside debug
+  /// builds. Off by default, so profile and release builds stay quiet. This
+  /// does not affect [onLog], which fires in every build mode.
   bool emitInRelease = false;
 
-  /// Receives every record that passes [level], before formatting.
+  /// Receives every record that passes [level], before formatting, in debug,
+  /// profile and release builds alike.
   ///
   /// Set this to route the package's diagnostics into your own logging or
-  /// crash-reporting stack.
+  /// crash-reporting stack. It is deliberately not gated by [emitInRelease]:
+  /// that flag only controls console output, so you can ship crash reports
+  /// without also shipping console spam. Use [level] to control what is
+  /// reported, or [MapPickerLogLevel.off] to stop reporting altogether.
   void Function(
     MapPickerLogLevel level,
     Object? message,

@@ -109,5 +109,29 @@ void main() {
         );
       },
     );
+
+    // `getDetails` passes `response.body` straight through without a null
+    // guard. That is deliberate, and only safe because of the two properties
+    // pinned here: `cachePlaceDetails` is null-tolerant, and it calls
+    // `refresh()` unconditionally, so a successful Details request concludes
+    // the session even when it carried nothing to cache. A `google_maps_apis`
+    // upgrade that made the refresh conditional would silently leave the
+    // picker reusing a concluded token, which Google bills per request.
+    test('a null body still concludes the session and rotates the token', () {
+      final handler = SessionTokenHandler();
+      final duringSearch = handler.token;
+
+      expect(
+        () => handler.cachePlaceDetails(id: 'place-1', data: null),
+        returnsNormally,
+      );
+
+      expect(handler.placeFromCache('place-1'), isNull);
+      expect(
+        handler.token,
+        isNot(duringSearch),
+        reason: 'a concluded session must not reuse its token',
+      );
+    });
   });
 }

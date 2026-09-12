@@ -101,9 +101,18 @@ class _PickerRouteState extends State<_PickerRoute> {
       config: widget.config.copyWith(
         onNext: (result) {
           // Honour a caller-supplied onNext first, then pop with the result.
+          // A 3.x config very likely still carries
+          // `onNext: (r) => Navigator.pop(context, r)`, so capture this route
+          // before handing control over and only pop if it is still the one on
+          // top -- otherwise we would pop the caller's screen out from under
+          // them. `mounted` is no guard here: the route stays mounted for the
+          // whole exit transition.
+          final navigator = Navigator.of(context);
+          final route = ModalRoute.of(context);
           widget.config.onNext?.call(result);
           if (!mounted) return;
-          Navigator.of(context).pop(
+          if (route != null && !route.isCurrent) return;
+          navigator.pop(
             PickedPlace.from(
               latLng: _controller.position,
               result: result,

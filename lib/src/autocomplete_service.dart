@@ -163,7 +163,14 @@ class AutoCompleteService {
   }) async {
     if (placeId.isEmpty) return null;
     final cached = sessionToken?.placeFromCache(placeId);
-    if (cached != null) return cached;
+    if (cached != null) {
+      // Serving from cache still concludes the session: the user has picked a
+      // place, so the keystrokes that led here are over. Skipping the refresh
+      // would carry a token Google has already seen into the next session, and
+      // a reused token is billed as if no token had been sent at all.
+      sessionToken?.refresh();
+      return cached;
+    }
     try {
       final effectiveCancel = cancelToken ?? CancelToken();
       final response = await _client(apiKey).getDetails(

@@ -1,5 +1,7 @@
 import 'dart:async';
+import 'dart:typed_data';
 
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:map_location_picker/map_location_picker.dart';
@@ -329,6 +331,8 @@ void main() {
     });
   });
 
+  _sessionTokenRegressions();
+
   group('embedding (W5)', () {
     testWidgets('the bottom card renders without a Scaffold ancestor', (
       tester,
@@ -360,6 +364,121 @@ void main() {
 
       expect(tester.takeException(), isNull);
       expect(find.text('10 Downing St'), findsWidgets);
+    });
+  });
+}
+
+/// Returns a canned HTTP response for every request, and counts the calls.
+class _CannedAdapter implements HttpClientAdapter {
+  _CannedAdapter(this.body);
+
+  final String body;
+  int calls = 0;
+
+  @override
+  void close({bool force = false}) {}
+
+  @override
+  Future<ResponseBody> fetch(
+    RequestOptions options,
+    Stream<Uint8List>? requestStream,
+    Future<void>? cancelFuture,
+  ) async {
+    calls++;
+    return ResponseBody.fromString(
+      body,
+      200,
+      headers: {
+        Headers.contentTypeHeader: [Headers.jsonContentType],
+      },
+    );
+  }
+}
+
+void _sessionTokenRegressions() {
+  group('Places session token is concluded on every getDetails path', () {
+    // `AutoCompleteService.getDetails` short-circuits on its place cache. That
+    // early return used to skip the token refresh that `cachePlaceDetails`
+    // performs on the network path, so picking the same place twice through one
+    // `SessionTokenHandler` carried a spent token into the *next* session.
+    // Google bills a reused session token as if no token had been sent, so the
+    // whole following session silently fell off the session SKU onto
+    // Autocomplete-Per-Request. The handler is memoized for the widget's
+    // lifetime (`autocomplete_view.dart`), so one long-lived picker is all it
+    // takes.
+    test('a cache hit concludes the session just like a network hit', () async {
+      final adapter = _CannedAdapter(
+        '{"id":"p1","formattedAddress":"1 Test St"}',
+      );
+      final session = SessionTokenHandler();
+      final service = AutoCompleteService(
+        placesApi: PlacesAPINew(apiKey: 'k', httpClientAdapter: adapter),
+      );
+      addTearDown(service.dispose);
+
+      // Session A: keystrokes, then Place Details over the network.
+      final tokenA = session.token;
+      expect(
+        await service.getDetails(
+          placeId: 'p1',
+          apiKey: 'k',
+          sessionToken: session,
+        ),
+        isNotNull,
+      );
+
+      // Session B: fresh keystrokes, then the user re-picks the same place, so
+      // Place Details is served from the cache and never reaches Google.
+      final tokenB = session.token;
+      expect(tokenB, isNot(tokenA), reason: 'the network path must rotate');
+      expect(
+        await service.getDetails(
+          placeId: 'p1',
+          apiKey: 'k',
+          sessionToken: session,
+        ),
+        isNotNull,
+      );
+      expect(adapter.calls, 1, reason: 'the second lookup must hit the cache');
+
+      expect(
+        session.token,
+        isNot(tokenB),
+        reason: 'session C must not reuse a token Google has already seen',
+      );
+    });
+
+    // Pins the two `google_maps_apis` properties that let `getDetails` hand
+    // `response.body` to `cachePlaceDetails` with no null check: the call is
+    // null-tolerant, and it refreshes unconditionally. A 2xx means Google
+    // processed and billed the Details request, so the session is over
+    // server-side whatever the payload was. Returning early on a null body
+    // instead -- as PR #73's review suggested -- would keep a dead token.
+    test('a 2xx carrying no place still rotates the token', () async {
+      final session = SessionTokenHandler();
+      final service = AutoCompleteService(
+        placesApi: PlacesAPINew(
+          apiKey: 'k',
+          httpClientAdapter: _CannedAdapter(''),
+        ),
+      );
+      addTearDown(service.dispose);
+
+      final during = session.token;
+      expect(
+        await service.getDetails(
+          placeId: 'p1',
+          apiKey: 'k',
+          sessionToken: session,
+        ),
+        isNull,
+      );
+      expect(session.placeFromCache('p1'), isNull);
+      expect(
+        session.token,
+        isNot(during),
+        reason: 'an empty 2xx body was still a billed Details request',
+      );
     });
   });
 }
