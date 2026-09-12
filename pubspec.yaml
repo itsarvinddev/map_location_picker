@@ -57,7 +57,11 @@ dependencies:
     google_maps_apis: ">=5.1.0 <6.0.0"
     dio: ">=5.9.0 <6.0.0"
     http: ">=1.0.0 <2.0.0"
-    pointer_interceptor: ">=0.10.1 <0.11.0"
+    # >=0.10.1+1, not >=0.10.1: 0.10.0 and 0.10.1 declare BOTH
+    # `implements: pointer_interceptor_platform_interface` and an ios
+    # `default_package:`, which the Flutter tool rejects with "Please resolve
+    # the plugin pubspec errors". 0.10.1+1 dropped the `implements` key.
+    pointer_interceptor: ">=0.10.1+1 <0.11.0"
 
 dev_dependencies:
     flutter_test:
