@@ -55,7 +55,7 @@ if (picked != null) {
 
 That is the whole integration. Everything below is optional.
 
-**Requires Flutter 3.38 / Dart 3.10.** Upgrading from 3.x? See the
+**Requires Flutter 3.38.1 / Dart 3.10.** Upgrading from 3.x? See the
 [migration guide](MIGRATION_GUIDE.md).
 
 ---

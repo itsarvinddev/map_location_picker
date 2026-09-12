@@ -24,8 +24,12 @@ environment:
     # Floor set by google_maps_apis 5.x, which needs meta ^1.17.0. The Flutter
     # SDK pins meta EXACTLY (1.16.0 on Flutter 3.32-3.37, 1.17.0 from 3.38), so
     # anything below 3.38 cannot resolve this package at all.
+    #
+    # 3.38.1 rather than 3.38.0: 3.38.0 shipped Dart "3.10.0-290.4.beta", and
+    # pub ranks a prerelease BELOW the release, so ">=3.10.0" excludes it.
+    # 3.38.1 is the first stable reporting a plain 3.10.0.
     sdk: ">=3.10.0 <4.0.0"
-    flutter: ">=3.38.0"
+    flutter: ">=3.38.1"
 
 # Declares supported platforms directly. The previous `flutter.plugin.platforms`
 # block with `default_package:` entries is the federated-plugin *endorsement*

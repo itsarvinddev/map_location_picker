@@ -4,7 +4,7 @@ A full audit release: every open issue closed, every open pull request merged or
 superseded with credit, the dependency stack brought current, and the parts of
 the package that were quietly broken made to actually work.
 
-**Requires Flutter 3.38 / Dart 3.10.** See
+**Requires Flutter 3.38.1 / Dart 3.10.** See
 [MIGRATION_GUIDE.md](https://github.com/itsarvinddev/map_location_picker/blob/master/MIGRATION_GUIDE.md)
 for the upgrade from 3.x.
 
@@ -118,7 +118,7 @@ for the upgrade from 3.x.
 
 ### Changed
 
-- **Requires Flutter 3.38 / Dart 3.10.** google_maps_apis 5.x needs
+- **Requires Flutter 3.38.1 / Dart 3.10.** google_maps_apis 5.x needs
   `meta ^1.17.0`, and the Flutter SDK pins `meta` exactly — 1.16.0 up to Flutter
   3.37, 1.17.0 from 3.38. Anything lower cannot resolve.
 - **The barrel exports far less.** It used to re-export all of `geolocator`,

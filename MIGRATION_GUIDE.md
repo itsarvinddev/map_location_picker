@@ -7,12 +7,12 @@ symbols the barrel no longer re-exports. Everything else is additive.
 
 ---
 
-### 1. Flutter 3.38 / Dart 3.10 is required
+### 1. Flutter 3.38.1 / Dart 3.10 is required
 
 ```yaml
 environment:
   sdk: ">=3.10.0 <4.0.0"
-  flutter: ">=3.38.0"
+  flutter: ">=3.38.1"
 ```
 
 This is not a preference. `google_maps_apis` 5.x — the version that fixes the
@@ -23,6 +23,11 @@ build failure in [#68](https://github.com/itsarvinddev/map_location_picker/issue
 |---|---|
 | 3.32 – 3.37 | 1.16.0 |
 | 3.38+ | 1.17.0 |
+
+The floor is 3.38**.1**, not 3.38.0, for a second reason: 3.38.0 shipped Dart
+`3.10.0-290.4.beta`, and pub ranks a prerelease *below* the release it precedes,
+so `sdk: ">=3.10.0"` excludes it. 3.38.1 is the first stable reporting a plain
+`3.10.0`.
 
 So there is no version of this package that both fixes #68 and runs on Flutter
 3.37 or below. If you cannot upgrade Flutter yet, stay on `3.1.0` and pin

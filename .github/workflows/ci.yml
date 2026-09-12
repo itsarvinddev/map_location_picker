@@ -23,7 +23,7 @@ jobs:
           # An unsatisfiable >=3.32 floor shipped once precisely because CI ran
           # nothing but the latest stable.
           - id: min
-            flutterVersion: '3.38.0'
+            flutterVersion: '3.38.1'
           # Empty version means "latest release on the channel".
           - id: stable
             flutterVersion: ''
@@ -34,7 +34,7 @@ jobs:
         with:
           # `channel` only accepts stable/beta/master; an exact release goes in
           # `flutter-version`. Passing a version as `channel` fails with
-          # "Unable to determine Flutter version for channel: 3.38.0".
+          # "Unable to determine Flutter version for channel: 3.38.1".
           channel: stable
           flutter-version: ${{ matrix.flutterVersion }}
           cache: true
