@@ -85,6 +85,9 @@ class PlacesAutocomplete extends HookWidget {
       () => AutoCompleteService(placesApi: config.placesApi, onError: onError),
       [config.placesApi, config.apiKey, onError],
     );
+    // Without this the service's own HTTP client leaks on unmount and on every
+    // credential change.
+    useEffect(() => service.dispose, [service]);
 
     /// Cupertino type ahead field. It is a text field that shows a list of suggestions as the user types.
     return CupertinoTypeAheadField<Suggestion>(
@@ -152,7 +155,12 @@ class PlacesAutocomplete extends HookWidget {
             final child = CupertinoSearchTextField(
               controller: controller,
               focusNode: focusNode,
-              placeholder: config.searchHintText,
+              // The picker substitutes its localized `strings.searchHint`
+              // before this point; the fallback is for the standalone widget,
+              // whose SearchConfig default is empty.
+              placeholder: config.searchHintText.isEmpty
+                  ? const MapLocationPickerStrings().searchHint
+                  : config.searchHintText,
               placeholderStyle: config.searchHintStyle,
               decoration: BoxDecoration(
                 color: cardType == CardType.liquidCard ? null : cardColor,
@@ -179,10 +187,20 @@ class PlacesAutocomplete extends HookWidget {
 
   Widget Function(BuildContext, Suggestion) _defaultItemBuilder() {
     return (context, content) {
+      // A suggestion is either a place prediction or -- with
+      // `includeQueryPredictions` -- a query prediction, which has no
+      // placePrediction at all and used to render as a blank tappable row.
+      final place = content.placePrediction;
+      final query = content.queryPrediction;
       final mainText =
-          content.placePrediction?.structuredFormat?.mainText?.text ?? "";
+          place?.structuredFormat?.mainText?.text ??
+          query?.structuredFormat?.mainText?.text ??
+          query?.text?.text ??
+          "";
       final secondaryText =
-          content.placePrediction?.structuredFormat?.secondaryText?.text ?? "";
+          place?.structuredFormat?.secondaryText?.text ??
+          query?.structuredFormat?.secondaryText?.text ??
+          "";
 
       final style = Theme.of(
         context,
@@ -245,9 +263,13 @@ class PlacesAutocomplete extends HookWidget {
       // Show what the user picked. Previously only the caret was moved, so the
       // field kept whatever partial text had been typed.
       final prediction = value.placePrediction;
+      final queryText =
+          value.queryPrediction?.text?.text ??
+          value.queryPrediction?.structuredFormat?.mainText?.text;
       final selectedText =
           prediction?.text?.text ??
           prediction?.structuredFormat?.mainText?.text ??
+          queryText ??
           controller.text;
       controller.value = TextEditingValue(
         text: selectedText,
@@ -256,6 +278,13 @@ class PlacesAutocomplete extends HookWidget {
 
       final placeId = prediction?.placeId ?? "";
       if (placeId.isEmpty) {
+        // A query prediction is a refined search term, not a place: put it in
+        // the field and reopen the list rather than silently doing nothing.
+        if (queryText != null && queryText.isNotEmpty) {
+          config.suggestionsController?.open();
+          onSelected?.call(value);
+          return;
+        }
         mapLogger.i("Place ID is empty, skipping place details.");
         return;
       }

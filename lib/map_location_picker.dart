@@ -25,7 +25,22 @@ export 'package:geolocator/geolocator.dart'
         LocationPermission,
         LocationSettings,
         Position,
-        WebSettings;
+        WebSettings,
+        ActivityType,
+        ForegroundNotificationConfig,
+        AndroidResource,
+        AndroidPosition,
+        LocationAccuracyStatus,
+        ServiceStatus,
+        LocationServiceDisabledException,
+        PermissionDeniedException,
+        PermissionDefinitionsNotFoundException,
+        PermissionRequestInProgressException,
+        ActivityMissingException,
+        AlreadySubscribedException,
+        InvalidPermissionException,
+        PositionUpdateException,
+        GeolocatorPlatform;
 
 // --- google_maps_apis (legacy geocoding): the reverse-geocoding result ------
 //
@@ -35,29 +50,37 @@ export 'package:geolocator/geolocator.dart'
 export 'package:google_maps_apis/geocoding.dart'
     show
         AddressComponent,
+        Bounds,
+        Component,
         Geometry,
         GeocodingResponse,
         GeocodingResult,
         GoogleMapsGeocoding,
-        Location;
+        Location,
+        ResponseStatus;
 
 // --- google_maps_apis (Places API New) --------------------------------------
 //
 // Two omissions are deliberate:
 //   * the Places (New) `AddressComponent` — the geocoding one above already
 //     claims that name, and exporting both is an ambiguous export;
-//   * `NearbySearchFilter` — it drags in a `Circle` that collides head-on with
-//     `google_maps_flutter`'s `Circle`, and it is not part of this package's
-//     public signatures (nearby search is configured with plain fields on
-//     `MapLocationPickerConfig`).
-// Import `package:google_maps_apis/places_new.dart` with a prefix if you need
-// either of them.
+//   * the Places (New) `AddressComponent`, `Circle` and `LatLng` — all three
+//     collide with a name this barrel already exports. They are available as
+//     `PlacesAddressComponent`, `PlacesCircle` and `PlacesLatLng` from
+//     `src/places_aliases.dart`, since Dart cannot rename on export.
+//   * `NearbySearchFilter` — not part of this package's public signatures;
+//     nearby search is configured with plain fields on
+//     `MapLocationPickerConfig`.
 export 'package:google_maps_apis/places_new.dart'
     show
         AutocompleteSearchFilter,
         FormattableText,
         GoogleHTTPResponse,
         LocalizedText,
+        LocationBias,
+        LocationRestriction,
+        QueryPrediction,
+        ReferencePoint,
         Place,
         PlaceDetailsFilter,
         PlacePrediction,
@@ -99,4 +122,5 @@ export 'src/logger.dart';
 export 'src/map_location_picker.dart';
 export 'src/map_location_picker_controller.dart';
 export 'src/picked_place.dart';
+export 'src/places_aliases.dart';
 export 'src/show_picker.dart';

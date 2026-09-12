@@ -68,9 +68,27 @@ abstract class MapLocationPickerConfig with _$MapLocationPickerConfig {
     CardType bottomCardType,
     @Default(null) ConfirmButtonBuilder confirmButton,
     @Default(null) BottomCardBuilder bottomCardBuilder,
+
+    /// Wraps or replaces the search bar.
+    ///
+    /// The returned widget is placed **directly** in the picker's [Stack], so
+    /// return a [Positioned] (or it will be stretched by `StackFit.expand`).
+    /// The `searchBar` handed to you already carries the web pointer
+    /// interceptor.
     @Default(null) SearchBarBuilder searchBarBuilder,
     @Default(null) LocationSettings? locationSettings,
-    @Default(null) Function(dynamic error)? onLocationError,
+
+    /// Superseded by [onError], which reports a typed
+    /// [MapLocationPickerException] for every failure, not just location ones.
+    ///
+    /// Still invoked for current-location failures, with the raw thrown object
+    /// as 3.x did.
+    @Deprecated(
+      'Use onError instead, which reports a typed MapLocationPickerException. '
+      'Will be removed in map_location_picker 5.0.0.',
+    )
+    @Default(null)
+    Function(dynamic error)? onLocationError,
     @Default(false) bool hideMoreOptions,
     @Default(null) Widget? mapTypeButton,
     @Default(null) Widget? locationButton,
@@ -249,6 +267,16 @@ abstract class MapLocationPickerConfig with _$MapLocationPickerConfig {
     @Default(null) Color? cardColor,
     @Default(null) BorderRadiusGeometry? cardRadius,
     @Default(null) BoxBorder? cardBorder,
-    @Default("No address found") String noAddressFoundText,
+
+    /// Superseded by [MapLocationPickerStrings.noAddressFound].
+    ///
+    /// When null (the default) the localized string is used. An explicit value
+    /// still wins, so existing callers are unaffected.
+    @Deprecated(
+      'Use strings.noAddressFound instead, which is localizable. '
+      'Will be removed in map_location_picker 5.0.0.',
+    )
+    @Default(null)
+    String? noAddressFoundText,
   }) = _MapLocationPickerConfig;
 }

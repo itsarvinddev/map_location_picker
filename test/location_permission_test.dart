@@ -1,5 +1,4 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:geolocator_platform_interface/geolocator_platform_interface.dart';
 import 'package:map_location_picker/map_location_picker.dart';
 import 'package:plugin_platform_interface/plugin_platform_interface.dart';
 
@@ -76,8 +75,9 @@ class _StubGeoCoding extends GeoCodingConfig {
 
   @override
   Future<(GeocodingResult?, List<GeocodingResult>)> reverseGeocode(
-    LatLng position,
-  ) async => (null, const <GeocodingResult>[]);
+    LatLng position, {
+    MapPickerErrorCallback? onErrorOverride,
+  }) async => (null, const <GeocodingResult>[]);
 }
 
 void main() {

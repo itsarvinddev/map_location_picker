@@ -99,13 +99,28 @@ bounded constraints.
 | `LatLng(0, 0)` is no longer an "unset" sentinel | It is a real coordinate in the Gulf of Guinea; passing it gave a marker-less, address-less picker | Use `skipInitialGeocode: true` if you meant "don't look anything up yet" |
 | The main marker is draggable | | `draggableMarker: false` to restore |
 | The map gets a bottom inset | The bottom card covered the Google logo, which the Maps Platform terms require to stay visible | Set `padding` yourself, or tune `mapBottomInset` |
-| The search hint defaults to `strings.searchHint` | So the hint follows localization | Set `SearchConfig.searchHintText` to override |
+| The search hint defaults to `strings.searchHint` | So the hint follows localization | Set `SearchConfig.searchHintText` to override. A standalone `PlacesAutocomplete` still falls back to the English default |
+| `bottomCardTitle` is now rendered, and defaults to empty | It was declared in 3.x but no widget ever read it, so setting it did nothing. Leaving the old `'Select your location'` default would have made a title appear on every picker | Nothing, if you never set it. If you did, that text now appears above the address — pass `bottomCardTitle: ''` to keep the 3.x look |
+| Picking an entry in the matching-addresses sheet fires `onAddressSelected` once, not twice | It was invoked directly *and* through the controller | Nothing — this was a defect |
+| `searchBarBuilder`'s result goes straight into the `Stack` again | 4.0.0 briefly wrapped it in a `Positioned`/`SafeArea`/`Padding`, which made a returned `Positioned` throw a `ParentDataWidget` assertion | Return a `Positioned`, as on 3.x |
 
 ---
 
 ### 5. Deprecated
 
 ```dart
+// Superseded by onError, which reports a typed MapLocationPickerException for
+// every failure rather than only location ones. Still invoked for
+// current-location failures, with the raw thrown object, as in 3.x.
+MapLocationPickerConfig(onLocationError: (e) => ...)  // works, deprecated
+MapLocationPickerConfig(onError: (e) => ...)          // prefer this
+
+// Now nullable, and superseded by the localizable strings object.
+MapLocationPickerConfig(noAddressFoundText: 'None')   // works, deprecated
+MapLocationPickerConfig(
+  strings: MapLocationPickerStrings(noAddressFound: 'None'),
+)                                                     // prefer this
+
 // flutter_typeahead 6 removed this: closing the keyboard also drops focus,
 // which hideOnUnfocus already handles.
 SearchConfig(hideWithKeyboard: false)  // ignored

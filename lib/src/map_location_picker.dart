@@ -64,6 +64,11 @@ class MapLocationPicker extends StatelessWidget {
     return Scaffold(
       extendBodyBehindAppBar: true,
       extendBody: true,
+      // Scaffold strips the bottom view inset from its body when it resizes,
+      // so `hideBottomCardOnKeyboard` could never observe an open keyboard.
+      // The picker does not want the map squeezed into the strip above the
+      // keyboard either.
+      resizeToAvoidBottomInset: false,
       backgroundColor: config.cardColor,
       body: MapLocationPickerView(
         config: config,
@@ -145,6 +150,15 @@ class MapLocationPickerView extends HookWidget {
     );
   }
 
+  /// The padding handed to [GoogleMap].
+  ///
+  /// Defaults to reserving [MapLocationPickerConfig.mapBottomInset] at the
+  /// bottom so the Google logo stays visible above the card, which the Maps
+  /// Platform terms require.
+  EdgeInsets get _mapPadding => config.padding == EdgeInsets.zero
+      ? EdgeInsets.only(bottom: config.mapBottomInset)
+      : config.padding;
+
   Widget _buildContent(BuildContext context, MapLocationPickerController ctrl) {
     final theme = Theme.of(context);
     // sizeOf/viewInsetsOf subscribe to just that slice of MediaQuery, so an
@@ -175,30 +189,44 @@ class MapLocationPickerView extends HookWidget {
           // IgnorePointer so the pin never swallows a map gesture.
           Positioned.fill(
             child: IgnorePointer(
-              child: Center(child: _buildCenterPin(context, ctrl)),
+              child: Padding(
+                // The SDK centres CameraPosition.target inside the *padded*
+                // region, so the pin has to sit there too -- otherwise the
+                // point that gets geocoded is mapBottomInset/2 north of the
+                // pin tip (~450 m at zoom 14). google_maps_flutter_web ignores
+                // padding, so on web the target stays at the geometric centre
+                // and no shift is wanted.
+                padding: kIsWeb ? EdgeInsets.zero : _mapPadding,
+                child: Center(child: _buildCenterPin(context, ctrl)),
+              ),
             ),
           ),
 
         if (config.showSearchBar)
-          Positioned(
-            top: 0,
-            left: 0,
-            right: 0,
-            child: SafeArea(
-              bottom: false,
-              child: Padding(
-                padding: EdgeInsets.only(
-                  left: config.showBackButton ? 60 : 12,
-                  right: 12,
-                ),
-                child: _interceptPointer(
-                  child:
-                      config.searchBarBuilder?.call(context, searchBar) ??
-                      searchBar,
+          if (config.searchBarBuilder != null)
+            // The builder's widget is a direct Stack child, as it was on 3.x,
+            // so a caller may return a Positioned. Wrapping it in our own
+            // Positioned/SafeArea/Padding tripped a ParentDataWidget assertion.
+            config.searchBarBuilder!(
+              context,
+              _interceptPointer(child: searchBar),
+            )
+          else
+            Positioned(
+              top: 0,
+              left: 0,
+              right: 0,
+              child: SafeArea(
+                bottom: false,
+                child: Padding(
+                  padding: EdgeInsets.only(
+                    left: config.showBackButton ? 60 : 12,
+                    right: 12,
+                  ),
+                  child: _interceptPointer(child: searchBar),
                 ),
               ),
             ),
-          ),
 
         if (config.showBackButton)
           Positioned(
@@ -234,15 +262,24 @@ class MapLocationPickerView extends HookWidget {
           bottom: 0,
           left: 0,
           right: 0,
-          child: _interceptPointer(
-            child: _buildControls(
-              context,
-              ctrl,
-              theme,
-              showBottomCard,
-              searchBar,
-              showFabs: !isTop,
-              isStart: isStart,
+          child: Padding(
+            // Resizing is off, so a caller who deliberately keeps the card
+            // visible would otherwise get it drawn under the keyboard.
+            padding: EdgeInsets.only(
+              bottom: isKeyboardVisible && !config.hideBottomCardOnKeyboard
+                  ? MediaQuery.viewInsetsOf(context).bottom
+                  : 0,
+            ),
+            child: _interceptPointer(
+              child: _buildControls(
+                context,
+                ctrl,
+                theme,
+                showBottomCard,
+                searchBar,
+                showFabs: !isTop,
+                isStart: isStart,
+              ),
             ),
           ),
         ),
@@ -382,9 +419,7 @@ class MapLocationPickerView extends HookWidget {
       zoomControlsEnabled: config.zoomControlsEnabled,
       // Keeps the Google logo and the "terms" link clear of the bottom card,
       // which is a Maps Platform terms-of-service requirement.
-      padding: config.padding == EdgeInsets.zero
-          ? EdgeInsets.only(bottom: config.mapBottomInset)
-          : config.padding,
+      padding: _mapPadding,
       compassEnabled: config.compassEnabled,
       liteModeEnabled: config.liteModeEnabled,
       mapType: ctrl.mapType,

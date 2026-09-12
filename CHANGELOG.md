@@ -75,6 +75,9 @@ for the upgrade from 3.x.
   terms.
 - The example could not compile from a clean clone — `example/lib/key.dart` was
   gitignored — and its `pubspec.yaml` declared an unsatisfiable SDK range.
+- **`bottomCardTitle` was never rendered.** The default bottom card ignored it
+  completely. It now draws above the address, and its default changed from
+  `'Select your location'` to `''` so no title appears unless you ask for one.
 
 ### Added
 
@@ -141,6 +144,11 @@ for the upgrade from 3.x.
 
 ### Deprecated
 
+- `MapLocationPickerConfig.onLocationError` — superseded by `onError`, which
+  reports a typed `MapLocationPickerException` for every failure rather than
+  only location ones. Still invoked for current-location failures.
+- `MapLocationPickerConfig.noAddressFoundText` — now nullable and superseded by
+  `strings.noAddressFound`, which is localizable. An explicit value still wins.
 - `SearchConfig.hideWithKeyboard` — removed upstream in flutter_typeahead 6.0.0
   because closing the keyboard also drops focus. Use `hideOnUnfocus`.
 - `MapLocationPickerConfig.bottomCardType` — was never read. Use `cardType`.

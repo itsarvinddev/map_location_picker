@@ -1,7 +1,10 @@
 /// Autocomplete and place-details lookups against the Places API (New).
 library;
 
+import 'dart:async' show TimeoutException;
+
 import 'package:dio/dio.dart' show CancelToken, DioException, DioExceptionType;
+import 'package:http/http.dart' show ClientException;
 import 'package:google_maps_apis/places_new.dart';
 
 import 'exceptions.dart';
@@ -43,8 +46,39 @@ class AutoCompleteService {
   /// Creates a service.
   AutoCompleteService({this.placesApi, this.onError});
 
-  PlacesAPINew _client(String apiKey) =>
-      placesApi ?? PlacesAPINew(apiKey: apiKey);
+  PlacesAPINew? _owned;
+  String? _ownedKey;
+
+  /// One client per API key rather than one per request.
+  ///
+  /// Building a [PlacesAPINew] per call created a fresh Dio/HttpClient on every
+  /// debounced keystroke, so no TLS connection was ever reused and each pool
+  /// was left open. Keyed on [apiKey] so a `copyWith(apiKey: ...)` is honoured.
+  PlacesAPINew _client(String apiKey) {
+    final injected = placesApi;
+    if (injected != null) return injected;
+    final owned = _owned;
+    if (owned != null && _ownedKey == apiKey) return owned;
+    _closeOwned();
+    _ownedKey = apiKey;
+    return _owned = PlacesAPINew(apiKey: apiKey);
+  }
+
+  void _closeOwned() {
+    try {
+      _owned?.restAPI.dispose();
+    } catch (_) {
+      // Closing an already-closed client must not break a lookup.
+    }
+    _owned = null;
+    _ownedKey = null;
+  }
+
+  /// Closes the client this service created.
+  ///
+  /// An injected [placesApi] is left alone -- you own its lifetime, as with
+  /// [GeoCodingConfig.dispose].
+  void dispose() => _closeOwned();
 
   /// Returns place predictions for [query].
   ///
@@ -85,6 +119,7 @@ class AutoCompleteService {
     if (query.isEmpty) return const <Suggestion>[];
     final session = sessionToken ?? SessionTokenHandler();
     try {
+      final effectiveCancel = cancelToken ?? CancelToken();
       final response = await _client(apiKey).searchAutocomplete(
         // Merge, do not replace. Replacing is what broke #70: a caller-supplied
         // filter dropped `input`, so Google never received the search text.
@@ -98,10 +133,10 @@ class AutoCompleteService {
         // A caller-supplied CancelToken is deliberately not reused here: once
         // cancelled, a CancelToken stays cancelled, which would kill every
         // later keystroke.
-        cancelToken: cancelToken ?? CancelToken(),
+        cancelToken: effectiveCancel,
       );
 
-      if (_reportIfError(response.error, response.statusCode)) {
+      if (_reportIfError(response, effectiveCancel)) {
         return const <Suggestion>[];
       }
       return response.body?.suggestions ?? const <Suggestion>[];
@@ -130,6 +165,7 @@ class AutoCompleteService {
     final cached = sessionToken?.placeFromCache(placeId);
     if (cached != null) return cached;
     try {
+      final effectiveCancel = cancelToken ?? CancelToken();
       final response = await _client(apiKey).getDetails(
         id: placeId,
         allFields: allFields,
@@ -140,10 +176,10 @@ class AutoCompleteService {
               sessionToken: filter.sessionToken ?? sessionToken?.token,
             ) ??
             PlaceDetailsFilter(sessionToken: sessionToken?.token),
-        cancelToken: cancelToken ?? CancelToken(),
+        cancelToken: effectiveCancel,
       );
 
-      if (_reportIfError(response.error, response.statusCode)) return null;
+      if (_reportIfError(response, effectiveCancel)) return null;
       // Caching the details also refreshes the session token, which is how the
       // Places session is formally concluded.
       sessionToken?.cachePlaceDetails(id: placeId, data: response.body);
@@ -154,19 +190,32 @@ class AutoCompleteService {
     }
   }
 
-  /// Reports an API-level error. Returns true when [error] was a failure.
-  bool _reportIfError(GoogleErrorResponse? error, int? statusCode) {
-    if (error == null) return false;
+  /// Reports an API-level error. Returns true when [response] was a failure.
+  ///
+  /// A non-2xx response counts even when `error` is null: the package
+  /// fabricates a response rather than throwing when a request is cancelled.
+  bool _reportIfError(GoogleHTTPResponse<Object?> response, CancelToken token) {
+    if (response.error == null && response.isSuccessful) return false;
+    if (token.isCancelled) {
+      onError?.call(
+        const MapLocationPickerException(
+          MapPickerErrorKind.cancelled,
+          'Request cancelled',
+        ),
+      );
+      return true;
+    }
+    final status = response.statusCode;
     final message =
-        error.error?.message ??
-        error.error?.toJsonString() ??
-        'Places request failed';
+        response.error?.error?.message ??
+        response.error?.error?.toJsonString() ??
+        'Places request failed (HTTP $status)';
     mapLogger.e(message);
     onError?.call(
       MapLocationPickerException(
-        mapPickerErrorKindFromStatus(statusCode ?? error.error?.code),
+        mapPickerErrorKindFromStatus(status),
         message,
-        statusCode: statusCode ?? error.error?.code,
+        statusCode: status,
       ),
     );
     return true;
@@ -194,6 +243,29 @@ class AutoCompleteService {
         kind,
         err.message ?? err.toString(),
         statusCode: err.response?.statusCode,
+        cause: err,
+        stackTrace: stack,
+      );
+    }
+    if (err is TimeoutException) {
+      return MapLocationPickerException(
+        MapPickerErrorKind.network,
+        'The Places request timed out.',
+        cause: err,
+        stackTrace: stack,
+      );
+    }
+    // SocketException lives in dart:io, which this package cannot import
+    // (it supports web, including wasm). Match on the runtime type name
+    // instead -- these arrive unwrapped, not as DioExceptions.
+    final typeName = err.runtimeType.toString();
+    if (err is ClientException ||
+        typeName == 'SocketException' ||
+        typeName == 'HandshakeException' ||
+        typeName == 'HttpException') {
+      return MapLocationPickerException(
+        MapPickerErrorKind.network,
+        'The Places request could not reach Google: $err',
         cause: err,
         stackTrace: stack,
       );

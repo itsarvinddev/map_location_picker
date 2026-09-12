@@ -59,7 +59,18 @@ void _surface() {
   LocalizedText();
   SessionTokenHandler();
   PlaceType.restaurant;
-  AutocompleteSearchFilter().copyWith(input: 'x');
+  AutocompleteSearchFilter(
+    locationBias: LocationBias(
+      circle: PlacesCircle(
+        center: ReferencePoint(latitude: 0, longitude: 0),
+        radius: 100,
+      ),
+    ),
+    locationRestriction: LocationRestriction(rectangle: null),
+    origin: PlacesLatLng(latitude: 0, longitude: 0),
+  ).copyWith(input: 'x');
+  QueryPrediction();
+  PlacesAddressComponent();
   PlaceDetailsFilter().copyWith(sessionToken: 'x');
 
   // Transitive types that appear in our signatures.
@@ -73,6 +84,27 @@ void _surface() {
   const LocationSettings();
   LocationPermission.always;
   Geolocator.checkPermission;
+  // Settings companions, and the exceptions Geolocator documents throwing.
+  AndroidSettings(
+    foregroundNotificationConfig: const ForegroundNotificationConfig(
+      notificationTitle: 't',
+      notificationText: 'b',
+      notificationIcon: AndroidResource(name: 'ic'),
+    ),
+  );
+  AppleSettings(activityType: ActivityType.otherNavigation);
+  WebSettings();
+  LocationAccuracyStatus.precise;
+  ServiceStatus.enabled;
+  GeolocatorPlatform.instance;
+  LocationServiceDisabledException;
+  PermissionDeniedException;
+
+  // Geocoding companions reachable from GeocodingResult.
+  Bounds;
+  Component;
+  ResponseStatus;
+  GoogleMapsGeocoding(apiKey: '');
 
   // Services and helpers.
   AutoCompleteService();

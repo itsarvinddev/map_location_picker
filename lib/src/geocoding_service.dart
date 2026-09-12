@@ -3,8 +3,11 @@ import 'package:map_location_picker/map_location_picker.dart';
 
 /// Reverse-geocodes coordinates into addresses using the Google Geocoding API.
 ///
-/// One instance owns one HTTP client. Call [dispose] when you are done with it;
-/// [MapLocationPickerController] does this for you.
+/// One instance owns one HTTP client (unless you supply [httpClient]). You own
+/// the lifetime of any instance you create: call [dispose] when you are done.
+/// [MapLocationPickerController] disposes only the client it derives itself
+/// from [MapLocationPickerConfig]; one passed in as `geoCodingConfig` is left
+/// alone so it can be reused across pickers.
 ///
 /// ```dart
 /// final geocoding = GeoCodingConfig(apiKey: 'YOUR_API_KEY');
@@ -77,10 +80,14 @@ class GeoCodingConfig {
   ///
   /// Returns `(bestResult, allResults)`. Both are empty/null when nothing was
   /// found *or* when the request failed; supply [onError] to tell them apart.
+  /// [onErrorOverride] replaces [onError] for this call only. The controller
+  /// uses it to drop failures belonging to a superseded request.
   Future<(GeocodingResult?, List<GeocodingResult>)> reverseGeocode(
-    LatLng position,
-  ) async {
+    LatLng position, {
+    MapPickerErrorCallback? onErrorOverride,
+  }) async {
     if (_disposed) return (null, const <GeocodingResult>[]);
+    final sink = onErrorOverride ?? onError;
     try {
       final response = await _geocoding.searchByLocation(
         Location(lat: position.latitude, lng: position.longitude),
@@ -89,16 +96,21 @@ class GeoCodingConfig {
         resultType: resultType,
       );
 
+      // dispose() closes the client, which aborts this request; reporting
+      // that self-inflicted abort would fire onError after teardown.
+      if (_disposed) return (null, const <GeocodingResult>[]);
+
       final failure = _failureFor(response);
       if (failure != null) {
-        onError?.call(failure);
+        sink?.call(failure);
         return (null, const <GeocodingResult>[]);
       }
 
       final results = response.results ?? const <GeocodingResult>[];
       return (results.isNotEmpty ? results.first : null, results);
     } catch (e, s) {
-      onError?.call(
+      if (_disposed) return (null, const <GeocodingResult>[]);
+      sink?.call(
         MapLocationPickerException(
           MapPickerErrorKind.network,
           'Reverse geocoding request failed: $e',

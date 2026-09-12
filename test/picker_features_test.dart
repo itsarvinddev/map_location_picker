@@ -9,8 +9,9 @@ class _StubGeoCoding extends GeoCodingConfig {
 
   @override
   Future<(GeocodingResult?, List<GeocodingResult>)> reverseGeocode(
-    LatLng position,
-  ) async {
+    LatLng position, {
+    MapPickerErrorCallback? onErrorOverride,
+  }) async {
     calls++;
     final r = result;
     return (r, r == null ? const <GeocodingResult>[] : [r]);

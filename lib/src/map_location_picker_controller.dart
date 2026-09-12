@@ -66,6 +66,8 @@ class MapLocationPickerController extends ChangeNotifier {
   /// Creates a controller.
   ///
   /// [geoCodingConfig] overrides the geocoding client derived from [config].
+  /// It is *not* disposed with the controller -- an injected client may outlive
+  /// one picker, so you own its lifetime.
   MapLocationPickerController({
     required MapLocationPickerConfig config,
     GeoCodingConfig? geoCodingConfig,
@@ -152,6 +154,17 @@ class MapLocationPickerController extends ChangeNotifier {
   GeoCodingConfig? _cachedGeoCoding;
   String? _cachedGeoCodingKey;
 
+  /// Superseded geocoding clients, disposed once nothing is in flight.
+  ///
+  /// Closing one inline would abort a request still using it and surface the
+  /// abort as a spurious network failure.
+  final List<GeoCodingConfig> _retiredGeoCoding = [];
+
+  /// Nearby search owns its own sequence, so a superseded nearby response
+  /// cannot clear the loading flag of a newer one.
+  int _nearbyRequestId = 0;
+  bool _initialised = false;
+
   /// How long to wait for the map to become available before giving up.
   ///
   /// Without this, a missing Android API key or a missing Maps JavaScript API
@@ -165,10 +178,16 @@ class MapLocationPickerController extends ChangeNotifier {
     final key =
         '${_config.apiKey}|${_config.language}|${_config.geocodingBaseUrl}'
         '|${_config.geocodingLocationType}|${_config.geocodingResultType}';
-    if (_cachedGeoCoding != null && _cachedGeoCodingKey == key) {
-      return _cachedGeoCoding!;
+    final cached = _cachedGeoCoding;
+    if (cached != null &&
+        _cachedGeoCodingKey == key &&
+        identical(cached.httpClient, _config.geocodingHttpClient) &&
+        mapEquals(cached.apiHeaders, _config.geocodingApiHeaders)) {
+      return cached;
     }
-    _cachedGeoCoding?.dispose();
+    // Retire rather than dispose: closing the client now would abort a request
+    // that is still in flight and surface the abort as a network failure.
+    if (cached != null) _retiredGeoCoding.add(cached);
     _cachedGeoCodingKey = key;
     return _cachedGeoCoding = GeoCodingConfig(
       apiKey: _config.apiKey,
@@ -200,9 +219,30 @@ class MapLocationPickerController extends ChangeNotifier {
     notifyListeners();
   }
 
-  void _report(MapLocationPickerException error) {
+  /// The "nothing found here" label.
+  ///
+  /// [MapLocationPickerConfig.noAddressFoundText] is the deprecated override;
+  /// when it is null the localized [MapLocationPickerStrings.noAddressFound]
+  /// applies.
+  String get _noAddressText =>
+      // ignore: deprecated_member_use_from_same_package
+      _config.noAddressFoundText ?? _config.strings.noAddressFound;
+
+  void _report(
+    MapLocationPickerException error, {
+    bool legacyLocation = false,
+  }) {
+    // A request aborted *by* dispose() would otherwise call back into a host
+    // that has already torn down the route it would report on.
+    if (_disposed) return;
     _lastError = error;
     mapLogger.e(error.message);
+    if (legacyLocation) {
+      // 3.x reported location failures here, and handed over the raw thrown
+      // object rather than a typed exception.
+      // ignore: deprecated_member_use_from_same_package
+      _config.onLocationError?.call(error.cause ?? error);
+    }
     _config.onError?.call(error);
     _safeNotify();
   }
@@ -267,21 +307,55 @@ class MapLocationPickerController extends ChangeNotifier {
     if (_config.pinMode != PickerPinMode.centerPin) return;
     _pinState = PinState.idle;
     final target = _pendingCameraTarget;
+    final settleTarget = _awaitingSettleAt;
+    _awaitingSettleAt = null; // only the next idle is excused
     if (target == null || target == _position) {
       _safeNotify();
       return;
     }
+    if (settleTarget != null && _isSameSpot(target, settleTarget)) {
+      // The map settled where we asked it to. Treating that as a user pan
+      // would clear lastSelectedPlace (losing the POI name) and pay for a
+      // second geocode of a point we just geocoded.
+      _safeNotify();
+      return;
+    }
     _setPosition(target, PositionChangeReason.cameraIdle);
+    // The lookup below is only *scheduled*. Without marking it in flight now,
+    // the card would keep showing the previous point's address with an enabled
+    // confirm button for the whole debounce window -- so confirming inside it
+    // returned the new coordinates paired with the old address.
+    _isLoading = true;
+    _result = null;
+    _results = const [];
+    _safeNotify();
     // Android reports idle more than once as a fling settles, and each one
     // would otherwise be a billed geocode.
-    _idleDebouncer ??= DeBouncer(duration: _config.pinIdleDebounce);
+    if (_idleDebouncer == null ||
+        _idleDebounceDuration != _config.pinIdleDebounce) {
+      _idleDebouncer?.dispose();
+      _idleDebounceDuration = _config.pinIdleDebounce;
+      _idleDebouncer = DeBouncer(duration: _idleDebounceDuration!);
+    }
     _idleDebouncer!.run(() {
       if (!_disposed) refreshAddress();
     });
   }
 
   LatLng? _pendingCameraTarget;
+
+  /// Target of an in-flight programmatic camera move, so the resulting idle is
+  /// not mistaken for the user panning.
+  LatLng? _awaitingSettleAt;
+
+  /// ~1e-5 degrees is about a metre: well under any deliberate pan, well over
+  /// the rounding the platform applies to camera targets.
+  static bool _isSameSpot(LatLng a, LatLng b) =>
+      (a.latitude - b.latitude).abs() < 1e-5 &&
+      (a.longitude - b.longitude).abs() < 1e-5;
+
   DeBouncer? _idleDebouncer;
+  Duration? _idleDebounceDuration;
 
   /// Changes the displayed map type.
   void setMapType(MapType type) {
@@ -307,11 +381,9 @@ class MapLocationPickerController extends ChangeNotifier {
     if (_disposed) return;
     _setPosition(target, reason);
 
-    if (animate || zoom != null) {
-      // Camera movement is best-effort: a map that never initialises must not
-      // stop the address lookup below.
-      unawaited(_moveCamera(target, zoom: zoom, animate: animate));
-    }
+    // Camera movement is best-effort: a map that never initialises must not
+    // stop the address lookup below.
+    unawaited(_moveCamera(target, zoom: zoom, animate: animate));
     if (geocode) await refreshAddress();
   }
 
@@ -320,6 +392,7 @@ class MapLocationPickerController extends ChangeNotifier {
     double? zoom,
     bool animate = true,
   }) async {
+    _awaitingSettleAt = target;
     try {
       final controller = await mapController;
       if (_disposed) return;
@@ -354,6 +427,9 @@ class MapLocationPickerController extends ChangeNotifier {
     if (reason != PositionChangeReason.suggestion) _lastSelectedPlace = null;
     _position = target;
     _lastReason = reason;
+    // Chips for the previous neighbourhood must not stay rendered and
+    // tappable -- tapping one would yank the pin back.
+    if (_config.showNearbyPlaces) _nearbyPlaces = const [];
     _config.onMainMarkerPositionChanged?.call(target);
     _safeNotify();
   }
@@ -370,7 +446,16 @@ class MapLocationPickerController extends ChangeNotifier {
     _safeNotify();
 
     try {
-      final (best, all) = await _geoCoding.reverseGeocode(_position);
+      final (best, all) = await _geoCoding.reverseGeocode(
+        _position,
+        // Route failures through the same sequencing the results get: a
+        // superseded request must not report an error for a lookup the user
+        // already abandoned.
+        onErrorOverride: (e) {
+          if (_disposed || requestId != _requestId) return;
+          _report(e);
+        },
+      );
       // A newer request superseded this one, or the controller went away.
       if (_disposed || requestId != _requestId) return;
 
@@ -383,7 +468,7 @@ class MapLocationPickerController extends ChangeNotifier {
       } else {
         _result = null;
         _results = const [];
-        _address = _config.noAddressFoundText;
+        _address = _noAddressText;
         mapLogger.i(
           'No address found for $_position. Try a larger radius or relax '
           'geocodingResultType / geocodingLocationType.',
@@ -393,7 +478,7 @@ class MapLocationPickerController extends ChangeNotifier {
       if (_disposed || requestId != _requestId) return;
       _result = null;
       _results = const [];
-      _address = _config.noAddressFoundText;
+      _address = _noAddressText;
       _report(
         MapLocationPickerException(
           MapPickerErrorKind.unknown,
@@ -405,6 +490,7 @@ class MapLocationPickerController extends ChangeNotifier {
     } finally {
       if (!_disposed && requestId == _requestId) {
         _isLoading = false;
+        _drainRetiredGeoCoding();
         _safeNotify();
         if (_config.showNearbyPlaces) unawaited(refreshNearbyPlaces());
       }
@@ -422,7 +508,7 @@ class MapLocationPickerController extends ChangeNotifier {
             .toList() ??
         const <String>[];
     if (parts.isNotEmpty) return parts.join(', ');
-    return _config.noAddressFoundText;
+    return _noAddressText;
   }
 
   /// Selects [result] as the current address without moving the map.
@@ -438,10 +524,11 @@ class MapLocationPickerController extends ChangeNotifier {
 
   /// Centres on a place returned by the autocomplete search.
   ///
-  /// The [places.Place] already carries a formatted address, so it is used
-  /// directly instead of paying for a second reverse-geocode round trip. The
-  /// full [GeocodingResult] list is then refreshed in the background so the
-  /// "nearby places" sheet still works.
+  /// The place's own address is shown immediately as an optimistic label, then
+  /// a reverse geocode runs and supersedes it -- that second lookup is what
+  /// populates [result] and [results] for the matching-addresses sheet, so it
+  /// is not skippable. [lastSelectedPlace] keeps the place's display name, and
+  /// [PickedPlace.name] is built from it.
   Future<void> selectPlace(places.Place? place) async {
     if (_disposed || place == null) return;
     final location = place.location;
@@ -479,12 +566,14 @@ class MapLocationPickerController extends ChangeNotifier {
   /// with a distinct [MapPickerErrorKind], instead of returning silently.
   Future<void> goToCurrentLocation() async {
     if (_disposed) return;
+    final requestId = _requestId;
     _lastError = null;
     _isLoading = true;
     _safeNotify();
     try {
       if (!await Geolocator.isLocationServiceEnabled()) {
         _report(
+          legacyLocation: true,
           const MapLocationPickerException(
             MapPickerErrorKind.locationServiceDisabled,
             'Location services are turned off on this device.',
@@ -499,6 +588,7 @@ class MapLocationPickerController extends ChangeNotifier {
       }
       if (permission == LocationPermission.deniedForever) {
         _report(
+          legacyLocation: true,
           const MapLocationPickerException(
             MapPickerErrorKind.locationPermissionDeniedForever,
             'Location permission is permanently denied. It can only be granted '
@@ -512,6 +602,7 @@ class MapLocationPickerController extends ChangeNotifier {
       if (permission != LocationPermission.whileInUse &&
           permission != LocationPermission.always) {
         _report(
+          legacyLocation: true,
           const MapLocationPickerException(
             MapPickerErrorKind.locationPermissionDenied,
             'Location permission was denied.',
@@ -532,6 +623,7 @@ class MapLocationPickerController extends ChangeNotifier {
       );
     } on TimeoutException catch (e, s) {
       _report(
+        legacyLocation: true,
         MapLocationPickerException(
           MapPickerErrorKind.locationTimeout,
           'Timed out waiting for a location fix.',
@@ -541,6 +633,7 @@ class MapLocationPickerController extends ChangeNotifier {
       );
     } catch (e, s) {
       _report(
+        legacyLocation: true,
         MapLocationPickerException(
           MapPickerErrorKind.unknown,
           'Failed to get the current location: $e',
@@ -549,7 +642,11 @@ class MapLocationPickerController extends ChangeNotifier {
         ),
       );
     } finally {
-      if (!_disposed) {
+      // Only clear the flag if no lookup was started in the meantime:
+      // `moveTo` delegates to `refreshAddress`, which owns the flag from that
+      // point on. Clearing it here would stop the spinner while the newer
+      // lookup is still in flight.
+      if (!_disposed && requestId == _requestId) {
         _isLoading = false;
         _safeNotify();
       }
@@ -562,8 +659,16 @@ class MapLocationPickerController extends ChangeNotifier {
   /// [goToCurrentLocation] this never surfaces a permission failure as an
   /// error: opening the picker should not nag, so it quietly falls back to
   /// [MapLocationPickerConfig.initialPosition].
-  Future<void> initialise() async {
+  /// Runs once per controller. Pass `force: true` to re-resolve, e.g. when
+  /// reopening the picker on a different address with a controller you own.
+  Future<void> initialise({bool force = false}) async {
     if (_disposed) return;
+    // A caller-supplied controller outlives the widget, so a remount
+    // (TabBarView, PageView, a conditional subtree) must not re-run this:
+    // it costs a billed geocode and, with startWithCurrentLocation, would
+    // discard the point the user had already chosen.
+    if (_initialised && !force) return;
+    _initialised = true; // set before awaiting so overlapping calls collapse
     if (_config.startWithCurrentLocation) {
       final located = await _tryCurrentPosition();
       if (_disposed) return;
@@ -615,7 +720,8 @@ class MapLocationPickerController extends ChangeNotifier {
   /// when [MapLocationPickerConfig.showNearbyPlaces] is on.
   Future<void> refreshNearbyPlaces() async {
     if (_disposed || !_config.showNearbyPlaces) return;
-    final requestId = _requestId;
+    final nearbyId = ++_nearbyRequestId; // owns the loading flag
+    final addressId = _requestId; // detects a moved pin
     _isLoadingNearby = true;
     _safeNotify();
     try {
@@ -644,7 +750,11 @@ class MapLocationPickerController extends ChangeNotifier {
           ),
         ),
       );
-      if (_disposed || requestId != _requestId) return;
+      if (_disposed ||
+          nearbyId != _nearbyRequestId ||
+          addressId != _requestId) {
+        return;
+      }
       if (response.error != null && !response.isSuccessful) {
         _report(
           MapLocationPickerException(
@@ -658,7 +768,11 @@ class MapLocationPickerController extends ChangeNotifier {
       }
       _nearbyPlaces = response.body?.places ?? const [];
     } catch (e, s) {
-      if (_disposed || requestId != _requestId) return;
+      if (_disposed ||
+          nearbyId != _nearbyRequestId ||
+          addressId != _requestId) {
+        return;
+      }
       _nearbyPlaces = const [];
       _report(
         MapLocationPickerException(
@@ -669,7 +783,7 @@ class MapLocationPickerController extends ChangeNotifier {
         ),
       );
     } finally {
-      if (!_disposed) {
+      if (!_disposed && nearbyId == _nearbyRequestId) {
         _isLoadingNearby = false;
         _safeNotify();
       }
@@ -683,12 +797,35 @@ class MapLocationPickerController extends ChangeNotifier {
     _config.onNext?.call(_result);
   }
 
+  void _drainRetiredGeoCoding() {
+    if (_retiredGeoCoding.isEmpty) return;
+    for (final client in _retiredGeoCoding) {
+      client.dispose();
+    }
+    _retiredGeoCoding.clear();
+  }
+
   @override
   void dispose() {
     _disposed = true;
     // Invalidate any in-flight response.
     _requestId++;
+    _nearbyRequestId++;
+    // Settle the map future so a pending `mapController` await resolves now
+    // instead of holding a 15s timer past teardown.
+    if (!_mapControllerCompleter.isCompleted) {
+      _mapControllerCompleter.completeError(
+        const MapLocationPickerException(
+          MapPickerErrorKind.mapUnavailable,
+          'The controller was disposed before the map initialised.',
+        ),
+      );
+      _mapControllerCompleter.future.ignore();
+    }
     _idleDebouncer?.dispose();
+    _drainRetiredGeoCoding();
+    // Only the client this controller derived from the config -- an injected
+    // `geoCodingConfig` belongs to the caller.
     _cachedGeoCoding?.dispose();
     _cachedGeoCoding = null;
     super.dispose();

@@ -109,99 +109,104 @@ Widget defaultBottomCard(
       radius: config.cardRadius ?? BorderRadius.circular(CustomMapCard.kRadius),
       color: config.cardColor,
       border: config.cardBorder,
-      child: SafeArea(
-        top: false,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            if (config.bottomCardTitle.isNotEmpty)
-              Padding(
-                padding: const EdgeInsets.only(top: 12),
-                child: Align(
-                  alignment: AlignmentDirectional.centerStart,
-                  child: Text(
-                    config.bottomCardTitle,
-                    style: theme.textTheme.labelLarge,
+      // MapLocationPickerView has no Scaffold, so nothing above it guarantees
+      // a Material ancestor -- and ListTile/CupertinoButton assert without one.
+      child: Material(
+        type: MaterialType.transparency,
+        child: SafeArea(
+          top: false,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (config.bottomCardTitle.isNotEmpty)
+                Padding(
+                  padding: const EdgeInsets.only(top: 12),
+                  child: Align(
+                    alignment: AlignmentDirectional.centerStart,
+                    child: Text(
+                      config.bottomCardTitle,
+                      style: theme.textTheme.labelLarge,
+                    ),
                   ),
                 ),
-              ),
-            ListTile(
-              title: isLoading
-                  ? Text(strings.loadingAddress, textAlign: TextAlign.start)
-                  : (title.isEmpty
-                        ? null
-                        : Text(title, style: theme.textTheme.titleMedium)),
-              subtitle: isLoading
-                  ? Text(
-                      strings.loadingAddressSubtitle,
-                      textAlign: TextAlign.start,
-                    )
-                  : Text(
-                      address,
-                      maxLines: 3,
-                      overflow: TextOverflow.ellipsis,
-                      textAlign: TextAlign.start,
-                    ),
-            ),
-            config.confirmButton?.call(context, onNext) ??
-                Builder(
-                  builder: (context) {
-                    // Never render a filled, enabled-looking button wired to a
-                    // no-op: that is what made "Confirm does nothing" the most
-                    // common report. Either it works, or it looks disabled.
-                    final canConfirm =
-                        !isLoading &&
-                        (result != null || !config.requireGeocodedAddress);
-                    return Semantics(
-                      button: true,
-                      enabled: canConfirm,
-                      label: strings.confirmAddress,
-                      child: CupertinoButton.filled(
-                        minimumSize: const Size(double.infinity, 40),
-                        padding: const EdgeInsets.symmetric(horizontal: 16),
-                        pressedOpacity: 0.9,
-                        onPressed: canConfirm ? onNext : null,
-                        child: isLoading
-                            // No backgroundColor: it paints a grey track on
-                            // Android/web/desktop and is dropped entirely on
-                            // iOS/macOS.
-                            ? const SizedBox.square(
-                                dimension: 22,
-                                child: CircularProgressIndicator.adaptive(
-                                  strokeWidth: 2.5,
-                                ),
-                              )
-                            : Text(strings.confirmAddress),
+              ListTile(
+                title: isLoading
+                    ? Text(strings.loadingAddress, textAlign: TextAlign.start)
+                    : (title.isEmpty
+                          ? null
+                          : Text(title, style: theme.textTheme.titleMedium)),
+                subtitle: isLoading
+                    ? Text(
+                        strings.loadingAddressSubtitle,
+                        textAlign: TextAlign.start,
+                      )
+                    : Text(
+                        address,
+                        maxLines: 3,
+                        overflow: TextOverflow.ellipsis,
+                        textAlign: TextAlign.start,
                       ),
-                    );
-                  },
-                ),
-            if (results.length > 1 && !config.hideMoreOptions) ...[
-              const SizedBox(height: 12),
-              CupertinoButton.tinted(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 2,
-                ),
-                minimumSize: const Size(100, 10),
-                pressedOpacity: 0.9,
-                onPressed: isLoading
-                    ? null
-                    : () => showAddressOptions(
-                        context,
-                        results,
-                        config,
-                        onResultSelected: onResultSelected,
-                      ),
-                child: Text(
-                  isLoading
-                      ? strings.loadingNearbyPlaces
-                      : strings.nearbyPlacesCount(results.length),
-                  style: theme.textTheme.bodyMedium,
-                ),
               ),
+              config.confirmButton?.call(context, onNext) ??
+                  Builder(
+                    builder: (context) {
+                      // Never render a filled, enabled-looking button wired to a
+                      // no-op: that is what made "Confirm does nothing" the most
+                      // common report. Either it works, or it looks disabled.
+                      final canConfirm =
+                          !isLoading &&
+                          (result != null || !config.requireGeocodedAddress);
+                      return Semantics(
+                        button: true,
+                        enabled: canConfirm,
+                        label: strings.confirmAddress,
+                        child: CupertinoButton.filled(
+                          minimumSize: const Size(double.infinity, 40),
+                          padding: const EdgeInsets.symmetric(horizontal: 16),
+                          pressedOpacity: 0.9,
+                          onPressed: canConfirm ? onNext : null,
+                          child: isLoading
+                              // No backgroundColor: it paints a grey track on
+                              // Android/web/desktop and is dropped entirely on
+                              // iOS/macOS.
+                              ? const SizedBox.square(
+                                  dimension: 22,
+                                  child: CircularProgressIndicator.adaptive(
+                                    strokeWidth: 2.5,
+                                  ),
+                                )
+                              : Text(strings.confirmAddress),
+                        ),
+                      );
+                    },
+                  ),
+              if (results.length > 1 && !config.hideMoreOptions) ...[
+                const SizedBox(height: 12),
+                CupertinoButton.tinted(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 2,
+                  ),
+                  minimumSize: const Size(100, 10),
+                  pressedOpacity: 0.9,
+                  onPressed: isLoading
+                      ? null
+                      : () => showAddressOptions(
+                          context,
+                          results,
+                          config,
+                          onResultSelected: onResultSelected,
+                        ),
+                  child: Text(
+                    isLoading
+                        ? strings.loadingNearbyPlaces
+                        : strings.nearbyPlacesCount(results.length),
+                    style: theme.textTheme.bodyMedium,
+                  ),
+                ),
+              ],
             ],
-          ],
+          ),
         ),
       ),
     ),
@@ -255,8 +260,16 @@ void showAddressOptions(
           final title = addressTitle(result);
           return CupertinoActionSheetAction(
             onPressed: () {
-              onResultSelected?.call(result);
-              config.onAddressSelected?.call(result);
+              // Exactly one of these fires. The picker passes
+              // `onResultSelected: controller.selectResult`, and that already
+              // invokes `config.onAddressSelected` -- calling both here made it
+              // fire twice per selection. The fallback is for callers who
+              // invoke this sheet directly.
+              if (onResultSelected != null) {
+                onResultSelected(result);
+              } else {
+                config.onAddressSelected?.call(result);
+              }
               Navigator.pop(sheetContext);
             },
             child: CupertinoListTile(

@@ -13,8 +13,9 @@ class _FakeGeoCoding extends GeoCodingConfig {
 
   @override
   Future<(GeocodingResult?, List<GeocodingResult>)> reverseGeocode(
-    LatLng position,
-  ) {
+    LatLng position, {
+    MapPickerErrorCallback? onErrorOverride,
+  }) {
     final completer = Completer<(GeocodingResult?, List<GeocodingResult>)>();
     pending.add(completer);
     return completer.future;
@@ -186,6 +187,23 @@ void main() {
       expect(controller.address, 'a nearby place');
       expect(controller.position, const LatLng(1, 1));
       expect(selected.length, 1);
+    });
+
+    test('selectResult fires onAddressSelected exactly once', () {
+      // The nearby-matches sheet used to call config.onAddressSelected directly
+      // AND route through selectResult, which calls it too.
+      var calls = 0;
+      final controller = MapLocationPickerController(
+        config: MapLocationPickerConfig(
+          apiKey: 'k',
+          onAddressSelected: (_) => calls++,
+        ),
+      );
+      addTearDown(controller.dispose);
+
+      controller.selectResult(_result('one'));
+
+      expect(calls, 1);
     });
 
     test('confirm forwards the current result to onNext', () {
