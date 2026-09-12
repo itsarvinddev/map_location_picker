@@ -1,0 +1,145 @@
+name: CI
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  analyze:
+    name: Analyze & test (${{ matrix.id }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # `min` is the floor declared in pubspec.yaml. Pinning it here is the
+          # point: a floor is only a claim until something compiles against it.
+          # An unsatisfiable >=3.32 floor shipped once precisely because CI ran
+          # nothing but the latest stable.
+          - id: min
+            flutterVersion: '3.38.1'
+          # Empty version means "latest release on the channel".
+          - id: stable
+            flutterVersion: ''
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          # `channel` only accepts stable/beta/master; an exact release goes in
+          # `flutter-version`. Passing a version as `channel` fails with
+          # "Unable to determine Flutter version for channel: 3.38.1".
+          channel: stable
+          flutter-version: ${{ matrix.flutterVersion }}
+          cache: true
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Resolve lower bounds
+        # Compiles against the *lowest* allowed version of every dependency, so
+        # a `>=` bound that no longer builds fails here instead of in an app.
+        if: matrix.id == 'min'
+        run: |
+          flutter pub downgrade
+          flutter analyze --no-fatal-infos
+          flutter pub get
+
+      - name: Verify formatting
+        if: matrix.id == 'stable'
+        run: dart format --output=none --set-exit-if-changed .
+
+      - name: Analyze
+        run: flutter analyze --fatal-infos
+
+      - name: Verify generated code is up to date
+        # freezed and build_runner are pinned exactly so this diff is
+        # reproducible across contributors.
+        if: matrix.id == 'stable'
+        run: |
+          dart run build_runner build
+          git diff --exit-code -- '*.freezed.dart' '*.g.dart'
+
+      - name: Run tests
+        run: flutter test --coverage
+
+      - name: Upload coverage
+        if: matrix.id == 'stable'
+        uses: codecov/codecov-action@v4
+        with:
+          files: coverage/lcov.info
+        continue-on-error: true
+
+  build-example:
+    name: Build example (${{ matrix.target }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            target: apk
+            build: flutter build apk --debug
+          - os: ubuntu-latest
+            target: web
+            build: flutter build web
+          - os: ubuntu-latest
+            target: web-wasm
+            build: flutter build web --wasm
+          - os: macos-latest
+            target: ios
+            build: flutter build ios --debug --no-codesign
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        if: matrix.target == 'apk'
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Build
+        working-directory: example
+        run: |
+          flutter pub get
+          ${{ matrix.build }}
+
+  publish-check:
+    name: pub.dev score & dry-run
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - run: flutter pub get
+
+      - name: Publish dry-run
+        run: flutter pub publish --dry-run
+
+      - name: Install pana's screenshot tooling
+        # pana validates `screenshots:` by generating webp thumbnails with
+        # ImageMagick and cwebp. Without them it reports "No such file or
+        # directory" for every screenshot and drops 10 points.
+        run: sudo apt-get update && sudo apt-get install -y imagemagick webp
+
+      - name: pana score
+        # Threshold is "points we are allowed to lose". The package currently
+        # scores 160/160, so zero. Ratchet down, never up.
+        run: |
+          dart pub global activate pana
+          dart pub global run pana --no-warning --exit-code-threshold 0 .

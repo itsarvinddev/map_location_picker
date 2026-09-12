@@ -1,6 +1,6 @@
 name: map_location_picker
 description: Google Map location picker for flutter Based on google_maps_flutter.
-version: 3.1.0
+version: 4.0.0
 homepage: https://github.com/itsarvinddev/map_location_picker
 repository: https://github.com/itsarvinddev/map_location_picker
 issue_tracker: https://github.com/itsarvinddev/map_location_picker/issues
@@ -21,38 +21,58 @@ topics:
     - places-autocomplete
 
 environment:
-    sdk: ">=3.6.0 <4.0.0"
-    flutter: ">=3.27.0"
+    # Floor set by google_maps_apis 5.x, which needs meta ^1.17.0. The Flutter
+    # SDK pins meta EXACTLY (1.16.0 on Flutter 3.32-3.37, 1.17.0 from 3.38), so
+    # anything below 3.38 cannot resolve this package at all.
+    #
+    # 3.38.1 rather than 3.38.0: 3.38.0 shipped Dart "3.10.0-290.4.beta", and
+    # pub ranks a prerelease BELOW the release, so ">=3.10.0" excludes it.
+    # 3.38.1 is the first stable reporting a plain 3.10.0.
+    sdk: ">=3.10.0 <4.0.0"
+    flutter: ">=3.38.1"
+
+# Declares supported platforms directly. The previous `flutter.plugin.platforms`
+# block with `default_package:` entries is the federated-plugin *endorsement*
+# mechanism; this package has no native code, no pluginClass and no `implements:`,
+# so declaring it made the Flutter tool register a plugin in every consumer app.
+# Desktop is absent because google_maps_flutter has no macOS/Windows/Linux
+# implementation -- see README "Platform support".
+platforms:
+    android:
+    ios:
+    web:
 
 flutter:
-    plugin:
-        platforms:
-            android:
-                default_package: google_maps_flutter_android
-            ios:
-                default_package: google_maps_flutter_ios
-            web:
-                default_package: google_maps_flutter_web
+    uses-material-design: true
 
 dependencies:
     flutter:
         sdk: flutter
 
-    google_maps_flutter: ^2.13.1
-    flutter_typeahead: ^5.2.0
-    geolocator: ^14.0.2
-    flutter_hooks: ^0.21.3
-    freezed_annotation: ^3.1.0
-    google_maps_apis: ^4.0.0
-    retrofit: ">=4.7.3 <4.9.0"
-    dio: ^5.9.0
-    http: ^1.5.0
-    web: ^1.0.0
+    google_maps_flutter: ">=2.13.1 <3.0.0"
+    flutter_typeahead: ">=6.0.0 <7.0.0"
+    geolocator: ">=14.0.0 <15.0.0"
+    flutter_hooks: ">=0.21.3 <0.22.0"
+    freezed_annotation: ">=3.1.0 <4.0.0"
+    google_maps_apis: ">=5.1.0 <6.0.0"
+    dio: ">=5.9.0 <6.0.0"
+    http: ">=1.0.0 <2.0.0"
+    # >=0.10.1+1, not >=0.10.1: 0.10.0 and 0.10.1 declare BOTH
+    # `implements: pointer_interceptor_platform_interface` and an ios
+    # `default_package:`, which the Flutter tool rejects with "Please resolve
+    # the plugin pubspec errors". 0.10.1+1 dropped the `implements` key.
+    pointer_interceptor: ">=0.10.1+1 <0.11.0"
 
 dev_dependencies:
     flutter_test:
         sdk: flutter
-    freezed: ^3.2.3
-    build_runner: ">=2.5.4 <3.5.0"
-    lints: ^6.0.0
+    # Pinned exactly: CI gates on `build_runner build` producing a byte-identical
+    # diff, which is only meaningful if every contributor generates the same
+    # output. Staying off freezed 4 deliberately -- it needs Dart >=3.13.
+    freezed: 3.2.5
+    build_runner: 2.15.1
+    lints: ^6.1.0
+    # For faking GeolocatorPlatform in tests.
+    geolocator_platform_interface: ^4.2.3
+    plugin_platform_interface: ^2.1.8
 

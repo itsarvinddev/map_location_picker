@@ -6,14 +6,14 @@ import 'package:google_maps_apis/places_new.dart';
 
 part 'search_config.freezed.dart';
 
-typedef TextFieldBuilder = Widget Function(
-    BuildContext, TextEditingController, FocusNode)?;
+typedef TextFieldBuilder =
+    Widget Function(BuildContext, TextEditingController, FocusNode)?;
 typedef ItemBuilder = Widget Function(BuildContext, Suggestion)?;
 typedef OnSelected = void Function(Suggestion)?;
 typedef ErrorBuilder = Widget Function(BuildContext, Object)?;
 typedef LoadingBuilder = Widget Function(BuildContext)?;
-typedef TransitionBuilder = Widget Function(
-    BuildContext, Animation<double>, Widget)?;
+typedef TransitionBuilder =
+    Widget Function(BuildContext, Animation<double>, Widget)?;
 typedef ItemSeparatorBuilder = Widget Function(BuildContext, int)?;
 typedef ListBuilder = Widget Function(BuildContext, List<Widget>)?;
 typedef DecorationBuilder = Widget Function(BuildContext, Widget)?;
@@ -52,7 +52,12 @@ abstract class SearchConfig with _$SearchConfig {
     @Default(null) AutocompleteSearchFilter? searchFilter,
     @Default(null) PlacesSuggestions? searchInstanceFields,
     @Default(null) SessionTokenHandler? sessionToken,
-    @Default('Search for place, address, landmark, etc.') String searchHintText,
+
+    /// Placeholder for the search field.
+    ///
+    /// When empty, [MapLocationPickerStrings.searchHint] is used, so the hint
+    /// follows the picker's localization by default.
+    @Default('') String searchHintText,
     @Default(null) TextStyle? searchHintStyle,
     @Default(3) int minCharsForSuggestions,
     @Default(Duration(milliseconds: 500)) Duration debounceDuration,
@@ -73,7 +78,20 @@ abstract class SearchConfig with _$SearchConfig {
     @Default(null) BoxConstraints? constraints,
     @Default(true) bool hideOnSelect,
     @Default(true) bool hideOnUnfocus,
-    @Default(true) bool hideWithKeyboard,
+    @Deprecated(
+      'flutter_typeahead 6.0.0 removed hideWithKeyboard because closing the '
+      'keyboard also drops focus, which hideOnUnfocus already handles. '
+      'This field is ignored. Use hideOnUnfocus instead. '
+      'Will be removed in map_location_picker 5.0.0.',
+    )
+    @Default(true)
+    bool hideWithKeyboard,
+
+    /// Whether the suggestions box is constrained to the width of the search
+    /// field. Set to `false` to let the suggestions box size itself.
+    ///
+    /// Added in flutter_typeahead 6.0.0.
+    @Default(true) bool constrainWidth,
     @Default(null) ItemSeparatorBuilder itemSeparatorBuilder,
     @Default(null) ListBuilder listBuilder,
     @Default(null) Offset? offset,

@@ -1,14 +1,12 @@
 import 'dart:async';
 
 import 'package:flutter/cupertino.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:flutter_typeahead/flutter_typeahead.dart';
-import 'package:google_maps_apis/places_new.dart';
+import 'package:pointer_interceptor/pointer_interceptor.dart';
 import 'package:map_location_picker/map_location_picker.dart';
-
-import 'card.dart';
-import 'logger.dart';
 
 /// The autocomplete view for the map location picker.
 /// [PlacesAutocomplete] is a widget that shows a list of suggestions as the user types.
@@ -36,6 +34,12 @@ class PlacesAutocomplete extends HookWidget {
   /// The callback for when a place is selected.
   final void Function(Suggestion)? onSelected;
 
+  /// Called for every failure raised while searching or fetching details.
+  ///
+  /// Without this a failed lookup looks identical to "no matches" — see
+  /// [MapLocationPickerException] for the failure kinds.
+  final MapPickerErrorCallback? onError;
+
   final CardType cardType;
 
   final Color? cardColor;
@@ -51,6 +55,7 @@ class PlacesAutocomplete extends HookWidget {
     this.initialValue,
     this.onGetDetails,
     this.onSelected,
+    this.onError,
     this.cardType = CardType.defaultCard,
     this.cardColor,
     this.cardRadius,
@@ -61,22 +66,37 @@ class PlacesAutocomplete extends HookWidget {
   Widget build(BuildContext context) {
     /// Text controller for the search field.
     final textController = useTextEditingController(
-      text: initialValue?.placePrediction?.text?.text ??
+      text:
+          initialValue?.placePrediction?.text?.text ??
           config.defaultAddressText,
     );
 
-    /// Auto complete service.
-    final service = useMemoized(
-      () => AutoCompleteService(placesApi: config.placesApi),
+    /// One session token for the whole search, so Google bills the keystrokes
+    /// and the final details call as a single Autocomplete session instead of
+    /// charging per request.
+    final sessionToken = useMemoized(
+      () => config.sessionToken ?? SessionTokenHandler(),
+      [config.sessionToken],
     );
+
+    /// Auto complete service. Rebuilt when the credentials change so a
+    /// `copyWith(apiKey: ...)` is not silently ignored.
+    final service = useMemoized(
+      () => AutoCompleteService(placesApi: config.placesApi, onError: onError),
+      [config.placesApi, config.apiKey, onError],
+    );
+    // Without this the service's own HTTP client leaks on unmount and on every
+    // credential change.
+    useEffect(() => service.dispose, [service]);
 
     /// Cupertino type ahead field. It is a text field that shows a list of suggestions as the user types.
     return CupertinoTypeAheadField<Suggestion>(
       controller: textController,
       itemBuilder: config.itemBuilder ?? _defaultItemBuilder(),
-      suggestionsCallback: (query) => _getSuggestions(query, service),
+      suggestionsCallback: (query) =>
+          _getSuggestions(query, service, sessionToken),
       onSelected: (value) {
-        _handleSelection(value, context, textController, service);
+        _handleSelection(value, context, textController, service, sessionToken);
         config.onSelected?.call(value);
         FocusManager.instance.primaryFocus?.unfocus();
       },
@@ -94,50 +114,59 @@ class PlacesAutocomplete extends HookWidget {
       constraints: config.constraints ?? BoxConstraints(maxHeight: 500),
       hideOnSelect: config.hideOnSelect,
       hideOnUnfocus: config.hideOnUnfocus,
-      hideWithKeyboard: config.hideWithKeyboard,
-      itemSeparatorBuilder: config.itemSeparatorBuilder ??
+      constrainWidth: config.constrainWidth,
+      itemSeparatorBuilder:
+          config.itemSeparatorBuilder ??
           (context, index) => const Divider(
-                color: CupertinoColors.opaqueSeparator,
-                thickness: 0.5,
-                indent: 12,
-                endIndent: 12,
-                height: 0,
-              ),
+            color: CupertinoColors.opaqueSeparator,
+            thickness: 0.5,
+            indent: 12,
+            endIndent: 12,
+            height: 0,
+          ),
       listBuilder: config.listBuilder,
       offset: config.offset ?? Offset(0, 12),
       retainOnLoading: config.retainOnLoading,
       showOnFocus: config.showOnFocus,
       suggestionsController: config.suggestionsController,
-      decorationBuilder: config.decorationBuilder ??
+      decorationBuilder:
+          config.decorationBuilder ??
           (context, child) {
-            return CustomMapCard(
-              radius:
-                  cardRadius ?? BorderRadius.circular(CustomMapCard.kRadius),
-              padding: EdgeInsets.zero,
-              color: cardColor,
-              border: cardBorder,
-              child: child,
+            // The suggestions box floats over the GoogleMap platform view on
+            // web, where it would otherwise be unclickable.
+            return _intercept(
+              child: CustomMapCard(
+                radius:
+                    cardRadius ?? BorderRadius.circular(CustomMapCard.kRadius),
+                padding: EdgeInsets.zero,
+                color: cardColor,
+                border: cardBorder,
+                child: child,
+              ),
             );
           },
       emptyBuilder: config.emptyBuilder,
       scrollController: config.scrollController,
       focusNode: config.focusNode,
       hideKeyboardOnDrag: config.hideKeyboardOnDrag,
-      builder: config.builder ??
+      builder:
+          config.builder ??
           (context, controller, focusNode) {
             final child = CupertinoSearchTextField(
               controller: controller,
               focusNode: focusNode,
-              placeholder: config.searchHintText,
+              // The picker substitutes its localized `strings.searchHint`
+              // before this point; the fallback is for the standalone widget,
+              // whose SearchConfig default is empty.
+              placeholder: config.searchHintText.isEmpty
+                  ? const MapLocationPickerStrings().searchHint
+                  : config.searchHintText,
               placeholderStyle: config.searchHintStyle,
               decoration: BoxDecoration(
                 color: cardType == CardType.liquidCard ? null : cardColor,
                 borderRadius: BorderRadius.circular(CustomMapCard.kRadius),
               ),
-              padding: const EdgeInsets.symmetric(
-                horizontal: 12,
-                vertical: 10,
-              ),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
               keyboardType: TextInputType.streetAddress,
             );
             return CustomMapCard(
@@ -152,16 +181,30 @@ class PlacesAutocomplete extends HookWidget {
     );
   }
 
+  /// Wraps [child] so it receives mouse events over the map on web.
+  static Widget _intercept({required Widget child}) =>
+      kIsWeb ? PointerInterceptor(child: child) : child;
+
   Widget Function(BuildContext, Suggestion) _defaultItemBuilder() {
     return (context, content) {
+      // A suggestion is either a place prediction or -- with
+      // `includeQueryPredictions` -- a query prediction, which has no
+      // placePrediction at all and used to render as a blank tappable row.
+      final place = content.placePrediction;
+      final query = content.queryPrediction;
       final mainText =
-          content.placePrediction?.structuredFormat?.mainText?.text ?? "";
+          place?.structuredFormat?.mainText?.text ??
+          query?.structuredFormat?.mainText?.text ??
+          query?.text?.text ??
+          "";
       final secondaryText =
-          content.placePrediction?.structuredFormat?.secondaryText?.text ?? "";
+          place?.structuredFormat?.secondaryText?.text ??
+          query?.structuredFormat?.secondaryText?.text ??
+          "";
 
-      final style = Theme.of(context).textTheme.titleMedium?.copyWith(
-            color: Colors.grey[600],
-          );
+      final style = Theme.of(
+        context,
+      ).textTheme.titleMedium?.copyWith(color: Colors.grey[600]);
 
       return ListTile(
         contentPadding: const EdgeInsets.symmetric(horizontal: 16),
@@ -175,14 +218,9 @@ class PlacesAutocomplete extends HookWidget {
                     color: Theme.of(context).textTheme.bodyLarge?.color,
                   ),
                 ),
-              TextSpan(
-                text: " ",
-              ),
+              TextSpan(text: " "),
               if (secondaryText.isNotEmpty)
-                TextSpan(
-                  text: secondaryText,
-                  style: style,
-                ),
+                TextSpan(text: secondaryText, style: style),
             ],
           ),
         ),
@@ -198,8 +236,9 @@ class PlacesAutocomplete extends HookWidget {
   Future<List<Suggestion>> _getSuggestions(
     String query,
     AutoCompleteService service,
+    SessionTokenHandler sessionToken,
   ) async {
-    if (query.length < config.minCharsForSuggestions) return [];
+    if (query.length < config.minCharsForSuggestions) return const [];
     return service.search(
       query: query,
       apiKey: config.apiKey,
@@ -207,7 +246,7 @@ class PlacesAutocomplete extends HookWidget {
       fields: config.searchFields,
       filter: config.searchFilter,
       instanceFields: config.searchInstanceFields,
-      sessionToken: config.sessionToken,
+      sessionToken: sessionToken,
       cancelToken: config.cancelToken,
     );
   }
@@ -218,63 +257,77 @@ class PlacesAutocomplete extends HookWidget {
     BuildContext context,
     TextEditingController controller,
     AutoCompleteService service,
+    SessionTokenHandler sessionToken,
   ) async {
     try {
-      controller.selection =
-          TextSelection.collapsed(offset: controller.text.length);
-      final placeId = value.placePrediction?.placeId ?? "";
+      // Show what the user picked. Previously only the caret was moved, so the
+      // field kept whatever partial text had been typed.
+      final prediction = value.placePrediction;
+      final queryText =
+          value.queryPrediction?.text?.text ??
+          value.queryPrediction?.structuredFormat?.mainText?.text;
+      final selectedText =
+          prediction?.text?.text ??
+          prediction?.structuredFormat?.mainText?.text ??
+          queryText ??
+          controller.text;
+      controller.value = TextEditingValue(
+        text: selectedText,
+        selection: TextSelection.collapsed(offset: selectedText.length),
+      );
+
+      final placeId = prediction?.placeId ?? "";
       if (placeId.isEmpty) {
+        // A query prediction is a refined search term, not a place: put it in
+        // the field and reopen the list rather than silently doing nothing.
+        if (queryText != null && queryText.isNotEmpty) {
+          config.suggestionsController?.open();
+          onSelected?.call(value);
+          return;
+        }
         mapLogger.i("Place ID is empty, skipping place details.");
         return;
       }
-      await _getPlaceDetails(placeId, context, service);
+      await _getPlaceDetails(placeId, context, service, sessionToken);
       onSelected?.call(value);
-    } catch (e) {
-      mapLogger.e(e);
+    } catch (e, stack) {
+      mapLogger.e(e, stackTrace: stack);
+      onError?.call(
+        MapLocationPickerException(
+          MapPickerErrorKind.unknown,
+          'Failed to handle the selected suggestion: $e',
+          cause: e,
+          stackTrace: stack,
+        ),
+      );
     }
   }
 
   /// Get the details of a place.
+  ///
+  /// Routed through [AutoCompleteService] rather than calling [PlacesAPINew]
+  /// directly, so the lookup carries the same [SessionTokenHandler] as the
+  /// searches that preceded it — which is what bills the whole search as one
+  /// Places session instead of one charge per keystroke — reuses the per-key
+  /// client, reads the session's place-details cache, and reports failures
+  /// through [onError]. There is one REST transport on every platform, web
+  /// included.
   Future<void> _getPlaceDetails(
     String placeId,
     BuildContext context,
     AutoCompleteService service,
+    SessionTokenHandler sessionToken,
   ) async {
-    try {
-      final places = service.placesApi ?? PlacesAPINew(apiKey: config.apiKey);
-      final response = await places.getDetails(
-        id: placeId,
-        fields: config.placeFields,
-        allFields: config.placesAllFields,
-        filter: config.placeDetailsFilter,
-        instanceFields: config.placeInstanceFields,
-      );
-
-      if (_isErrorResponse(response)) {
-        _showErrorSnackbar(response.error?.error?.message, context);
-        return;
-      }
-      onGetDetails?.call(response.body);
-    } catch (e) {
-      mapLogger.e(e);
-    }
-  }
-
-  /// Check if the response is an error response.
-  bool _isErrorResponse(GoogleHTTPResponse<Place?> response) {
-    final isError = response.error != null && !response.isSuccessful;
-    if (isError) {
-      mapLogger.e(response.error?.error?.toJsonString());
-    }
-    return isError;
-  }
-
-  /// Show an error snackbar.
-  void _showErrorSnackbar(String? message, BuildContext context) {
-    if (context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(message ?? "Address not found")),
-      );
-    }
+    final place = await service.getDetails(
+      placeId: placeId,
+      apiKey: config.apiKey,
+      fields: config.placeFields,
+      allFields: config.placesAllFields,
+      filter: config.placeDetailsFilter,
+      instanceFields: config.placeInstanceFields,
+      sessionToken: sessionToken,
+    );
+    if (place == null) return;
+    onGetDetails?.call(place);
   }
 }

@@ -44,20 +44,10 @@
 	<key>UIViewControllerBasedStatusBarAppearance</key>
 	<false/>
 	    <key>NSLocationWhenInUseUsageDescription</key>
-        <string>Need location when in use</string>
-        <key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
-        <string>Always and when in use!</string>
-        <key>NSLocationUsageDescription</key>
-        <string>Older devices need location.</string>
-        <key>NSLocationAlwaysUsageDescription</key>
-        <string>Can I haz location always?</string>
+        <string>Shows your current location on the map so you can pick an address.</string>
 	<key>CADisableMinimumFrameDurationOnPhone</key>
 	<true/>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
-	<key>UIBackgroundModes</key>
-    <array>
-      <string>location</string>
-    </array>
 </dict>
 </plist>

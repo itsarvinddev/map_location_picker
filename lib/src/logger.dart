@@ -83,9 +83,86 @@ class BlockPrettyFormatter implements LogFormatter {
 // --- LOGGER ---
 // ----------------
 
+/// Severity levels, ordered.
+///
+/// Set [MapLocationPickerLogger.level] to drop everything below a threshold,
+/// or to [MapPickerLogLevel.off] to silence the package entirely.
+enum MapPickerLogLevel {
+  /// Everything.
+  trace(700),
+
+  /// Debug and above.
+  debug(800),
+
+  /// Info and above.
+  info(900),
+
+  /// Warnings and above.
+  warn(1000),
+
+  /// Errors and above.
+  error(1100),
+
+  /// Fatal only.
+  fatal(1200),
+
+  /// Nothing at all.
+  off(10000);
+
+  const MapPickerLogLevel(this.value);
+
+  /// The numeric severity, matching `dart:developer` conventions.
+  final int value;
+}
+
+/// The package's logger.
+///
+/// The single instance is [mapLogger]. It has two independent sinks: every
+/// record that passes [level] is handed to [onLog] in all build modes, so it
+/// can be used as a crash-reporting sink in production, while the
+/// human-readable copy written through `dart:developer` is additionally
+/// suppressed outside debug builds unless [emitInRelease] is set.
+/// Set [level] to [MapPickerLogLevel.off] to silence the package entirely.
+///
+/// ```dart
+/// // Quieten the package.
+/// mapLogger.level = MapPickerLogLevel.off;
+///
+/// // Or forward everything into your own crash reporter.
+/// mapLogger.onLog = (level, message, error, stack) =>
+///     Sentry.captureMessage('[' + level.name + '] ' + message.toString());
+/// ```
 class MapLocationPickerLogger {
+  /// A label prefixed to every line.
   final String tag;
+
   final LogFormatter _formatter;
+
+  /// The minimum level that is emitted, in every build mode. Records below it
+  /// reach neither [onLog] nor the console. Defaults to
+  /// [MapPickerLogLevel.trace].
+  MapPickerLogLevel level = MapPickerLogLevel.trace;
+
+  /// Whether to write the console copy (`dart:developer`) outside debug
+  /// builds. Off by default, so profile and release builds stay quiet. This
+  /// does not affect [onLog], which fires in every build mode.
+  bool emitInRelease = false;
+
+  /// Receives every record that passes [level], before formatting, in debug,
+  /// profile and release builds alike.
+  ///
+  /// Set this to route the package's diagnostics into your own logging or
+  /// crash-reporting stack. It is deliberately not gated by [emitInRelease]:
+  /// that flag only controls console output, so you can ship crash reports
+  /// without also shipping console spam. Use [level] to control what is
+  /// reported, or [MapPickerLogLevel.off] to stop reporting altogether.
+  void Function(
+    MapPickerLogLevel level,
+    Object? message,
+    Object? error,
+    StackTrace? stackTrace,
+  )?
+  onLog;
 
   // Map string levels to integer levels for the developer log.
   static const _levelMap = {
@@ -100,7 +177,7 @@ class MapLocationPickerLogger {
   /// Creates a logger.
   /// Defaults to [BlockPrettyFormatter] for clear, separated logging.
   MapLocationPickerLogger(this.tag, {LogFormatter? formatter})
-      : _formatter = formatter ?? BlockPrettyFormatter();
+    : _formatter = formatter ?? BlockPrettyFormatter();
 
   /// Pass error/stackTrace to the formatter to ensure they are included inside the separator blocks.
   void _log(
@@ -109,7 +186,15 @@ class MapLocationPickerLogger {
     Object? error,
     StackTrace? stackTrace,
   }) {
-    if (kDebugMode) {
+    final resolved = MapPickerLogLevel.values.firstWhere(
+      (l) => l.value == (_levelMap[level] ?? 900),
+      orElse: () => MapPickerLogLevel.info,
+    );
+    if (resolved.value < this.level.value) return;
+
+    onLog?.call(resolved, message, error, stackTrace);
+
+    if (kDebugMode || emitInRelease) {
       // The formatter now handles the entire visual layout,
       // including error and stacktrace.
       final formattedMessage = _formatter.format(

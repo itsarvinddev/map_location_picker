@@ -5,13 +5,24 @@ import 'package:flutter/material.dart';
 
 import '../map_location_picker.dart';
 
-/// The default bottom card for the map location picker.
+/// A rounded, blurred surface used for the search bar and the bottom card.
 class CustomMapCard extends StatelessWidget {
+  /// The card's contents.
   final Widget child;
+
+  /// Corner radius. Defaults to [kRadius] on every corner.
   final BorderRadiusGeometry? radius;
+
+  /// Padding around [child].
   final EdgeInsets? padding;
+
+  /// Background colour. Defaults to the theme's surface colour.
   final Color? color;
+
+  /// Border. Defaults to a hairline outline.
   final BoxBorder? border;
+
+  /// Creates a card.
   const CustomMapCard({
     super.key,
     required this.child,
@@ -21,7 +32,7 @@ class CustomMapCard extends StatelessWidget {
     this.border,
   });
 
-  /// Default radius for the map location picker.
+  /// The default corner radius used across the picker.
   static const kRadius = 12.0;
 
   @override
@@ -36,10 +47,12 @@ class CustomMapCard extends StatelessWidget {
           decoration: BoxDecoration(
             color: color ?? Theme.of(context).colorScheme.surface,
             borderRadius: radius ?? BorderRadius.circular(kRadius + 0.5),
-            border: border ??
+            border:
+                border ??
                 Border.all(
-                    color: Theme.of(context).colorScheme.outlineVariant,
-                    width: 0.5),
+                  color: Theme.of(context).colorScheme.outlineVariant,
+                  width: 0.5,
+                ),
           ),
           child: child,
         ),
@@ -48,6 +61,32 @@ class CustomMapCard extends StatelessWidget {
   }
 }
 
+/// A short, human-readable title for [result].
+///
+/// Falls back through the first address component, then the first segment of
+/// the formatted address, then an empty string.
+///
+/// Written defensively on purpose: the previous implementation did
+/// `(result.addressComponents?.first.longName ?? "").substring(0, 1)`, which
+/// threw `RangeError` whenever the components list was null (the `?? ""`
+/// guaranteed it) and `Bad state: No element` whenever it was empty — which the
+/// Geocoding API does return for plus-code-only results and for results
+/// filtered by `resultType`/`locationType`.
+String addressTitle(GeocodingResult? result) {
+  final name = result?.addressComponents?.firstOrNull?.longName?.trim();
+  if (name != null && name.isNotEmpty) {
+    return name[0].toUpperCase() + name.substring(1);
+  }
+  final formatted = result?.formattedAddress?.split(',').first.trim();
+  if (formatted != null && formatted.isNotEmpty) {
+    return formatted[0].toUpperCase() + formatted.substring(1);
+  }
+  return '';
+}
+
+/// The bottom card shown below the map.
+///
+/// Override it wholesale with [MapLocationPickerConfig.bottomCardBuilder].
 Widget defaultBottomCard(
   BuildContext context,
   GeocodingResult? result,
@@ -55,99 +94,127 @@ Widget defaultBottomCard(
   bool isLoading,
   List<GeocodingResult> results,
   MapLocationPickerConfig config,
-  VoidCallback onNext,
-) {
+  VoidCallback onNext, {
+
+  /// Called when the user picks one of the other nearby matches.
+  ValueChanged<GeocodingResult>? onResultSelected,
+}) {
   final theme = Theme.of(context);
+  final strings = config.strings;
+  final title = addressTitle(result);
+
   return Padding(
     padding: const EdgeInsets.only(top: 12),
     child: CustomMapCard(
       radius: config.cardRadius ?? BorderRadius.circular(CustomMapCard.kRadius),
       color: config.cardColor,
       border: config.cardBorder,
-      child: SafeArea(
-        top: false,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            ListTile(
-              title: isLoading
-                  ? const Text(
-                      "Loading address...",
-                      textAlign: TextAlign.start,
-                    )
-                  : result?.addressComponents?.first.longName != null
-                      ? Text(
-                          (result?.addressComponents?.first.longName ?? "")
-                                  .substring(0, 1)
-                                  .toUpperCase() +
-                              (result?.addressComponents?.first.longName ?? "")
-                                  .substring(1),
-                          style: theme.textTheme.titleMedium,
-                        )
-                      : null,
-              subtitle: isLoading
-                  ? const Text(
-                      "Fetching location details.",
-                      textAlign: TextAlign.start,
-                    )
-                  : Text(
-                      address,
-                      maxLines: 3,
-                      overflow: TextOverflow.ellipsis,
-                      textAlign: TextAlign.start,
+      // MapLocationPickerView has no Scaffold, so nothing above it guarantees
+      // a Material ancestor -- and ListTile/CupertinoButton assert without one.
+      child: Material(
+        type: MaterialType.transparency,
+        child: SafeArea(
+          top: false,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (config.bottomCardTitle.isNotEmpty)
+                Padding(
+                  padding: const EdgeInsets.only(top: 12),
+                  child: Align(
+                    alignment: AlignmentDirectional.centerStart,
+                    child: Text(
+                      config.bottomCardTitle,
+                      style: theme.textTheme.labelLarge,
                     ),
-            ),
-            config.confirmButton?.call(context, onNext) ??
-                ((!isLoading && result != null)
-                    ? CupertinoButton.filled(
-                        minimumSize: const Size(double.infinity, 40),
-                        padding: const EdgeInsets.symmetric(horizontal: 16),
-                        child: const Text("Confirm Address"),
-                        onPressed: onNext,
-                        pressedOpacity: 0.9,
+                  ),
+                ),
+              ListTile(
+                title: isLoading
+                    ? Text(strings.loadingAddress, textAlign: TextAlign.start)
+                    : (title.isEmpty
+                          ? null
+                          : Text(title, style: theme.textTheme.titleMedium)),
+                subtitle: isLoading
+                    ? Text(
+                        strings.loadingAddressSubtitle,
+                        textAlign: TextAlign.start,
                       )
-                    : CupertinoButton.filled(
-                        minimumSize: const Size(double.infinity, 40),
-                        padding: const EdgeInsets.symmetric(horizontal: 16),
-                        child: isLoading
-                            ? const CircularProgressIndicator.adaptive(
-                                backgroundColor: Colors.grey,
-                              )
-                            : Text(address),
-                        onPressed: () {},
-                      )),
-            if (results.length > 1 && !config.hideMoreOptions) ...[
-              const SizedBox(height: 12),
-              CupertinoButton.tinted(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 2,
-                ),
-                minimumSize: const Size(100, 10),
-                child: Text(
-                  isLoading
-                      ? "Loading nearby places..."
-                      : "${results.length} places found nearby",
-                  style: theme.textTheme.bodyMedium,
-                ),
-                pressedOpacity: 0.9,
-                onPressed: isLoading
-                    ? () {}
-                    : () => _showAddressOptions(context, results, config),
+                    : Text(
+                        address,
+                        maxLines: 3,
+                        overflow: TextOverflow.ellipsis,
+                        textAlign: TextAlign.start,
+                      ),
               ),
+              config.confirmButton?.call(context, onNext) ??
+                  Builder(
+                    builder: (context) {
+                      // Never render a filled, enabled-looking button wired to a
+                      // no-op: that is what made "Confirm does nothing" the most
+                      // common report. Either it works, or it looks disabled.
+                      final canConfirm =
+                          !isLoading &&
+                          (result != null || !config.requireGeocodedAddress);
+                      return Semantics(
+                        button: true,
+                        enabled: canConfirm,
+                        label: strings.confirmAddress,
+                        child: CupertinoButton.filled(
+                          minimumSize: const Size(double.infinity, 40),
+                          padding: const EdgeInsets.symmetric(horizontal: 16),
+                          pressedOpacity: 0.9,
+                          onPressed: canConfirm ? onNext : null,
+                          child: isLoading
+                              // No backgroundColor: it paints a grey track on
+                              // Android/web/desktop and is dropped entirely on
+                              // iOS/macOS.
+                              ? const SizedBox.square(
+                                  dimension: 22,
+                                  child: CircularProgressIndicator.adaptive(
+                                    strokeWidth: 2.5,
+                                  ),
+                                )
+                              : Text(strings.confirmAddress),
+                        ),
+                      );
+                    },
+                  ),
+              if (results.length > 1 && !config.hideMoreOptions) ...[
+                const SizedBox(height: 12),
+                CupertinoButton.tinted(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 2,
+                  ),
+                  minimumSize: const Size(100, 10),
+                  pressedOpacity: 0.9,
+                  onPressed: isLoading
+                      ? null
+                      : () => showAddressOptions(
+                          context,
+                          results,
+                          config,
+                          onResultSelected: onResultSelected,
+                        ),
+                  child: Text(
+                    isLoading
+                        ? strings.loadingNearbyPlaces
+                        : strings.nearbyPlacesCount(results.length),
+                    style: theme.textTheme.bodyMedium,
+                  ),
+                ),
+              ],
             ],
-          ],
+          ),
         ),
       ),
     ),
   );
 }
 
-BoxDecoration buildBoxDecoration(
-  BuildContext context,
-  int index,
-  bool isLast,
-) {
+/// Builds the decoration for a row in the nearby-places list.
+BoxDecoration buildBoxDecoration(BuildContext context, int index, bool isLast) {
   return BoxDecoration(
     color: CupertinoColors.systemFill,
     borderRadius: BorderRadius.only(
@@ -159,7 +226,7 @@ BoxDecoration buildBoxDecoration(
     border: Border(
       bottom: isLast
           ? BorderSide.none
-          : BorderSide(
+          : const BorderSide(
               color: CupertinoColors.opaqueSeparator,
               width: 0.5,
             ),
@@ -167,50 +234,67 @@ BoxDecoration buildBoxDecoration(
   );
 }
 
-void _showAddressOptions(
+/// Shows the other geocoding matches for the current pin.
+///
+/// Picking one updates the picker's selection. It deliberately does *not*
+/// invoke `onNext`: the previous implementation fired `onNext` here as well as
+/// `onAddressSelected`, so an app that popped the route in `onNext` popped
+/// twice, and the picker's own state was never updated.
+void showAddressOptions(
   BuildContext context,
   List<GeocodingResult> results,
-  MapLocationPickerConfig config,
-) {
+  MapLocationPickerConfig config, {
+  ValueChanged<GeocodingResult>? onResultSelected,
+}) {
+  final strings = config.strings;
   showModalBottomSheet(
     context: context,
     backgroundColor: Colors.transparent,
     barrierColor: Colors.black38,
-    builder: (context) => CupertinoActionSheet(
-      title: Text("${results.length} places found nearby"),
-      message: Text("tap to select"),
-      actions: results.map((result) {
-        return CupertinoActionSheetAction(
-          child: CupertinoListTile(
-            padding: EdgeInsets.zero,
-            title: Text(
-              (result.addressComponents?.first.longName ?? "")
-                      .substring(0, 1)
-                      .toUpperCase() +
-                  (result.addressComponents?.first.longName ?? "").substring(1),
-              style: Theme.of(context).textTheme.titleMedium,
+    builder: (sheetContext) => Material(
+      type: MaterialType.transparency,
+      child: CupertinoActionSheet(
+        title: Text(strings.nearbyPlacesTitle(results.length)),
+        message: Text(strings.tapToSelect),
+        actions: results.map((result) {
+          final title = addressTitle(result);
+          return CupertinoActionSheetAction(
+            onPressed: () {
+              // Exactly one of these fires. The picker passes
+              // `onResultSelected: controller.selectResult`, and that already
+              // invokes `config.onAddressSelected` -- calling both here made it
+              // fire twice per selection. The fallback is for callers who
+              // invoke this sheet directly.
+              if (onResultSelected != null) {
+                onResultSelected(result);
+              } else {
+                config.onAddressSelected?.call(result);
+              }
+              Navigator.pop(sheetContext);
+            },
+            child: CupertinoListTile(
+              padding: EdgeInsets.zero,
+              title: Text(
+                title.isEmpty ? (result.formattedAddress ?? '') : title,
+                style: Theme.of(context).textTheme.titleMedium,
+              ),
+              subtitle: Text(
+                result.formattedAddress ?? '',
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                textAlign: TextAlign.start,
+                style: Theme.of(context).textTheme.bodyMedium,
+              ),
+              leading: const Icon(Icons.pin_drop, size: 20),
             ),
-            subtitle: Text(
-              result.formattedAddress ?? "",
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-              textAlign: TextAlign.start,
-              style: Theme.of(context).textTheme.bodyMedium,
-            ),
-            leading: Icon(Icons.pin_drop, size: 20),
-          ),
-          onPressed: () {
-            config.onAddressSelected?.call(result);
-            config.onNext?.call(result);
-            Navigator.pop(context);
-          },
-        );
-      }).toList(),
-      cancelButton: CupertinoButton(
-        child: Text("Cancel"),
-        minimumSize: const Size(double.infinity, 40),
-        padding: const EdgeInsets.symmetric(horizontal: 16),
-        onPressed: () => Navigator.pop(context),
+          );
+        }).toList(),
+        cancelButton: CupertinoButton(
+          minimumSize: const Size(double.infinity, 40),
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          onPressed: () => Navigator.pop(sheetContext),
+          child: Text(strings.cancel),
+        ),
       ),
     ),
   );
