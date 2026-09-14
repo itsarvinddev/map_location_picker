@@ -63,6 +63,12 @@ class MapLocationPickerController extends ChangeNotifier {
   MapLocationPickerConfig _config;
   GeoCodingConfig? _geoCodingOverride;
 
+  /// The geocoder passed to this controller's constructor.
+  ///
+  /// Kept separately so a widget that does not supply its own geocoder falls
+  /// back to this one rather than clearing it.
+  final GeoCodingConfig? _ownGeoCoding;
+
   /// Creates a controller.
   ///
   /// [geoCodingConfig] overrides the geocoding client derived from [config].
@@ -73,6 +79,7 @@ class MapLocationPickerController extends ChangeNotifier {
     GeoCodingConfig? geoCodingConfig,
   }) : _config = config,
        _geoCodingOverride = geoCodingConfig,
+       _ownGeoCoding = geoCodingConfig,
        _position = config.initialPosition,
        _mapType = config.initialMapType;
 
@@ -203,14 +210,22 @@ class MapLocationPickerController extends ChangeNotifier {
 
   /// Replaces the configuration, e.g. when the host widget rebuilds with a new
   /// one. Does not move the pin.
+  ///
+  /// When [geoCodingConfig] is null, the geocoder this controller was
+  /// constructed with stays in effect.
   void updateConfig(
     MapLocationPickerConfig config, {
     GeoCodingConfig? geoCodingConfig,
   }) {
     if (_disposed) return;
-    final changed = _config != config || _geoCodingOverride != geoCodingConfig;
+    // A widget that passes no geocoder has no opinion, so the controller keeps
+    // the one it was constructed with. Assigning null here used to discard it:
+    // `MapLocationPicker(controller: c)` silently replaced a proxy, custom
+    // client or test fake configured on `c` with the default geocoder.
+    final effective = geoCodingConfig ?? _ownGeoCoding;
+    final changed = _config != config || _geoCodingOverride != effective;
     _config = config;
-    _geoCodingOverride = geoCodingConfig;
+    _geoCodingOverride = effective;
     if (changed) _safeNotify();
   }
 

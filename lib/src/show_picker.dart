@@ -39,22 +39,34 @@ Future<PickedPlace?> showMapLocationPicker(
   bool fullscreenDialog = false,
   RouteSettings? routeSettings,
   bool useRootNavigator = false,
-}) {
-  return Navigator.of(
-    context,
-    rootNavigator: useRootNavigator,
-  ).push<PickedPlace>(
-    MaterialPageRoute<PickedPlace>(
-      fullscreenDialog: fullscreenDialog,
-      settings: routeSettings,
-      builder: (routeContext) => _PickerRoute(
-        config: config,
-        searchConfig: searchConfig,
-        geoCodingConfig: geoCodingConfig,
-        controller: controller,
-      ),
-    ),
-  );
+}) async {
+  // Set when the user confirms, before any caller-supplied onNext runs.
+  PickedPlace? confirmed;
+
+  // Typed Object? on purpose. A 3.x config very likely carries
+  // `onNext: (r) => Navigator.pop(context, r)`, which pops this route with a
+  // GeocodingResult. A MaterialPageRoute<PickedPlace> rejects that with an
+  // assertion in debug and a TypeError in release, so accept anything and
+  // translate below.
+  final popped = await Navigator.of(context, rootNavigator: useRootNavigator)
+      .push<Object?>(
+        MaterialPageRoute<Object?>(
+          fullscreenDialog: fullscreenDialog,
+          settings: routeSettings,
+          builder: (routeContext) => _PickerRoute(
+            config: config,
+            searchConfig: searchConfig,
+            geoCodingConfig: geoCodingConfig,
+            controller: controller,
+            onConfirmed: (place) => confirmed = place,
+          ),
+        ),
+      );
+
+  if (popped is PickedPlace) return popped;
+  // The caller's onNext popped with its own value -- a GeocodingResult, null,
+  // anything. The user did confirm, so return what they picked.
+  return confirmed;
 }
 
 /// Owns the controller so the route can read the final position even when
@@ -65,12 +77,17 @@ class _PickerRoute extends StatefulWidget {
     this.searchConfig,
     this.geoCodingConfig,
     this.controller,
+    required this.onConfirmed,
   });
 
   final MapLocationPickerConfig config;
   final SearchConfig? searchConfig;
   final GeoCodingConfig? geoCodingConfig;
   final MapLocationPickerController? controller;
+
+  /// Receives the pick the moment the user confirms, so it survives even if a
+  /// caller-supplied onNext pops the route with a value of its own.
+  final ValueChanged<PickedPlace> onConfirmed;
 
   @override
   State<_PickerRoute> createState() => _PickerRouteState();
@@ -109,16 +126,18 @@ class _PickerRouteState extends State<_PickerRoute> {
           // whole exit transition.
           final navigator = Navigator.of(context);
           final route = ModalRoute.of(context);
+          // Capture before handing over: the caller may pop, after which this
+          // route's controller is on its way to being disposed.
+          final picked = PickedPlace.from(
+            latLng: _controller.position,
+            result: result,
+            place: _controller.lastSelectedPlace,
+          );
+          widget.onConfirmed(picked);
           widget.config.onNext?.call(result);
           if (!mounted) return;
           if (route != null && !route.isCurrent) return;
-          navigator.pop(
-            PickedPlace.from(
-              latLng: _controller.position,
-              result: result,
-              place: _controller.lastSelectedPlace,
-            ),
-          );
+          navigator.pop(picked);
         },
       ),
     );

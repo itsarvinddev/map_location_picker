@@ -219,16 +219,31 @@ class MapLocationPickerView extends HookWidget {
               child: SafeArea(
                 bottom: false,
                 child: Padding(
-                  padding: EdgeInsets.only(
-                    left: config.showBackButton ? 60 : 12,
-                    right: 12,
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                  // The back button shares one Row with the search field so the
+                  // two are centred on the same line. As separate Positioned
+                  // widgets they sat at different heights: the button is 48 px
+                  // with a 6 px inset, the field about 40 px with none.
+                  child: Row(
+                    children: [
+                      if (config.showBackButton) ...[
+                        _interceptPointer(
+                          child:
+                              config.backButtonBuilder?.call(context) ??
+                              _defaultBackButton(context),
+                        ),
+                        const SizedBox(width: 8),
+                      ],
+                      Expanded(child: _interceptPointer(child: searchBar)),
+                    ],
                   ),
-                  child: _interceptPointer(child: searchBar),
                 ),
               ),
             ),
 
-        if (config.showBackButton)
+        // Only reached when there is no default search bar to share a row with.
+        if (config.showBackButton &&
+            (!config.showSearchBar || config.searchBarBuilder != null))
           Positioned(
             top: 0,
             left: 0,

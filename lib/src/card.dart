@@ -120,7 +120,9 @@ Widget defaultBottomCard(
             children: [
               if (config.bottomCardTitle.isNotEmpty)
                 Padding(
-                  padding: const EdgeInsets.only(top: 12),
+                  // Same start inset as the ListTile below, so the title and
+                  // the address share one left edge.
+                  padding: const EdgeInsetsDirectional.fromSTEB(16, 12, 16, 0),
                   child: Align(
                     alignment: AlignmentDirectional.centerStart,
                     child: Text(
