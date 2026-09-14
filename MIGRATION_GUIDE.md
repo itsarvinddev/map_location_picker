@@ -136,7 +136,7 @@ MapLocationPickerConfig(bottomCardType: ...)  // ignored
 MapLocationPickerConfig(cardType: ...)        // use this
 ```
 
-Both still compile in 4.x and will be removed in 5.0.0.
+All four still compile in 4.x and will be removed in 5.0.0.
 
 ---
 

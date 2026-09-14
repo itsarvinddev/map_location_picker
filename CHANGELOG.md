@@ -23,10 +23,26 @@
 ### Documentation
 
 - README rewritten: a step-by-step getting-started guide, a section for each
-  feature, a configuration reference, and troubleshooting. Two errors in the
-  old README are fixed: the iOS `AppDelegate` snippet didn't match current
-  Flutter templates, and the Android minimum was listed as API 21 when
-  `google_maps_flutter` needs 24.
+  feature, a configuration reference, and troubleshooting. Every factual
+  claim was then audited against the source, which corrected several errors
+  carried over from the old README:
+  - The iOS `AppDelegate` snippet didn't match current Flutter templates.
+  - Android was listed as API 21, when `google_maps_flutter` needs 24.
+  - The iOS 14 deployment target that apps created with Flutter 3.38 must set
+    was never mentioned.
+  - The web Maps script was loaded with `async`/`loading=async`;
+    `google_maps_flutter_web` needs it loaded synchronously. The example app
+    is fixed too.
+  - The key-restriction sample used `dart:io`, which throws on web, and the
+    guidance didn't mention that the Geocoding API rejects
+    referrer-restricted keys.
+  - How key problems map to error kinds is now documented per API. With
+    Places API (New) (search, details, nearby), a wrong key arrives as
+    `invalidRequest` (HTTP 400, "API key not valid"). The Geocoding API
+    reports it as `requestDenied`, and an empty key fails search with
+    `unknown` in debug builds.
+- `MIGRATION_GUIDE.md`: the deprecation note now says all four deprecated
+  options, not "both", are removed in 5.0.0.
 - New screenshots rendered from the real widgets, with a reproducible
   generator in `tool/screenshots`. The pub.dev gallery grows from three
   images to eight, and the package archive shrinks from about 10 MB to under

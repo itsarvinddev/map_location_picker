@@ -7,8 +7,6 @@
 // It is never executed.
 // ignore_for_file: unused_element, unreachable_from_main
 
-import 'dart:io' show Platform;
-
 import 'package:flutter/foundation.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
@@ -224,6 +222,7 @@ MapLocationPickerConfig _french() => MapLocationPickerConfig(
   apiKey: 'YOUR_API_KEY',
   language: 'fr',
   bottomCardTitle: 'Où livrer ?',
+  fabTooltip: 'Ma position',
   strings: MapLocationPickerStrings(
     searchHint: 'Rechercher une adresse',
     confirmAddress: "Confirmer l'adresse",
@@ -242,7 +241,7 @@ MapLocationPickerConfig _themed(BuildContext context) =>
       mapStyle: Theme.of(context).brightness == Brightness.dark
           ? darkMapStyleJson
           : null,
-      cardType: CardType.liquidCard,
+      cardBorder: Border.all(color: Colors.black12),
       cardColor: Colors.white,
       cardRadius: BorderRadius.circular(16),
       floatingControlsColor: Colors.white,
@@ -306,8 +305,9 @@ Widget _standaloneSearch() {
 // --- Restricting the key ----------------------------------------------------
 MapLocationPickerConfig _restrictedKey() {
   final headers = <String, String>{
-    if (Platform.isIOS) 'X-Ios-Bundle-Identifier': 'com.example.app',
-    if (Platform.isAndroid) ...{
+    if (!kIsWeb && defaultTargetPlatform == TargetPlatform.iOS)
+      'X-Ios-Bundle-Identifier': 'com.example.app',
+    if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) ...{
       'X-Android-Package': 'com.example.app',
       'X-Android-Cert': '00112233445566778899AABBCCDDEEFF00112233',
     },
