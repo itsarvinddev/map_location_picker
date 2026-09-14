@@ -1,3 +1,5 @@
+# pub reads this file INSTEAD of the root .gitignore, so it repeats those rules.
+
 # Miscellaneous
 *.class
 *.log
@@ -35,3 +37,10 @@ build/
 
 # Screenshot harness intermediates (tool/screenshots); only the framed WebP files are committed.
 doc/readme/raw/
+
+# Repository-only material: the README hero image and the screenshot harness.
+# The README resolves its images against the GitHub repository, and the
+# pub.dev gallery uses screenshots/, which does ship.
+doc/readme/
+tool/
+coverage/

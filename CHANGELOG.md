@@ -1,3 +1,45 @@
+## 4.0.1
+
+### Fixed
+
+- **`showMapLocationPicker` threw when an existing `onNext` popped with a
+  result.** Code carried over from 3.x as `onNext: (r) => Navigator.pop(context, r)`
+  popped the route with a `GeocodingResult`, but the route was typed
+  `PickedPlace`, so it failed with an assertion in debug and a `TypeError` in
+  release — on exactly the migration path the migration guide recommends. Any
+  popped value is now accepted, and the future still resolves to the
+  `PickedPlace` the user confirmed.
+- **A geocoder given to `MapLocationPickerController` was silently discarded.**
+  `MapLocationPicker(controller: c)` without its own `geoCodingConfig` replaced
+  the one configured on `c` with the default, so a proxy, custom HTTP client or
+  test fake stopped being used as soon as the picker mounted. A geocoder passed
+  to the widget still takes precedence.
+- The back button and the search field now share one row, so they are centred
+  on the same line; they previously sat at different heights.
+- `bottomCardTitle` now starts at the same left edge as the address below it.
+- The default search hint is now "Search for a place or address". The previous
+  text was clipped mid-sentence whenever the back button was shown.
+
+### Documentation
+
+- README rewritten: a step-by-step getting-started guide, a section for each
+  feature, a configuration reference, and troubleshooting. Two errors in the
+  old README are fixed: the iOS `AppDelegate` snippet didn't match current
+  Flutter templates, and the Android minimum was listed as API 21 when
+  `google_maps_flutter` needs 24.
+- New screenshots rendered from the real widgets, with a reproducible
+  generator in `tool/screenshots`. The pub.dev gallery grows from three
+  images to eight, and the package archive shrinks from about 10 MB to under
+  1 MB.
+- New "Using with AI coding assistants" section: project rules for
+  `CLAUDE.md`, `AGENTS.md`, Copilot, Cursor and Gemini, plus seven copy-paste
+  prompts for integrating, embedding, migrating, localizing, debugging and
+  testing. Each prompt was checked by having an assistant follow it without
+  access to the package source, then compiling the result.
+- Added `llms.txt`, a compact and authoritative 4.x API reference for AI
+  assistants.
+- The package description on pub.dev now says what the package does.
+
 ## 4.0.0
 
 A full audit release: every open issue closed, every open pull request merged or

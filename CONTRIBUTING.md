@@ -61,7 +61,7 @@ dart run build_runner build
 git diff --exit-code -- '*.freezed.dart' '*.g.dart'
 ```
 
-Two things worth knowing:
+Worth knowing:
 
 - **Never hand-edit a `.freezed.dart` file.** `freezed` and `build_runner` are
   pinned to exact versions precisely so everyone's generated output matches;
@@ -73,6 +73,31 @@ Two things worth knowing:
 - **If you change a README code sample**, update
   `example/lib/readme_samples.dart` to match. Every sample in the README is
   compiled there.
+- **Keep `llms.txt` accurate** whenever the public API changes. AI coding assistants
+  read it in place of their training data, so a stale entry there becomes
+  wrong code in someone else's app. The copy-paste prompts in the README repeat
+  some of the same facts; keep them in step.
+
+## Updating the screenshots
+
+The README and pub.dev images are rendered from the real widgets. They don't
+come from a device, so they can be regenerated after any UI change, without an
+API key:
+
+```bash
+flutter test tool/screenshots/generate_test.dart   # renders doc/readme/raw/*.png
+python3 tool/screenshots/frame.py                  # device frames -> screenshots/*.webp, doc/readme/hero.webp
+```
+
+The first command drives each scene with canned Places and Geocoding
+responses, so search, place details and nearby search run through the
+package's real code. Google's tiles can't load in a test, so the map itself is
+an illustration drawn by `tool/screenshots/map_art.dart`. The second command
+needs Pillow (`pip install pillow`) and finds Roboto in your Flutter SDK.
+
+Commit the WebP files; `doc/readme/raw/` is ignored. Scenes are defined in
+`generate_test.dart`. If you add one, list it in `pubspec.yaml` under
+`screenshots:` and in the README gallery.
 
 ## Reporting a bug
 
