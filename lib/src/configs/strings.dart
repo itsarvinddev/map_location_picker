@@ -94,7 +94,7 @@ class MapLocationPickerStrings {
     this.nearbyPlacesTitle = _defaultNearbyPlacesCount,
     this.loadingNearbyPlaces = 'Loading addresses...',
     this.tapToSelect = 'tap to select',
-    this.searchHint = 'Search for place, address, landmark, etc.',
+    this.searchHint = 'Search for a place or address',
   });
 
   static String _defaultNearbyPlacesCount(int count) =>

@@ -1,3 +1,61 @@
+## 4.0.1
+
+### Fixed
+
+- **`showMapLocationPicker` threw when an existing `onNext` popped with a
+  result.** Code carried over from 3.x as `onNext: (r) => Navigator.pop(context, r)`
+  popped the route with a `GeocodingResult`, but the route was typed
+  `PickedPlace`, so it failed with an assertion in debug and a `TypeError` in
+  release — on exactly the migration path the migration guide recommends. Any
+  popped value is now accepted, and the future still resolves to the
+  `PickedPlace` the user confirmed.
+- **A geocoder given to `MapLocationPickerController` was silently discarded.**
+  `MapLocationPicker(controller: c)` without its own `geoCodingConfig` replaced
+  the one configured on `c` with the default, so a proxy, custom HTTP client or
+  test fake stopped being used as soon as the picker mounted. A geocoder passed
+  to the widget still takes precedence.
+- The back button and the search field now share one row, so they are centred
+  on the same line; they previously sat at different heights.
+- `bottomCardTitle` now starts at the same left edge as the address below it.
+- The default search hint is now "Search for a place or address". The previous
+  text was clipped mid-sentence whenever the back button was shown.
+
+### Documentation
+
+- README rewritten: a step-by-step getting-started guide, a section for each
+  feature, a configuration reference, and troubleshooting. Every factual
+  claim was then audited against the source, which corrected several errors
+  carried over from the old README:
+  - The iOS `AppDelegate` snippet didn't match current Flutter templates.
+  - Android was listed as API 21, when `google_maps_flutter` needs 24.
+  - The iOS 14 deployment target that apps created with Flutter 3.38 must set
+    was never mentioned.
+  - The web Maps script was loaded with `async`/`loading=async`;
+    `google_maps_flutter_web` needs it loaded synchronously. The example app
+    is fixed too.
+  - The key-restriction sample used `dart:io`, which throws on web, and the
+    guidance didn't mention that the Geocoding API rejects
+    referrer-restricted keys.
+  - How key problems map to error kinds is now documented per API. With
+    Places API (New) (search, details, nearby), a wrong key arrives as
+    `invalidRequest` (HTTP 400, "API key not valid"). The Geocoding API
+    reports it as `requestDenied`, and an empty key fails search with
+    `unknown` in debug builds.
+- `MIGRATION_GUIDE.md`: the deprecation note now says all four deprecated
+  options, not "both", are removed in 5.0.0.
+- New screenshots rendered from the real widgets, with a reproducible
+  generator in `tool/screenshots`. The pub.dev gallery grows from three
+  images to eight, and the package archive shrinks from about 10 MB to under
+  1 MB.
+- New "Using with AI coding assistants" section: project rules for
+  `CLAUDE.md`, `AGENTS.md`, Copilot, Cursor and Gemini, plus seven copy-paste
+  prompts for integrating, embedding, migrating, localizing, debugging and
+  testing. Each prompt was checked by having an assistant follow it without
+  access to the package source, then compiling the result.
+- Added `llms.txt`, a compact and authoritative 4.x API reference for AI
+  assistants.
+- The package description on pub.dev now says what the package does.
+
 ## 4.0.0
 
 A full audit release: every open issue closed, every open pull request merged or

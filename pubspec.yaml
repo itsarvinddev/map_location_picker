@@ -1,17 +1,29 @@
 name: map_location_picker
-description: Google Map location picker for flutter Based on google_maps_flutter.
-version: 4.0.0
+description: A Google Maps location picker for Flutter with Places API (New) search, marker or centre-pin picking, and typed addresses. Android, iOS and web.
+version: 4.0.1
 homepage: https://github.com/itsarvinddev/map_location_picker
 repository: https://github.com/itsarvinddev/map_location_picker
 issue_tracker: https://github.com/itsarvinddev/map_location_picker/issues
 documentation: https://github.com/itsarvinddev/map_location_picker/blob/master/README.md
+# Rendered from the real widgets by tool/screenshots (see CONTRIBUTING.md).
+# The same files illustrate the README, so they ship in the archive; keep them small.
 screenshots:
-    - description: "Map Location Picker Decoded Address"
-      path: assets/iphone_14_pro_1_0.png
-    - description: "Map Location Picker Places autocomplete"
-      path: assets/iphone_14_pro_3_2.png
-    - description: "Map Location Picker dark mode"
-      path: assets/iphone_14_pro_5_4.png
+    - description: "Place search with Places API (New) autocomplete suggestions"
+      path: screenshots/search.webp
+    - description: "Centre-pin mode: the map moves under a fixed pin, with a custom card title"
+      path: screenshots/center_pin.webp
+    - description: "Dark theme"
+      path: screenshots/dark.webp
+    - description: "Tap or drag a marker to pick a point and see its decoded address"
+      path: screenshots/pick.webp
+    - description: "Nearby places shown as chips above the address card"
+      path: screenshots/nearby.webp
+    - description: "MapLocationPickerView embedded in a checkout form"
+      path: screenshots/embedded.webp
+    - description: "Every visible string translated, here into French"
+      path: screenshots/localized.webp
+    - description: "Map type selection sheet"
+      path: screenshots/map_type.webp
 
 topics:
     - map-picker
@@ -36,7 +48,7 @@ environment:
 # mechanism; this package has no native code, no pluginClass and no `implements:`,
 # so declaring it made the Flutter tool register a plugin in every consumer app.
 # Desktop is absent because google_maps_flutter has no macOS/Windows/Linux
-# implementation -- see README "Platform support".
+# implementation -- see README "Requirements".
 platforms:
     android:
     ios:
@@ -72,6 +84,9 @@ dev_dependencies:
     freezed: 3.2.5
     build_runner: 2.15.1
     lints: ^6.1.0
+    # Glyphs for the screenshot harness in tool/screenshots.
+    cupertino_icons: ^1.0.8
+    google_maps_flutter_platform_interface: ^2.14.0
     # For faking GeolocatorPlatform in tests.
     geolocator_platform_interface: ^4.2.3
     plugin_platform_interface: ^2.1.8

@@ -20,8 +20,10 @@
   <!-- Required by google_maps_flutter_web to RENDER the map. Place search does
        not need it: this package calls the Places REST API directly, which
        supports CORS. Replace YOUR_API_KEY with your own key. -->
-  <script async
-    src="https://maps.googleapis.com/maps/api/js?key=YOUR_API_KEY&loading=async"></script>
+  <!-- Loaded synchronously, as google_maps_flutter_web documents: the plugin
+       constructs google.maps.Map directly, so the API must be ready before the
+       app starts. -->
+  <script src="https://maps.googleapis.com/maps/api/js?key=YOUR_API_KEY"></script>
 
   <meta charset="UTF-8">
   <meta content="IE=Edge" http-equiv="X-UA-Compatible">
